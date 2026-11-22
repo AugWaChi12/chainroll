@@ -31,7 +31,8 @@ export const wagmiConfig = createConfig({
   connectors: [
     // generic window.ethereum — only shown when no EIP-6963 wallet announced itself
     injected({ shimDisconnect: true }),
-    ...(walletConnectEnabled
+    // browser only: the WalletConnect core needs IndexedDB and must not boot during SSR/prerender
+    ...(walletConnectEnabled && typeof window !== 'undefined'
       ? [
           walletConnect({
             projectId: env.NEXT_PUBLIC_WC_PROJECT_ID!,
