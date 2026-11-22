@@ -7,6 +7,17 @@ export const DEV_ACCOUNT = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8' as const
 
 const isLocal = activeChain.id === localChain.id
 
+/** Restore the dev wallet after a reload only if it was the last wallet used (not on first visit). */
+function devWalletWasUsed() {
+  try {
+    return (
+      typeof window !== 'undefined' && localStorage.getItem('wagmi.recentConnectorId') === '"mock"'
+    )
+  } catch {
+    return false
+  }
+}
+
 export const wagmiConfig = createConfig({
   chains: [activeChain],
   connectors: [
@@ -17,7 +28,7 @@ export const wagmiConfig = createConfig({
           mock({
             accounts: [DEV_ACCOUNT],
             // without defaultConnected the mock can't restore itself after a reload
-            features: { reconnect: true, defaultConnected: true },
+            features: { reconnect: true, defaultConnected: devWalletWasUsed() },
           }),
         ]
       : []),

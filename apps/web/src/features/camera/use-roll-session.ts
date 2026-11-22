@@ -7,20 +7,17 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 
 export type Shot = PhotoRecord & { url: string }
 
-export const PRACTICE_KEY = 'practice'
-
 /**
  * Everything about "the roll in the camera": which roll, its frames, and pushing shots on-chain.
- * - Wallet connected → the user's on-chain roll (claim → shoot → develop).
- * - Not connected   → an offline practice roll (stays on the device, never on-chain).
+ * A wallet is required — every shot is one tx on KUB Chain. Without one the phase is 'connect'.
  */
-export function useRollSession(practiceFrames: number) {
+export function useRollSession(defaultFrames: number) {
   const wallet = useWallet()
   const chain = useChainRoll(wallet.address)
   const onChain = Boolean(wallet.adapter)
   const roll = onChain ? chain.roll : null
 
-  const rollKey = onChain ? (roll ? `${activeChain.id}:${roll.id}` : null) : PRACTICE_KEY
+  const rollKey = roll ? `${activeChain.id}:${roll.id}` : null
   const [shots, setShots] = useState<Shot[]>([])
   const [action, dispatchAction] = useReducer(txReducer, { status: 'idle' })
   const [approvalUrl, setApprovalUrl] = useState<string | null>(null)
@@ -50,12 +47,12 @@ export function useRollSession(practiceFrames: number) {
   }, [])
 
   const pending = shots.filter((s) => s.status === 'pending').length
-  const frames = roll?.frames ?? practiceFrames
-  const used = onChain ? (roll?.framesUsed ?? 0) + pending : shots.length
+  const frames = roll?.frames ?? defaultFrames
+  const used = (roll?.framesUsed ?? 0) + pending
   const full = used >= frames
 
-  const phase: 'practice' | 'loading' | 'claim' | 'open' | 'full' = !onChain
-    ? 'practice'
+  const phase: 'connect' | 'loading' | 'claim' | 'open' | 'full' = !onChain
+    ? 'connect'
     : chain.loading
       ? 'loading'
       : !roll
@@ -96,20 +93,20 @@ export function useRollSession(practiceFrames: number) {
 
   const addShot = useCallback(
     async (photo: EncodedPhoto, filmId: number) => {
-      if (!rollKey || full) return
+      if (!onChain || !roll || !rollKey || full) return
       const record: PhotoRecord = {
         ...photo,
         rollKey,
         frame: used + 1,
         filmId,
         takenAt: Date.now(),
-        status: onChain ? 'pending' : 'local',
+        status: 'pending',
       }
       const url = URL.createObjectURL(photo.blob)
       urls.current.push(url)
       setShots((prev) => [...prev, { ...record, url }])
       await photoStore.put(record)
-      if (onChain && roll) void submit(record, roll.id)
+      void submit(record, roll.id)
     },
     [full, onChain, roll, rollKey, submit, used],
   )
@@ -148,13 +145,6 @@ export function useRollSession(practiceFrames: number) {
   const develop = () =>
     wallet.adapter && roll && runAction((h) => wallet.adapter!.develop(roll.id, h))
 
-  const newPracticeRoll = async () => {
-    await photoStore.clearRoll(PRACTICE_KEY)
-    urls.current.forEach((u) => URL.revokeObjectURL(u))
-    urls.current = []
-    setShots([])
-  }
-
   return {
     wallet,
     onChain,
@@ -173,6 +163,5 @@ export function useRollSession(practiceFrames: number) {
     retry,
     claim,
     develop,
-    newPracticeRoll,
   }
 }

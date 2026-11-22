@@ -5,11 +5,11 @@
  * (R2 upload lands in M3b). Survives reloads and offline use — like undeveloped film.
  */
 
-export type PhotoStatus = 'local' | 'pending' | 'confirmed' | 'failed'
+export type PhotoStatus = 'pending' | 'confirmed' | 'failed'
 
 export type PhotoRecord = {
   hash: `0x${string}`
-  /** `${chainId}:${rollId}` for on-chain rolls, `practice` for the offline practice roll */
+  /** `${chainId}:${rollId}` */
   rollKey: string
   frame: number
   filmId: number

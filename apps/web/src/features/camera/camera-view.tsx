@@ -45,7 +45,7 @@ export function CameraView() {
   // an open on-chain roll fixes the film; otherwise the picker decides
   const filmId = roll ? roll.filmId : pickedFilm
   const stock = getStock(filmId)
-  const filmLocked = phase === 'open' || (phase === 'practice' && shots.length > 0)
+  const filmLocked = phase === 'open'
 
   const usingImage = image !== null
   const source = useCallback(
@@ -104,7 +104,7 @@ export function CameraView() {
   }, [source, stock.look, usingImage, cam.facing])
 
   // ── capture ──────────────────────────────────────────────
-  const canShoot = live && !busy && !glError && !full && (phase === 'practice' || phase === 'open')
+  const canShoot = live && !busy && !glError && !full && phase === 'open'
 
   const shoot = async () => {
     const src = source()
@@ -148,7 +148,7 @@ export function CameraView() {
   const pendingCount = shots.filter((s) => s.status === 'pending').length
   const failedCount = shots.filter((s) => s.status === 'failed').length
   const statusLine = !session.onChain
-    ? t('chain.practice')
+    ? t('chain.connectFirst')
     : session.approvalUrl
       ? t('chain.approve')
       : pendingCount > 0
@@ -344,7 +344,11 @@ export function CameraView() {
         </div>
 
         <div className="flex justify-center">
-          {phase === 'loading' ? (
+          {phase === 'connect' ? (
+            <Button variant="primary" onClick={() => setConnectOpen(true)}>
+              {t('chain.connectToShoot')}
+            </Button>
+          ) : phase === 'loading' ? (
             <FilmStrip className="w-24" label={t('chain.loading')} />
           ) : phase === 'claim' || (phase === 'full' && session.canClaim) ? (
             session.canClaim ? (
@@ -380,10 +384,6 @@ export function CameraView() {
                 })}
               </span>
             )
-          ) : phase === 'practice' && full ? (
-            <Button variant="inverse" onClick={() => void session.newPracticeRoll()}>
-              {t('newRoll')}
-            </Button>
           ) : (
             <button
               type="button"
