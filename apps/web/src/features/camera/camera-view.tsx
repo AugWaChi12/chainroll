@@ -7,24 +7,24 @@ import {
   captureSize,
   encodeCanvas,
   getStock,
-  type EncodedPhoto,
   type FilmSource,
 } from '@/features/film'
+import { ConnectSheet, WalletButton, isBusy } from '@/features/wallet'
 import { Button, FilmStrip, FrameCounter, RebateLabel, cn } from '@deekub/ui'
-import { ArrowLeft, ImagePlus, RefreshCcw, SwitchCamera } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { ArrowLeft, ExternalLink, ImagePlus, RefreshCcw, SwitchCamera } from 'lucide-react'
+import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ReviewSheet } from './review-sheet'
 import { haptic, playShutter } from './shutter-fx'
 import { useCamera, type CameraStatus } from './use-camera'
-
-export type Shot = EncodedPhoto & { frame: number; filmId: number; url: string; takenAt: number }
+import { useRollSession } from './use-roll-session'
 
 const BLOCKING: CameraStatus[] = ['denied', 'no-camera', 'insecure', 'unsupported', 'error']
 
 export function CameraView() {
   const t = useTranslations('camera')
+  const format = useFormatter()
   const cam = useCamera()
 
   const previewRef = useRef<HTMLCanvasElement>(null)
@@ -32,17 +32,21 @@ export function CameraView() {
   const captureRef = useRef<FilmRenderer | null>(null)
   const [glError, setGlError] = useState(false)
 
-  const [filmId, setFilmId] = useState(FILM_STOCKS[0]!.id)
-  const stock = getStock(filmId)
+  const [pickedFilm, setPickedFilm] = useState(FILM_STOCKS[0]!.id)
   const [image, setImage] = useState<ImageBitmap | null>(null)
-  const [shots, setShots] = useState<Shot[]>([])
   const [busy, setBusy] = useState(false)
   const [flash, setFlash] = useState(false)
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
+  const [connectOpen, setConnectOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const used = shots.length
-  const full = used >= stock.frames
+  const session = useRollSession(getStock(pickedFilm).frames)
+  const { shots, used, frames, full, phase, roll } = session
+  // an open on-chain roll fixes the film; otherwise the picker decides
+  const filmId = roll ? roll.filmId : pickedFilm
+  const stock = getStock(filmId)
+  const filmLocked = phase === 'open' || (phase === 'practice' && shots.length > 0)
+
   const usingImage = image !== null
   const source = useCallback(
     (): FilmSource | null => image ?? cam.video.current,
@@ -99,17 +103,12 @@ export function CameraView() {
     return () => cancelAnimationFrame(raf)
   }, [source, stock.look, usingImage, cam.facing])
 
-  // revoke object URLs on unmount
-  const shotsRef = useRef(shots)
-  useEffect(() => {
-    shotsRef.current = shots
-  }, [shots])
-  useEffect(() => () => shotsRef.current.forEach((s) => URL.revokeObjectURL(s.url)), [])
-
   // ── capture ──────────────────────────────────────────────
+  const canShoot = live && !busy && !glError && !full && (phase === 'practice' || phase === 'open')
+
   const shoot = async () => {
     const src = source()
-    if (!src || busy || full) return
+    if (!src || !canShoot) return
     setBusy(true)
     playShutter()
     haptic()
@@ -119,28 +118,16 @@ export function CameraView() {
       const sw = src instanceof HTMLVideoElement ? src.videoWidth : src.width
       const sh = src instanceof HTMLVideoElement ? src.videoHeight : src.height
       const { width, height } = captureSize(sw, sh)
-      if (!captureRef.current) {
-        captureRef.current = new FilmRenderer(document.createElement('canvas'), {
-          preserveDrawingBuffer: true,
-        })
-      }
+      captureRef.current ??= new FilmRenderer(document.createElement('canvas'), {
+        preserveDrawingBuffer: true,
+      })
       const r = captureRef.current
       r.setSize(width, height)
       r.render(src, stock.look, {
         mirror: !usingImage && cam.facing === 'user',
         seed: Math.random(),
       })
-      const photo = await encodeCanvas(r.canvas)
-      setShots((prev) => [
-        ...prev,
-        {
-          ...photo,
-          frame: prev.length + 1,
-          filmId,
-          url: URL.createObjectURL(photo.blob),
-          takenAt: Date.now(),
-        },
-      ])
+      await session.addShot(await encodeCanvas(r.canvas), filmId)
     } finally {
       setBusy(false)
     }
@@ -153,14 +140,24 @@ export function CameraView() {
     setImage(bmp)
   }
 
-  const newRoll = () => {
-    shots.forEach((s) => URL.revokeObjectURL(s.url))
-    setShots([])
-    setReviewIndex(null)
-  }
-
   const blocked = !usingImage && BLOCKING.includes(cam.status)
   const lastShot = shots.at(-1)
+  const actionBusy = isBusy(session.action)
+
+  // ── status strip copy ────────────────────────────────────
+  const pendingCount = shots.filter((s) => s.status === 'pending').length
+  const failedCount = shots.filter((s) => s.status === 'failed').length
+  const statusLine = !session.onChain
+    ? t('chain.practice')
+    : session.approvalUrl
+      ? t('chain.approve')
+      : pendingCount > 0
+        ? t('chain.saving', { count: pendingCount })
+        : failedCount > 0
+          ? t('chain.failed', { count: failedCount })
+          : session.action.status === 'failed'
+            ? t(`chain.errors.${session.action.code}`)
+            : t('chain.onChain')
 
   return (
     <div data-mode="analog" className="grain flex h-dvh flex-col overflow-hidden bg-bg text-fg">
@@ -174,10 +171,34 @@ export function CameraView() {
           <ArrowLeft className="size-5" />
         </Link>
         <RebateLabel className="truncate">
-          {stock.code} · {stock.frames} EXP
+          {stock.code} · {frames} EXP{roll ? ` · #${roll.id}` : ''}
         </RebateLabel>
-        <FrameCounter used={used} total={stock.frames} />
+        <FrameCounter used={used} total={frames} />
       </header>
+
+      {/* chain status strip */}
+      <div className="flex min-h-9 shrink-0 items-center justify-between gap-2 px-4 pb-2 text-2xs">
+        <span
+          role="status"
+          className={cn(
+            'truncate',
+            failedCount > 0 || session.action.status === 'failed' ? 'text-danger' : 'text-fg-muted',
+          )}
+        >
+          {statusLine}
+          {session.approvalUrl && (
+            <a
+              href={session.approvalUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-2 inline-flex items-center gap-1 text-frame underline underline-offset-2"
+            >
+              {t('chain.openApproval')} <ExternalLink className="size-3" />
+            </a>
+          )}
+        </span>
+        <WalletButton onOpen={() => setConnectOpen(true)} />
+      </div>
 
       {/* viewfinder */}
       <div className="relative flex min-h-0 flex-1 items-center justify-center px-3">
@@ -188,7 +209,6 @@ export function CameraView() {
             role="img"
             className={cn('absolute inset-0 size-full bg-black', !live && 'opacity-0')}
           />
-          {/* frame corners */}
           {[
             'top-2 left-2 border-t border-l',
             'top-2 right-2 border-t border-r',
@@ -203,8 +223,7 @@ export function CameraView() {
             </span>
           )}
 
-          {/* status overlays */}
-          {!live && !blocked && (
+          {!live && !blocked && !glError && (
             <div className="absolute inset-0 grid place-items-center">
               <FilmStrip label={t('starting')} />
             </div>
@@ -238,7 +257,6 @@ export function CameraView() {
             </div>
           )}
 
-          {/* shutter flash */}
           <div
             aria-hidden
             className={cn(
@@ -254,7 +272,7 @@ export function CameraView() {
         <div role="radiogroup" aria-label={t('film')} className="flex justify-center gap-2">
           {FILM_STOCKS.map((s) => {
             const selected = s.id === filmId
-            const locked = used > 0 && !selected
+            const locked = filmLocked && !selected
             return (
               <button
                 key={s.id}
@@ -262,7 +280,7 @@ export function CameraView() {
                 role="radio"
                 aria-checked={selected}
                 disabled={locked}
-                onClick={() => setFilmId(s.id)}
+                onClick={() => setPickedFilm(s.id)}
                 className={cn(
                   'flex items-center gap-2 rounded-xs border px-2.5 py-1.5 text-xs transition-colors',
                   selected
@@ -282,7 +300,13 @@ export function CameraView() {
           })}
         </div>
         <p className="mt-1.5 h-4 text-center text-2xs text-fg-muted">
-          {full ? t('rollFull') : used > 0 ? t('filmLocked') : ''}
+          {full
+            ? t('rollFull')
+            : filmLocked
+              ? t('filmLocked')
+              : phase === 'claim'
+                ? t('chain.pickFilm')
+                : ''}
         </p>
       </div>
 
@@ -301,6 +325,18 @@ export function CameraView() {
               <span className="absolute right-0 bottom-0 bg-black/70 px-1 font-mono text-[10px] text-frame">
                 {String(lastShot.frame).padStart(2, '0')}
               </span>
+              {lastShot.status === 'pending' && (
+                <span
+                  aria-hidden
+                  className="absolute top-1 left-1 size-1.5 animate-pulse rounded-full bg-warning"
+                />
+              )}
+              {lastShot.status === 'failed' && (
+                <span
+                  aria-hidden
+                  className="absolute top-1 left-1 size-1.5 rounded-full bg-danger"
+                />
+              )}
             </button>
           ) : (
             <span className="size-14 border border-dashed border-border" aria-hidden />
@@ -308,15 +344,51 @@ export function CameraView() {
         </div>
 
         <div className="flex justify-center">
-          {full ? (
-            <Button variant="inverse" onClick={newRoll}>
+          {phase === 'loading' ? (
+            <FilmStrip className="w-24" label={t('chain.loading')} />
+          ) : phase === 'claim' || (phase === 'full' && session.canClaim) ? (
+            session.canClaim ? (
+              <Button
+                variant="primary"
+                disabled={actionBusy}
+                onClick={() => session.claim(pickedFilm)}
+              >
+                {actionBusy ? t('chain.claiming') : t('chain.claim')}
+              </Button>
+            ) : (
+              <span className="text-center font-mono text-2xs text-fg-muted">
+                {t('chain.nextRoll', {
+                  time: format.dateTime(new Date(session.nextClaimAt * 1000), {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                })}
+              </span>
+            )
+          ) : phase === 'full' ? (
+            roll && roll.developReadyAt === 0 ? (
+              <Button variant="inverse" disabled={actionBusy} onClick={() => session.develop()}>
+                {actionBusy ? t('chain.developing') : t('chain.develop')}
+              </Button>
+            ) : (
+              <span className="text-center font-mono text-2xs text-fg-muted">
+                {t('chain.developed', {
+                  time: format.dateTime(new Date((roll?.developReadyAt ?? 0) * 1000), {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                })}
+              </span>
+            )
+          ) : phase === 'practice' && full ? (
+            <Button variant="inverse" onClick={() => void session.newPracticeRoll()}>
               {t('newRoll')}
             </Button>
           ) : (
             <button
               type="button"
               onClick={shoot}
-              disabled={!live || busy || glError}
+              disabled={!canShoot}
               aria-label={t('shutter')}
               className="group grid size-20 place-items-center rounded-full border-2 border-fg/80 transition-transform active:scale-95 disabled:opacity-40"
             >
@@ -371,8 +443,10 @@ export function CameraView() {
           index={reviewIndex}
           onIndex={setReviewIndex}
           onClose={() => setReviewIndex(null)}
+          onRetry={session.retry}
         />
       )}
+      <ConnectSheet open={connectOpen} onClose={() => setConnectOpen(false)} />
     </div>
   )
 }

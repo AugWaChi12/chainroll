@@ -14,7 +14,8 @@
     "storybook": "pnpm --filter @deekub/ui storybook",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "contracts:test": "pnpm --filter @deekub/contracts test"
+    "contracts:test": "pnpm --filter @deekub/contracts test",
+    "dev:chain": "node scripts/dev-chain.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

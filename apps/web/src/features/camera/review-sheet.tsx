@@ -2,20 +2,22 @@
 
 import { getStock } from '@/features/film'
 import { Button, RebateLabel, TxHash, cn } from '@deekub/ui'
-import { Download, X } from 'lucide-react'
+import { explorerTxUrl } from '@/features/wallet'
+import { Download, RefreshCcw, X } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useEffect, useRef } from 'react'
-import type { Shot } from './camera-view'
+import type { Shot } from './use-roll-session'
 
 type Props = {
   shots: Shot[]
   index: number
   onIndex: (i: number) => void
   onClose: () => void
+  onRetry: (hash: `0x${string}`) => void
 }
 
 /** Full-screen review of the current roll: the photo, its on-chain fingerprint, and a contact strip. */
-export function ReviewSheet({ shots, index, onIndex, onClose }: Props) {
+export function ReviewSheet({ shots, index, onIndex, onClose, onRetry }: Props) {
   const t = useTranslations('camera.reviewSheet')
   const format = useFormatter()
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -82,7 +84,37 @@ export function ReviewSheet({ shots, index, onIndex, onClose }: Props) {
         <dd className="flex justify-end">
           <TxHash hash={shot.hash} />
         </dd>
+        <dt>{t('chain')}</dt>
+        <dd
+          className={cn(
+            'flex items-center justify-end gap-2 text-right',
+            shot.status === 'confirmed' && 'text-success',
+            shot.status === 'pending' && 'text-warning',
+            shot.status === 'failed' && 'text-danger',
+          )}
+        >
+          {t(`status.${shot.status}`)}
+          {shot.status === 'failed' && shot.errorCode && (
+            <span className="text-fg-muted">· {t(`errors.${shot.errorCode}`)}</span>
+          )}
+        </dd>
+        {shot.txHash && (
+          <>
+            <dt>Tx</dt>
+            <dd className="flex justify-end">
+              <TxHash hash={shot.txHash} explorerUrl={explorerTxUrl('')} />
+            </dd>
+          </>
+        )}
       </dl>
+      {shot.status === 'failed' && (
+        <div className="flex justify-center pt-2">
+          <Button size="sm" variant="secondary" onClick={() => onRetry(shot.hash)}>
+            <RefreshCcw />
+            {t('retry')}
+          </Button>
+        </div>
+      )}
       <p className="mx-auto max-w-md px-4 pt-2 text-center text-2xs text-fg-subtle">
         {t('hashNote')}
       </p>

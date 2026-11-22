@@ -370,6 +370,25 @@ export const chainRollAbi = [
   },
   {
     "type": "function",
+    "name": "latestRollOf",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "rollId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "nextClaimAt",
     "inputs": [
       {

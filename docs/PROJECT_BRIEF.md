@@ -115,7 +115,7 @@ event Developed(address indexed owner, uint256 indexed rollId, uint64 readyAt);
 - [ ] สมัคร KUB Developer Console + ขอสิทธิ์ mainnet ของ NEXT SDK (ต้องกรอกฟอร์มและรอติดต่อกลับ — **ทำทันที** เพราะอาจใช้เวลา)
 - [x] tx จาก Bitkub NEXT ผ่าน `sdkCallHelperRouter` (`msg.sender` = router) และส่งผู้ใช้จริงเป็น arg ตัวท้าย `address _bitkubNext` — contract รองรับแล้ว (ข้อ 5). ฝั่งเว็บเรียกด้วย `sdk.sendCustomTx(contract, "shoot(uint256 rollId, bytes32 photoHash, address _bitkubNext)", [rollId, hash])`
 - [ ] ยืนยัน address ของ router: testnet ตาม docs คือ `0x96f4C25E4fEB02c8BCbAdb80d0088E0112F728Bc` (docs เตือนให้ยืนยันเอง), **mainnet ยังไม่มีใน docs** — ตั้งค่าได้ทีหลังด้วย `setSdkCallHelperRouter`
-- [ ] ค่า gas ของผู้ใช้ Bitkub NEXT จ่ายอย่างไร / ใครจ่าย
+- [~] ค่า gas ของผู้ใช้ Bitkub NEXT: SDK มี `getUserQuota()` → `{ currentFree, limitFree, currentPaid }` แปลว่ามีโควตา tx ฟรีต่อผู้ใช้ — ต้องยืนยันตัวเลขกับทีม KUB
 
 ---
 
@@ -399,7 +399,8 @@ CI (GitHub Actions): `lint → typecheck → test → build` ทุก PR; previ
 | M1 | Monorepo + CI + `packages/ui` tokens & primitives + Storybook + app shell | `pnpm dev` รันได้, Storybook มี Button/Input/DataTable |
 | M1.5 | Contract + test + deploy testnet | ✅ contract + 26 tests + ABI→TS + deploy script (ทดสอบบน anvil แล้ว) · ⏳ deploy testnet รอ key ที่มี tKUB |
 | M2 | กล้อง + filter 3 โทน (ยังไม่ต่อเชน) | ✅ กล้อง + WebGL2 film shader 3 โทน + WebP ≤300KB + keccak hash + ม้วน 24 รูป (ทดสอบในเบราว์เซอร์ด้วยรูปจากเครื่อง) · ⏳ ทดสอบกล้องจริงบนมือถือ (`pnpm --filter @deekub/web dev:https`) · iOS Safari เข้ารหัส WebP ไม่ได้ → ใช้ JPEG แทน |
-| M3 | ต่อ wallet (Bitkub NEXT + MetaMask) + `shoot()` + upload R2 | แชะแล้วเห็น tx บน explorer ทั้งสองกระเป๋า |
+| M3a | ต่อ wallet + บันทึกลงเชน | ✅ WalletAdapter (MetaMask / Bitkub NEXT SDK / dev wallet), tx state machine, claim → shoot → develop บนเชน, รูปเก็บใน IndexedDB (รีโหลดไม่หาย) · ทดสอบครบวงบน anvil (hash ในแอป = event บนเชน) · ⏳ Bitkub NEXT ยังไม่ได้ทดสอบจริง (รอ Client ID) |
+| M3b | Server: upload R2 + Supabase + SIWE session + indexer | รอบัญชี Cloudflare R2 + Supabase |
 | M4 | Gallery / contact sheet + feed + report | โพสต์และเห็นใน feed |
 | M5 | Darkroom Console (8.1–8.3, 8.7 ก่อน) | moderator ทำงานได้ด้วยคีย์บอร์ด |
 | M6 | Deploy mainnet หลัง Zurich fork | 14 ธ.ค. |

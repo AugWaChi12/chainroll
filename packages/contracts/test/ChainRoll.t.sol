@@ -115,6 +115,18 @@ contract ChainRollTest is Test {
         assertFalse(cam.canClaim(alice));
     }
 
+    function test_claim_tracksLatestRoll() public {
+        assertEq(cam.latestRollOf(alice), 0);
+        uint256 first = _claim(alice);
+        assertEq(cam.latestRollOf(alice), first);
+        vm.prank(router);
+        uint256 bobs = cam.claimDailyRoll(FILM, bob);
+        assertEq(cam.latestRollOf(bob), bobs);
+        vm.warp(cam.nextClaimAt(alice));
+        uint256 second = _claim(alice);
+        assertEq(cam.latestRollOf(alice), second);
+    }
+
     function test_claim_onlyOncePerBangkokDay() public {
         _claim(alice);
         uint256 nextAt = cam.nextClaimAt(alice);

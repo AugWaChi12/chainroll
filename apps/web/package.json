@@ -12,14 +12,19 @@
     "dev:https": "next dev --experimental-https -H 0.0.0.0"
   },
   "dependencies": {
+    "@bitkub-chain/sdk.js": "1.0.1",
+    "@deekub/contracts": "workspace:*",
     "@deekub/shared": "workspace:*",
     "@deekub/ui": "workspace:*",
+    "@tanstack/react-query": "5.108.2",
     "lucide-react": "1.77.0",
     "next": "16.4.6",
     "next-intl": "4.15.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "viem": "2.58.4"
+    "viem": "2.58.4",
+    "wagmi": "3.7.11",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@deekub/config": "workspace:*",

@@ -40,6 +40,8 @@ contract ChainRoll is AccessControl, Pausable {
     /// @dev day number of the user's last free claim, +1 so that 0 means "never".
     mapping(address user => uint256) private _lastClaimDayPlusOne;
     mapping(bytes32 photoHash => bool) public hashUsed;
+    /// @notice Most recent roll claimed by a user (0 = none). Lets the app find the open roll without scanning logs.
+    mapping(address user => uint256 rollId) public latestRollOf;
 
     uint256 public nextRollId = 1;
     address public sdkCallHelperRouter;
@@ -196,6 +198,7 @@ contract ChainRoll is AccessControl, Pausable {
 
         _lastClaimDayPlusOne[user] = currentDay() + 1;
         rollId = nextRollId++;
+        latestRollOf[user] = rollId;
         _rolls[rollId] = Roll({
             owner: user, filmId: filmId, framesUsed: 0, frames: film.frames, developReadyAt: 0
         });

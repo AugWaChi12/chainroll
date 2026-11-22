@@ -8,6 +8,7 @@ import {
   Noto_Serif_Thai,
 } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { WalletProvider } from '@/features/wallet'
 import './globals.css'
 
 const display = Instrument_Serif({ subsets: ['latin'], weight: '400', variable: '--ff-display' })
@@ -47,7 +48,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       suppressHydrationWarning
     >
       <body className="min-h-dvh">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider>
+          <WalletProvider>{children}</WalletProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   )
