@@ -1,7 +1,7 @@
 import type { Address, Hex } from 'viem'
 import type { TxEvent } from './tx'
 
-export type WalletKind = 'bitkub-next' | 'injected' | 'dev'
+export type WalletKind = 'bitkub-next' | 'injected' | 'walletconnect' | 'dev'
 
 export type TxHooks = { onEvent: (e: TxEvent) => void }
 

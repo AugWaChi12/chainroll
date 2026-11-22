@@ -12,24 +12,45 @@ import {
   type ReactNode,
 } from 'react'
 import type { Address } from 'viem'
-import { WagmiProvider, useAccount, useConnect, useDisconnect } from 'wagmi'
+import {
+  WagmiProvider,
+  useAccount,
+  useConnect,
+  useConnectors,
+  useDisconnect,
+  type Connector,
+} from 'wagmi'
 import { bitkubNextEnabled } from '@/lib/env'
 import type { WalletAdapter, WalletKind } from './adapter'
 import { createBitkubNextAdapter, getBitkubSdk } from './bitkub-next'
 import { activeChain, chainRollContract, localChain } from './chain'
-import { wagmiConfig } from './config'
+import { wagmiConfig, walletConnectEnabled } from './config'
 import { createInjectedAdapter } from './injected-adapter'
+
+/** One row in the connect sheet. */
+export type WalletOption = {
+  /** connector id, or 'bitkub-next' */
+  id: string
+  kind: WalletKind
+  name: string
+  /** data: URI icon announced by the wallet (EIP-6963) */
+  icon?: string
+  available: boolean
+}
 
 type WalletContextValue = {
   /** null = not connected (or contract not deployed on this chain) */
   adapter: WalletAdapter | null
   address: Address | null
   kind: WalletKind | null
+  /** display name of the connected wallet, e.g. "MetaMask" */
+  walletName: string | null
   connecting: boolean
-  /** which options the connect sheet should offer */
-  available: { bitkubNext: boolean; injected: boolean; dev: boolean }
-  connect: (kind: WalletKind) => Promise<void>
+  options: WalletOption[]
+  connect: (optionId: string) => Promise<void>
   disconnect: () => Promise<void>
+  /** WalletConnect pairing URI while waiting for a scan (render as QR) */
+  wcUri: string | null
   contractReady: boolean
 }
 
@@ -41,18 +62,22 @@ export function useWallet() {
   return ctx
 }
 
+const kindOf = (c: Connector): WalletKind =>
+  c.id === 'mock' ? 'dev' : c.type === 'walletConnect' ? 'walletconnect' : 'injected'
+
 function WalletState({ children }: { children: ReactNode }) {
   const account = useAccount()
-  const { connectAsync, connectors } = useConnect()
+  const connectors = useConnectors()
+  const { connectAsync } = useConnect()
   const { disconnectAsync } = useDisconnect()
   const [next, setNext] = useState<{ sdk: BitkubChainSDK; address: Address } | null>(null)
   const [connecting, setConnecting] = useState(false)
-  const [hasInjected, setHasInjected] = useState(false)
+  const [wcUri, setWcUri] = useState<string | null>(null)
+  const [hasWindowEthereum, setHasWindowEthereum] = useState(false)
 
-  // detect a browser wallet after mount (window.ethereum)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reading a browser global once
-    setHasInjected(typeof window !== 'undefined' && 'ethereum' in window)
+    setHasWindowEthereum(typeof window !== 'undefined' && 'ethereum' in window)
   }, [])
 
   // restore a Bitkub NEXT session
@@ -71,23 +96,69 @@ function WalletState({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const options = useMemo<WalletOption[]>(() => {
+    const announced = connectors.filter((c) => c.type === 'injected' && c.id !== 'injected')
+    const generic = connectors.find((c) => c.id === 'injected')
+    const wc = connectors.find((c) => c.type === 'walletConnect')
+    const dev = connectors.find((c) => c.id === 'mock')
+    const list: WalletOption[] = [
+      {
+        id: 'bitkub-next',
+        kind: 'bitkub-next',
+        name: 'Bitkub NEXT',
+        available: bitkubNextEnabled && activeChain.id !== localChain.id,
+      },
+      // EIP-6963 wallets (MetaMask, OKX, Rabby…) with their real names and icons
+      ...announced.map((c) => ({
+        id: c.id,
+        kind: 'injected' as const,
+        name: c.name,
+        icon: c.icon,
+        available: true,
+      })),
+    ]
+    // old-style wallets that don't announce via EIP-6963
+    if (announced.length === 0 && generic) {
+      list.push({
+        id: generic.id,
+        kind: 'injected',
+        name: 'Browser wallet',
+        available: hasWindowEthereum,
+      })
+    }
+    list.push({
+      id: wc?.id ?? 'walletConnect',
+      kind: 'walletconnect',
+      name: 'WalletConnect',
+      available: Boolean(wc) && walletConnectEnabled,
+    })
+    if (dev) list.push({ id: dev.id, kind: 'dev', name: 'Dev wallet', available: true })
+    return list
+  }, [connectors, hasWindowEthereum])
+
   const connect = useCallback(
-    async (kind: WalletKind) => {
+    async (optionId: string) => {
       setConnecting(true)
+      setWcUri(null)
+      const connector = connectors.find((c) => c.id === optionId)
+      const onMessage = ({ type, data }: { type: string; data?: unknown }) => {
+        if (type === 'display_uri' && typeof data === 'string') setWcUri(data)
+      }
       try {
-        if (kind === 'bitkub-next') {
+        if (optionId === 'bitkub-next') {
           const sdk = await getBitkubSdk()
           await sdk.loginWithBitkubNext()
           const address = (await sdk.getUserWalletAddress()) as Address
           setNext({ sdk, address })
           return
         }
-        const connector = connectors.find((c) =>
-          kind === 'dev' ? c.id === 'mock' : c.id === 'injected',
-        )
-        if (!connector) throw new Error(`connector ${kind} not available`)
+        if (!connector) throw new Error(`connector ${optionId} not available`)
+        connector.emitter.on('message', onMessage)
+        // chainId → injected wallets are asked to add/switch to KUB Chain
         await connectAsync({ connector, chainId: activeChain.id })
       } finally {
+        connector?.emitter.off('message', onMessage)
+        setWcUri(null)
         setConnecting(false)
       }
     },
@@ -104,33 +175,28 @@ function WalletState({ children }: { children: ReactNode }) {
 
   const value = useMemo<WalletContextValue>(() => {
     const contract = chainRollContract
+    const connector = account.connector
     let adapter: WalletAdapter | null = null
     if (contract && next) adapter = createBitkubNextAdapter(next.sdk, next.address, contract)
-    else if (contract && account.address && account.connector) {
-      adapter = createInjectedAdapter(
-        account.address,
-        contract,
-        account.connector.id === 'mock' ? 'dev' : 'injected',
-      )
+    else if (contract && account.address && connector) {
+      adapter = createInjectedAdapter(account.address, contract, kindOf(connector))
     }
     return {
       adapter,
       address: next?.address ?? account.address ?? null,
-      kind: next
-        ? 'bitkub-next'
-        : account.connector
-          ? account.connector.id === 'mock'
-            ? 'dev'
-            : 'injected'
+      kind: next ? 'bitkub-next' : connector ? kindOf(connector) : null,
+      walletName: next
+        ? 'Bitkub NEXT'
+        : connector
+          ? kindOf(connector) === 'dev'
+            ? 'Dev wallet'
+            : connector.name
           : null,
       connecting: connecting || account.isConnecting,
-      available: {
-        bitkubNext: bitkubNextEnabled && activeChain.id !== localChain.id,
-        injected: hasInjected,
-        dev: activeChain.id === localChain.id,
-      },
+      options,
       connect,
       disconnect,
+      wcUri,
       contractReady: Boolean(contract),
     }
   }, [
@@ -140,8 +206,9 @@ function WalletState({ children }: { children: ReactNode }) {
     connect,
     connecting,
     disconnect,
-    hasInjected,
     next,
+    options,
+    wcUri,
   ])
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>

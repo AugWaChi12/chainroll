@@ -27,4 +27,4 @@ bracket_spacing = false
 
 [rpc_endpoints]
 kub_testnet = "https://rpc-testnet.bitkubchain.io"
-kub_mainnet = "https://rpc.bitkubchain.io"
+kub_mainnet = "https://rpc.kubchain.io"

@@ -109,7 +109,7 @@ event Developed(address indexed owner, uint256 indexed rollId, uint64 readyAt);
   ```
 - เก็บ `wallet_kind` ใน `users` ไว้ดูสถิติในหน้า admin
 - OAuth client secret / token exchange ทำฝั่ง server (`/api/auth/bitkub-next/callback`) เท่านั้น
-- Chain (**ยืนยันจาก docs ก่อนใช้**): mainnet chain id `96`, RPC `https://rpc.bitkubchain.io`, explorer `bkcscan.com` · testnet chain id `25925` (`0x6545`), RPC `https://rpc-testnet.bitkubchain.io`
+- Chain (Whitepaper V5.2): mainnet `96`, RPC `https://rpc.kubchain.io` (สำรอง `rpc.bitkubchain.io`), block 3s, gas ขั้นต่ำ 25 Gwei · testnet `25925`, RPC `https://rpc-testnet.bitkubchain.io` (โดเมนใหม่ `rpc-testnet.kubchain.io` ยังไม่ตอบ ณ 22 พ.ย.) · L2 mainnet `9601` / L2 testnet `259251` · explorer `bkcscan.com`
 
 **ต้องเช็คก่อนเขียน contract (สำคัญ)**
 - [ ] สมัคร KUB Developer Console + ขอสิทธิ์ mainnet ของ NEXT SDK (ต้องกรอกฟอร์มและรอติดต่อกลับ — **ทำทันที** เพราะอาจใช้เวลา)
