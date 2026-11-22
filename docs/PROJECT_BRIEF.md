@@ -398,7 +398,7 @@ CI (GitHub Actions): `lint → typecheck → test → build` ทุก PR; previ
 | M0 | สมัคร Developer Console + ขอสิทธิ์ NEXT SDK mainnet *(ทำคู่ขนานได้เลย)* | ได้ client id / อนุมัติ |
 | M1 | Monorepo + CI + `packages/ui` tokens & primitives + Storybook + app shell | `pnpm dev` รันได้, Storybook มี Button/Input/DataTable |
 | M1.5 | Contract + test + deploy testnet | ✅ contract + 26 tests + ABI→TS + deploy script (ทดสอบบน anvil แล้ว) · ⏳ deploy testnet รอ key ที่มี tKUB |
-| M2 | กล้อง + filter 3 โทน (ยังไม่ต่อเชน) | ถ่ายแล้วได้ WebP บนมือถือจริง |
+| M2 | กล้อง + filter 3 โทน (ยังไม่ต่อเชน) | ✅ กล้อง + WebGL2 film shader 3 โทน + WebP ≤300KB + keccak hash + ม้วน 24 รูป (ทดสอบในเบราว์เซอร์ด้วยรูปจากเครื่อง) · ⏳ ทดสอบกล้องจริงบนมือถือ (`pnpm --filter @deekub/web dev:https`) · iOS Safari เข้ารหัส WebP ไม่ได้ → ใช้ JPEG แทน |
 | M3 | ต่อ wallet (Bitkub NEXT + MetaMask) + `shoot()` + upload R2 | แชะแล้วเห็น tx บน explorer ทั้งสองกระเป๋า |
 | M4 | Gallery / contact sheet + feed + report | โพสต์และเห็นใน feed |
 | M5 | Darkroom Console (8.1–8.3, 8.7 ก่อน) | moderator ทำงานได้ด้วยคีย์บอร์ด |

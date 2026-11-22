@@ -1,1 +1,1 @@
-export { CameraPlaceholder } from './camera-placeholder'
+export { CameraView } from './camera-view'
