@@ -1,0 +1,138 @@
+/*
+ * Import AFTER `@import "tailwindcss"` in the consuming app.
+ * Maps semantic tokens → Tailwind utilities (bg-bg, text-fg-muted, border-border, bg-accent …)
+ */
+@import './tokens/tokens.css';
+
+@source '.';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-bg-raised: var(--bg-raised);
+  --color-bg-sunken: var(--bg-sunken);
+  --color-bg-inverse: var(--bg-inverse);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-inverse: var(--fg-inverse);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-frame: var(--frame);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-focus: var(--focus-ring);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #fff;
+  --color-black: #000;
+
+  --radius-*: initial;
+  --radius-none: 0;
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-full: 9999px;
+
+  --shadow-*: initial;
+  --shadow-pop: var(--elev-pop);
+
+  /* --ff-* are set by next/font in the app (or Google Fonts in Storybook) */
+  --font-display:
+    var(--ff-display, 'Instrument Serif'), var(--ff-display-th, 'Noto Serif Thai'), serif;
+  --font-sans: var(--ff-sans, 'IBM Plex Sans Thai'), system-ui, sans-serif;
+  --font-mono: var(--ff-mono, 'IBM Plex Mono'), ui-monospace, monospace;
+
+  /* type scale 1.2 — base 15px */
+  --text-2xs: 12px;
+  --text-2xs--line-height: 16px;
+  --text-xs: 13px;
+  --text-xs--line-height: 18px;
+  --text-sm: 15px;
+  --text-sm--line-height: 22px;
+  --text-md: 18px;
+  --text-md--line-height: 26px;
+  --text-lg: 22px;
+  --text-lg--line-height: 30px;
+  --text-xl: 26px;
+  --text-xl--line-height: 34px;
+  --text-2xl: 32px;
+  --text-2xl--line-height: 38px;
+  --text-3xl: 44px;
+  --text-3xl--line-height: 48px;
+  --text-4xl: 64px;
+  --text-4xl--line-height: 64px;
+
+  --ease-out: var(--motion-out);
+  --ease-in: var(--motion-in);
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--ff-sans, 'IBM Plex Sans Thai'), system-ui, sans-serif;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+  }
+  ::selection {
+    background: var(--frame);
+    color: var(--ink-950);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Film grain — only for analog surfaces & hero (§9.7) */
+@utility grain {
+  position: relative;
+  isolation: isolate;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@keyframes film-advance {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -48px;
+  }
+}
+@keyframes develop-in {
+  from {
+    filter: brightness(0) contrast(1.4);
+  }
+  60% {
+    filter: brightness(0.6) contrast(1.2) sepia(0.4);
+  }
+  to {
+    filter: none;
+  }
+}

@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+@import '@deekub/ui/styles.css';
+
+/* scan the shared UI package for class names */
+@source '../../../../packages/ui/src';

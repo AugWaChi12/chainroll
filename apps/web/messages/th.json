@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "title": "ChainRoll — กล้องฟิล์มบน KUB Chain",
+    "description": "ถ่ายหนึ่งแชะ ใส่โทนฟิล์ม บันทึกลงเชน"
+  },
+  "brand": "ChainRoll",
+  "landing": {
+    "rebate": "KUB 96 · ISO 400 · 24 EXP",
+    "headline": "ถ่ายทีละแชะ\nเหมือนฟิล์มจริง",
+    "sub": "วันละหนึ่งม้วน ยี่สิบสี่รูป ทุกแชะถูกบันทึกลง KUB Chain — ช้าลงนิดนึง แต่ทุกรูปมีความหมาย",
+    "ctaCamera": "เปิดกล้อง",
+    "ctaFeed": "ดูรูปจากคนอื่น",
+    "stepsTitle": "จากชัตเตอร์ถึงเชน",
+    "steps": {
+      "load": { "title": "ใส่ฟิล์ม", "body": "รับม้วนฟรีวันละม้วน เลือกโทนที่ชอบ" },
+      "shoot": { "title": "ถ่าย", "body": "ทุกแชะสร้างลายนิ้วมือของรูปและบันทึกลงเชน" },
+      "develop": { "title": "ล้าง", "body": "ถ่ายครบม้วนแล้วส่งล้าง รอสักพักก่อนได้ดูรูป" },
+      "share": { "title": "แชร์", "body": "เลือกรูปที่ชอบลง feed — ไม่โพสต์ก็ไม่มีใครเห็น" }
+    },
+    "privacy": "รูปไม่ได้ขึ้นเชน — บนเชนมีแค่ hash ของรูป ลบโพสต์ได้เสมอ",
+    "launch": "เปิดตัวพร้อม Zurich Hard Fork · 14.12"
+  },
+  "camera": {
+    "placeholder": "กล้องกำลังมา",
+    "placeholderBody": "viewfinder และฟิลเตอร์ฟิล์มอยู่ใน milestone ถัดไป (M2)",
+    "shutter": "ถ่ายรูป"
+  },
+  "admin": {
+    "console": "Darkroom Console",
+    "search": "ค้นหา address, โพสต์, tx…",
+    "nav": {
+      "monitor": "ดูแลระบบ",
+      "content": "เนื้อหา",
+      "system": "ระบบ",
+      "overview": "ภาพรวม",
+      "moderation": "ตรวจเนื้อหา",
+      "films": "ม้วนฟิล์ม",
+      "users": "ผู้ใช้",
+      "gas": "Gas และโควตา",
+      "contract": "Contract",
+      "audit": "Audit log"
+    },
+    "overview": {
+      "eyebrow": "01 · ภาพรวม",
+      "title": "วันนี้ในห้องมืด",
+      "description": "ข้อมูลตัวอย่าง — จะต่อกับ indexer จริงใน M3",
+      "export": "Export",
+      "refresh": "รีเฟรช",
+      "kpi": {
+        "shots": "แชะวันนี้",
+        "txFailed": "tx ไม่สำเร็จ",
+        "activeUsers": "ผู้ใช้ active",
+        "openReports": "รายงานรอตรวจ",
+        "vsYesterday": "เทียบเมื่อวาน",
+        "needsReview": "ต้องตรวจภายใน 24 ชม."
+      },
+      "relayer": {
+        "title": "กระเป๋า relayer เหลือพอใช้อีก {days} วัน",
+        "body": "ยอดคงเหลือ {balance} KUB · ใช้ไปเฉลี่ย {burn} KUB/วัน",
+        "action": "เติม KUB"
+      },
+      "recent": "แชะล่าสุด",
+      "cols": {
+        "frame": "เฟรม",
+        "shooter": "ผู้ถ่าย",
+        "film": "ฟิล์ม",
+        "wallet": "กระเป๋า",
+        "tx": "Tx",
+        "status": "สถานะ",
+        "time": "เวลา"
+      },
+      "status": { "confirmed": "ยืนยันแล้ว", "pending": "รอเชน", "failed": "ไม่สำเร็จ" },
+      "bulkHide": "ซ่อนที่เลือก"
+    },
+    "soon": {
+      "title": "ส่วนนี้ยังไม่ได้ล้าง",
+      "body": "อยู่ในแผน M5 — ดูรายละเอียดใน PROJECT_BRIEF §8"
+    }
+  }
+}
