@@ -16,10 +16,12 @@ export { DataTable, type ColumnDef, type DataTableProps } from './components/dat
 export {
   FilmStrip,
   FrameCounter,
+  LatentFrame,
   RebateLabel,
   TxHash,
   truncateHash,
   type FrameCounterProps,
+  type LatentFrameProps,
   type TxHashProps,
 } from './components/film'
 export {

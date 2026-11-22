@@ -129,3 +129,53 @@ export function FilmStrip({
     </div>
   )
 }
+
+/* ── LatentFrame ──────────────────────────────────────────── */
+
+export type LatentFrameProps = {
+  frame: number
+  /** on-chain state of this frame */
+  status?: 'pending' | 'confirmed' | 'failed'
+  className?: string
+  /** show the big frame number (contact sheets) or keep it tiny (thumbnails) */
+  size?: 'sm' | 'lg'
+}
+
+/**
+ * An exposed-but-undeveloped frame: you know it's there, you can't see it yet.
+ * Used everywhere a photo would appear before its roll is developed (PROJECT_BRIEF §7, decision 1).
+ */
+export function LatentFrame({ frame, status, className, size = 'sm' }: LatentFrameProps) {
+  const n = String(frame).padStart(2, '0')
+  return (
+    <div
+      role="img"
+      aria-label={`เฟรม ${n} — ยังไม่ได้ล้าง`}
+      className={cn(
+        'relative overflow-hidden bg-[#120f0d]',
+        "before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_30%_20%,rgba(210,58,30,0.10),transparent_60%)] before:content-['']",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          'absolute inset-0 grid place-items-center font-mono tabular text-frame/35',
+          size === 'lg' ? 'text-2xl' : 'text-[10px]',
+        )}
+      >
+        {n}
+      </span>
+      {status && (
+        <span
+          aria-hidden
+          className={cn(
+            'absolute top-1 left-1 size-1.5 rounded-full',
+            status === 'pending' && 'animate-pulse bg-warning',
+            status === 'confirmed' && 'bg-success',
+            status === 'failed' && 'bg-danger',
+          )}
+        />
+      )}
+    </div>
+  )
+}

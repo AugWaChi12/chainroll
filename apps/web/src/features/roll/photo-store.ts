@@ -77,6 +77,15 @@ export const photoStore = {
       return []
     }
   },
+  /** Every roll key that has at least one photo on this device. */
+  async rollKeys(): Promise<string[]> {
+    try {
+      const rows = await tx<PhotoRecord[]>('readonly', (s) => s.getAll())
+      return [...new Set(rows.map((r) => r.rollKey))]
+    } catch {
+      return []
+    }
+  },
   async clearRoll(rollKey: string) {
     const rows = await this.listRoll(rollKey)
     for (const r of rows) {

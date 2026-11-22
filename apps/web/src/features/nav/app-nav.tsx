@@ -1,0 +1,119 @@
+'use client'
+
+import { ConnectSheet, WalletButton } from '@/features/wallet'
+import { cn } from '@chainroll/ui'
+import { Aperture, BookOpen, Film, LayoutGrid, Warehouse } from 'lucide-react'
+import type { Route } from 'next'
+import { useTranslations } from 'next-intl'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useState, type ComponentType, type ReactNode } from 'react'
+
+type Item = { href: Route; key: string; icon: ComponentType<{ className?: string }> }
+
+const LEFT: Item[] = [
+  { href: '/feed', key: 'feed', icon: LayoutGrid },
+  { href: '/films', key: 'films', icon: Film },
+]
+const RIGHT: Item[] = [
+  { href: '/darkroom', key: 'darkroom', icon: Warehouse },
+  { href: '/how-it-works', key: 'how', icon: BookOpen },
+]
+
+/**
+ * Studio-mode chrome for every user page except the camera (PROJECT_BRIEF §7):
+ * top bar on desktop, bottom tab bar with a big center shutter on phones.
+ */
+export function AppNav({ children }: { children: ReactNode }) {
+  const t = useTranslations('nav')
+  const pathname = usePathname()
+  const [connectOpen, setConnectOpen] = useState(false)
+  const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-bg text-fg">
+      {/* top bar */}
+      <header className="sticky top-0 z-30 border-b border-border bg-bg/90 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 md:px-8">
+          <Link href="/" className="flex items-center gap-2 font-display text-xl">
+            <Aperture className="size-5 text-accent" aria-hidden />
+            ChainRoll
+          </Link>
+          <nav aria-label={t('label')} className="hidden items-center gap-1 md:flex">
+            {[...LEFT, ...RIGHT].map((i) => (
+              <Link
+                key={i.href}
+                href={i.href}
+                aria-current={active(i.href) ? 'page' : undefined}
+                className={cn(
+                  'relative rounded-xs px-3 py-1.5 text-sm transition-colors',
+                  active(i.href) ? 'text-fg' : 'text-fg-muted hover:text-fg',
+                )}
+              >
+                {t(i.key)}
+                {active(i.href) && (
+                  <span aria-hidden className="absolute inset-x-3 -bottom-[13px] h-0.5 bg-accent" />
+                )}
+              </Link>
+            ))}
+          </nav>
+          <div className="ml-auto flex items-center gap-2">
+            <Link
+              href="/camera"
+              className="hidden h-8 items-center gap-2 rounded-sm bg-accent px-3 text-xs font-medium text-accent-fg hover:bg-accent-hover md:flex"
+            >
+              <Aperture className="size-4" aria-hidden />
+              {t('camera')}
+            </Link>
+            <WalletButton onOpen={() => setConnectOpen(true)} />
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 pb-24 md:pb-0">{children}</main>
+
+      {/* bottom tab bar (phones) */}
+      <nav
+        aria-label={t('label')}
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg-raised/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden"
+      >
+        <div className="grid h-16 grid-cols-5 items-center">
+          {LEFT.map((i) => (
+            <Tab key={i.href} item={i} label={t(i.key)} active={active(i.href)} />
+          ))}
+          <div className="flex justify-center">
+            <Link
+              href="/camera"
+              aria-label={t('camera')}
+              className="-mt-7 grid size-16 place-items-center rounded-full border-4 border-bg bg-accent text-accent-fg shadow-pop transition-transform active:scale-95"
+            >
+              <Aperture className="size-7" />
+            </Link>
+          </div>
+          {RIGHT.map((i) => (
+            <Tab key={i.href} item={i} label={t(i.key)} active={active(i.href)} />
+          ))}
+        </div>
+      </nav>
+
+      <ConnectSheet open={connectOpen} onClose={() => setConnectOpen(false)} />
+    </div>
+  )
+}
+
+function Tab({ item, label, active }: { item: Item; label: string; active: boolean }) {
+  const Icon = item.icon
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'flex flex-col items-center gap-1 text-[11px]',
+        active ? 'text-fg' : 'text-fg-subtle',
+      )}
+    >
+      <Icon className={cn('size-5', active && 'text-accent')} />
+      {label}
+    </Link>
+  )
+}

@@ -32,9 +32,11 @@ export default function LandingPage() {
           ChainRoll
         </Link>
         <nav className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/admin">Console</Link>
-          </Button>
+          {(['films', 'how', 'darkroom'] as const).map((k) => (
+            <Button key={k} variant="ghost" size="sm" className="hidden sm:inline-flex" asChild>
+              <Link href={k === 'how' ? '/how-it-works' : `/${k}`}>{t(`nav.${k}`)}</Link>
+            </Button>
+          ))}
           <Button variant="inverse" size="sm" asChild>
             <Link href="/camera">{t('ctaCamera')}</Link>
           </Button>
@@ -56,8 +58,8 @@ export default function LandingPage() {
                 <ArrowRight />
               </Link>
             </Button>
-            <Button variant="ghost" size="lg" disabled>
-              {t('ctaFeed')}
+            <Button variant="ghost" size="lg" asChild>
+              <Link href="/films">{t('ctaFilms')}</Link>
             </Button>
           </div>
           <p className="font-mono text-2xs uppercase tracking-wide text-fg-subtle">{t('launch')}</p>
@@ -100,7 +102,15 @@ export default function LandingPage() {
 
       <footer className="mx-auto flex max-w-6xl items-center justify-between px-4 py-8 font-mono text-2xs text-fg-subtle md:px-8">
         <span>ChainRoll · KUB Chain</span>
-        <span>36 EXP · ไม่มีฟิล์มม้วนไหนเหมือนกัน</span>
+        <nav className="flex gap-4">
+          <Link href="/how-it-works" className="hover:text-fg">
+            {t('nav.how')}
+          </Link>
+          <Link href="/privacy" className="hover:text-fg">
+            {t('nav.privacy')}
+          </Link>
+        </nav>
+        <span className="hidden sm:inline">{t('footerTag')}</span>
       </footer>
     </div>
   )

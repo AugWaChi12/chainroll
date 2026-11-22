@@ -136,3 +136,27 @@
     filter: none;
   }
 }
+
+/* Darkroom safelight — a slow red breathing glow while a roll is in the developer */
+@keyframes safelight-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@utility safelight {
+  position: relative;
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgb(210 58 30 / 0.16), transparent 70%);
+    animation: safelight-breathe 6s ease-in-out infinite;
+  }
+}

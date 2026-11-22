@@ -9,8 +9,9 @@ import {
   getStock,
   type FilmSource,
 } from '@/features/film'
+import { rollStage, useNowSec } from '@/features/roll'
 import { ConnectSheet, WalletButton, isBusy } from '@/features/wallet'
-import { Button, FilmStrip, FrameCounter, RebateLabel, cn } from '@chainroll/ui'
+import { Button, FilmStrip, FrameCounter, LatentFrame, RebateLabel, cn } from '@chainroll/ui'
 import { ArrowLeft, ExternalLink, ImagePlus, RefreshCcw, SwitchCamera } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
@@ -26,6 +27,7 @@ export function CameraView() {
   const t = useTranslations('camera')
   const format = useFormatter()
   const cam = useCamera()
+  const nowSec = useNowSec()
 
   const previewRef = useRef<HTMLCanvasElement>(null)
   const rendererRef = useRef<FilmRenderer | null>(null)
@@ -33,6 +35,12 @@ export function CameraView() {
   const [glError, setGlError] = useState(false)
 
   const [pickedFilm, setPickedFilm] = useState(FILM_STOCKS[0]!.id)
+  // /camera?film=2 (from the films catalog) preselects a stock for the next roll
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get('film'))
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of the URL
+    if (FILM_STOCKS.some((s) => s.id === id)) setPickedFilm(id)
+  }, [])
   const [image, setImage] = useState<ImageBitmap | null>(null)
   const [busy, setBusy] = useState(false)
   const [flash, setFlash] = useState(false)
@@ -142,6 +150,7 @@ export function CameraView() {
 
   const blocked = !usingImage && BLOCKING.includes(cam.status)
   const lastShot = shots.at(-1)
+  const developed = Boolean(roll && rollStage(roll, nowSec) === 'developed')
   const actionBusy = isBusy(session.action)
 
   // ── status strip copy ────────────────────────────────────
@@ -320,8 +329,12 @@ export function CameraView() {
               aria-label={t('review')}
               className="relative size-14 overflow-hidden border border-border"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- blob: URL, not optimizable */}
-              <img src={lastShot.url} alt="" className="size-full object-cover" />
+              {developed ? (
+                // eslint-disable-next-line @next/next/no-img-element -- blob: URL, not optimizable
+                <img src={lastShot.url} alt="" className="size-full object-cover" />
+              ) : (
+                <LatentFrame frame={lastShot.frame} className="size-full" />
+              )}
               <span className="absolute right-0 bottom-0 bg-black/70 px-1 font-mono text-[10px] text-frame">
                 {String(lastShot.frame).padStart(2, '0')}
               </span>
@@ -373,6 +386,10 @@ export function CameraView() {
             roll && roll.developReadyAt === 0 ? (
               <Button variant="inverse" disabled={actionBusy} onClick={() => session.develop()}>
                 {actionBusy ? t('chain.developing') : t('chain.develop')}
+              </Button>
+            ) : developed && roll ? (
+              <Button variant="primary" asChild>
+                <Link href={`/darkroom/${roll.id}`}>{t('chain.toDarkroom')}</Link>
               </Button>
             ) : (
               <span className="text-center font-mono text-2xs text-fg-muted">
@@ -444,6 +461,7 @@ export function CameraView() {
           onIndex={setReviewIndex}
           onClose={() => setReviewIndex(null)}
           onRetry={session.retry}
+          developed={developed}
         />
       )}
       <ConnectSheet open={connectOpen} onClose={() => setConnectOpen(false)} />

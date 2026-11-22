@@ -1,7 +1,7 @@
 'use client'
 
 import { getStock } from '@/features/film'
-import { Button, RebateLabel, TxHash, cn } from '@chainroll/ui'
+import { Button, LatentFrame, RebateLabel, TxHash, cn } from '@chainroll/ui'
 import { explorerTxUrl } from '@/features/wallet'
 import { Download, RefreshCcw, X } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
@@ -13,11 +13,13 @@ type Props = {
   index: number
   onIndex: (i: number) => void
   onClose: () => void
-  onRetry: (hash: `0x${string}`) => void
+  onRetry?: (hash: `0x${string}`) => void
+  /** false → latent images: frames stay dark until the roll is developed */
+  developed: boolean
 }
 
-/** Full-screen review of the current roll: the photo, its on-chain fingerprint, and a contact strip. */
-export function ReviewSheet({ shots, index, onIndex, onClose, onRetry }: Props) {
+/** Full-screen review of a roll: the photo (once developed), its on-chain fingerprint, and a contact strip. */
+export function ReviewSheet({ shots, index, onIndex, onClose, onRetry, developed }: Props) {
   const t = useTranslations('camera.reviewSheet')
   const format = useFormatter()
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -61,13 +63,25 @@ export function ReviewSheet({ shots, index, onIndex, onClose, onRetry }: Props) 
       </header>
 
       <div className="flex min-h-0 flex-1 items-center justify-center px-3">
-        {/* eslint-disable-next-line @next/next/no-img-element -- blob: URL */}
-        <img
-          src={shot.url}
-          alt={t('alt', { frame: shot.frame })}
-          className="max-h-full max-w-full object-contain"
-          style={{ animation: 'develop-in 900ms var(--motion-out) both' }}
-        />
+        {developed ? (
+          // eslint-disable-next-line @next/next/no-img-element -- blob: URL
+          <img
+            src={shot.url}
+            alt={t('alt', { frame: shot.frame })}
+            className="max-h-full max-w-full object-contain"
+            style={{ animation: 'develop-in 900ms var(--motion-out) both' }}
+          />
+        ) : (
+          <div className="flex h-full max-h-full flex-col items-center justify-center gap-3">
+            <LatentFrame
+              frame={shot.frame}
+              status={shot.status}
+              size="lg"
+              className="aspect-[2/3] h-[min(60dvh,480px)] border border-border"
+            />
+            <p className="max-w-xs text-center text-xs text-fg-muted">{t('latent')}</p>
+          </div>
+        )}
       </div>
 
       <dl className="mx-auto grid w-full max-w-md shrink-0 grid-cols-2 gap-x-4 gap-y-1.5 px-4 pt-4 font-mono text-2xs text-fg-muted">
@@ -107,7 +121,7 @@ export function ReviewSheet({ shots, index, onIndex, onClose, onRetry }: Props) 
           </>
         )}
       </dl>
-      {shot.status === 'failed' && (
+      {shot.status === 'failed' && onRetry && (
         <div className="flex justify-center pt-2">
           <Button size="sm" variant="secondary" onClick={() => onRetry(shot.hash)}>
             <RefreshCcw />
@@ -134,17 +148,23 @@ export function ReviewSheet({ shots, index, onIndex, onClose, onRetry }: Props) 
                 i === index ? 'border-frame' : 'border-transparent opacity-60',
               )}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- blob: URL */}
-              <img src={s.url} alt="" className="size-full object-cover" />
+              {developed ? (
+                // eslint-disable-next-line @next/next/no-img-element -- blob: URL
+                <img src={s.url} alt="" className="size-full object-cover" />
+              ) : (
+                <LatentFrame frame={s.frame} status={s.status} className="size-full" />
+              )}
             </button>
           ))}
         </div>
-        <Button size="sm" asChild>
-          <a href={shot.url} download={`chainroll-${String(shot.frame).padStart(2, '0')}.${ext}`}>
-            <Download />
-            {t('download')}
-          </a>
-        </Button>
+        {developed && (
+          <Button size="sm" asChild>
+            <a href={shot.url} download={`chainroll-${String(shot.frame).padStart(2, '0')}.${ext}`}>
+              <Download />
+              {t('download')}
+            </a>
+          </Button>
+        )}
       </div>
     </div>
   )
