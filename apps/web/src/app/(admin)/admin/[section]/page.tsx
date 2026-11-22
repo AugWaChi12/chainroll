@@ -1,5 +1,5 @@
 import { ADMIN_SECTIONS, type AdminSection } from '@/features/admin'
-import { EmptyState, PageHeader } from '@deekub/ui'
+import { EmptyState, PageHeader } from '@chainroll/ui'
 import { getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 

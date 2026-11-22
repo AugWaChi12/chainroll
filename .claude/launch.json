@@ -4,13 +4,13 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@deekub/web", "dev"],
+      "runtimeArgs": ["--filter", "@chainroll/web", "dev"],
       "port": 3000
     },
     {
       "name": "storybook",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@deekub/ui", "storybook"],
+      "runtimeArgs": ["--filter", "@chainroll/ui", "storybook"],
       "port": 6006
     }
   ]

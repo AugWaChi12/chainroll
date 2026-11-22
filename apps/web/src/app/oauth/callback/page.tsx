@@ -1,7 +1,7 @@
 'use client'
 
 import { getBitkubSdk } from '@/features/wallet'
-import { Button, FilmStrip } from '@deekub/ui'
+import { Button, FilmStrip } from '@chainroll/ui'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'

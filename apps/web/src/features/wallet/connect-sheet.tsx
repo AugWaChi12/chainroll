@@ -1,6 +1,6 @@
 'use client'
 
-import { Button, cn } from '@deekub/ui'
+import { Button, cn } from '@chainroll/ui'
 import { ArrowLeft, Check, Copy, FlaskConical, QrCode, Smartphone, Wallet, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import QRCode from 'qrcode'

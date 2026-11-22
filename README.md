@@ -1,4 +1,4 @@
-# ChainRoll (deeKub)
+# ChainRoll
 
 On-chain film camera for KUB Chain — spec: [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)
 

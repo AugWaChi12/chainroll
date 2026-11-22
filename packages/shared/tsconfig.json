@@ -1,1 +1,1 @@
-{ "extends": "@deekub/config/tsconfig/base.json", "include": ["src"] }
+{ "extends": "@chainroll/config/tsconfig/base.json", "include": ["src"] }

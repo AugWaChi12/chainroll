@@ -96,7 +96,7 @@ export default tseslint.config(
         'error',
         {
           patterns: [
-            { group: ['@deekub/web', '**/apps/**'], message: 'ui must not depend on apps' },
+            { group: ['@chainroll/web', '**/apps/**'], message: 'ui must not depend on apps' },
           ],
         },
       ],

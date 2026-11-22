@@ -1,6 +1,6 @@
 'use client'
 
-import { AppShell, Badge, type NavSection } from '@deekub/ui'
+import { AppShell, Badge, type NavSection } from '@chainroll/ui'
 import {
   Aperture,
   FileClock,

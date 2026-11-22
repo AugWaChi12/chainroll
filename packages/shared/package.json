@@ -1,5 +1,5 @@
 {
-  "name": "@deekub/shared",
+  "name": "@chainroll/shared",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@deekub/config": "workspace:*",
+    "@chainroll/config": "workspace:*",
     "typescript": "6.0.3"
   }
 }

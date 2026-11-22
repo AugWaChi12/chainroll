@@ -10,8 +10,8 @@ import {
   TxHash,
   truncateHash,
   type ColumnDef,
-} from '@deekub/ui'
-import { kubTestnet } from '@deekub/shared'
+} from '@chainroll/ui'
+import { kubTestnet } from '@chainroll/shared'
 import { Download, Fuel, RefreshCw, TriangleAlert } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useMemo } from 'react'

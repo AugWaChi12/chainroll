@@ -1,4 +1,4 @@
-import { chainRollAbi } from '@deekub/contracts'
+import { chainRollAbi } from '@chainroll/contracts'
 import type { Address, Hex } from 'viem'
 import { waitForTransactionReceipt, writeContract } from 'wagmi/actions'
 import type { TxHooks, WalletAdapter, WalletKind } from './adapter'

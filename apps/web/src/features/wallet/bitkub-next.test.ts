@@ -1,4 +1,4 @@
-import { chainRollAbi } from '@deekub/contracts'
+import { chainRollAbi } from '@chainroll/contracts'
 import { describe, expect, it } from 'vitest'
 import { NEXT_SIGNATURES } from './bitkub-next'
 

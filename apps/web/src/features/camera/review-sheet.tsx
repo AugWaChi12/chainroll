@@ -1,7 +1,7 @@
 'use client'
 
 import { getStock } from '@/features/film'
-import { Button, RebateLabel, TxHash, cn } from '@deekub/ui'
+import { Button, RebateLabel, TxHash, cn } from '@chainroll/ui'
 import { explorerTxUrl } from '@/features/wallet'
 import { Download, RefreshCcw, X } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'

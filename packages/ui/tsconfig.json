@@ -1,4 +1,4 @@
 {
-  "extends": "@deekub/config/tsconfig/react-library.json",
+  "extends": "@chainroll/config/tsconfig/react-library.json",
   "include": ["src", ".storybook"]
 }

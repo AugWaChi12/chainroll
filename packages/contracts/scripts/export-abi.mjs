@@ -1,5 +1,5 @@
 // Generates abi/chainRoll.ts (typed `as const` ABI) and abi/deployments.ts from Foundry output.
-// Run via `pnpm --filter @deekub/contracts build`.
+// Run via `pnpm --filter @chainroll/contracts build`.
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

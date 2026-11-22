@@ -1,4 +1,4 @@
-import { Button, RebateLabel } from '@deekub/ui'
+import { Button, RebateLabel } from '@chainroll/ui'
 import { Aperture, ArrowRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'

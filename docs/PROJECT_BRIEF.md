@@ -83,7 +83,7 @@ event Developed(address indexed owner, uint256 indexed rollId, uint64 readyAt);
 - Gas (จาก `forge test --gas-report`): `shoot` ≈ 55k · `claimDailyRoll` ≈ 79k · `develop` ≈ 26–34k
 - OpenZeppelin 5.6 (`AccessControl`, `Pausable`), Solidity 0.8.30, `evm_version = cancun` *(ยืนยันกับ Zurich ก่อน mainnet)*
 - ไม่ต้องใช้ reentrancy guard — contract ไม่รับ/ส่งเงิน และไม่เรียก contract ภายนอก
-- ABI → TS: `pnpm --filter @deekub/contracts build` → `import { chainRollAbi, chainRollAddress } from '@deekub/contracts'`
+- ABI → TS: `pnpm --filter @chainroll/contracts build` → `import { chainRollAbi, chainRollAddress } from '@chainroll/contracts'`
 - Deploy: `forge script script/Deploy.s.sol --rpc-url kub_testnet --account <keystore> --broadcast` (key อยู่ใน keystore เข้ารหัส ไม่อยู่ใน .env)
 
 ## 5.1 Login & Wallet
@@ -292,7 +292,7 @@ admin_log  (id, actor, action, target, payload jsonb, created_at)
 
 ### 10.1 Monorepo (pnpm workspaces + Turborepo)
 ```
-deeKub/
+chainroll/   # (โฟลเดอร์ตอนนี้ชื่อ deeKub)
 ├─ apps/
 │  └─ web/                         # Next.js 16 App Router
 │     ├─ src/
@@ -398,7 +398,7 @@ CI (GitHub Actions): `lint → typecheck → test → build` ทุก PR; previ
 | M0 | สมัคร Developer Console + ขอสิทธิ์ NEXT SDK mainnet *(ทำคู่ขนานได้เลย)* | ได้ client id / อนุมัติ |
 | M1 | Monorepo + CI + `packages/ui` tokens & primitives + Storybook + app shell | `pnpm dev` รันได้, Storybook มี Button/Input/DataTable |
 | M1.5 | Contract + test + deploy testnet | ✅ contract + 26 tests + ABI→TS + deploy script (ทดสอบบน anvil แล้ว) · ⏳ deploy testnet รอ key ที่มี tKUB |
-| M2 | กล้อง + filter 3 โทน (ยังไม่ต่อเชน) | ✅ กล้อง + WebGL2 film shader 3 โทน + WebP ≤300KB + keccak hash + ม้วน 24 รูป (ทดสอบในเบราว์เซอร์ด้วยรูปจากเครื่อง) · ⏳ ทดสอบกล้องจริงบนมือถือ (`pnpm --filter @deekub/web dev:https`) · iOS Safari เข้ารหัส WebP ไม่ได้ → ใช้ JPEG แทน |
+| M2 | กล้อง + filter 3 โทน (ยังไม่ต่อเชน) | ✅ กล้อง + WebGL2 film shader 3 โทน + WebP ≤300KB + keccak hash + ม้วน 24 รูป (ทดสอบในเบราว์เซอร์ด้วยรูปจากเครื่อง) · ⏳ ทดสอบกล้องจริงบนมือถือ (`pnpm --filter @chainroll/web dev:https`) · iOS Safari เข้ารหัส WebP ไม่ได้ → ใช้ JPEG แทน |
 | M3a | ต่อ wallet + บันทึกลงเชน | ✅ WalletAdapter (MetaMask / Bitkub NEXT SDK / dev wallet), tx state machine, claim → shoot → develop บนเชน, รูปเก็บใน IndexedDB (รีโหลดไม่หาย) · ทดสอบครบวงบน anvil (hash ในแอป = event บนเชน) · ⏳ Bitkub NEXT ยังไม่ได้ทดสอบจริง (รอ Client ID) |
 | M3b | Server: upload R2 + Supabase + SIWE session + indexer | รอบัญชี Cloudflare R2 + Supabase |
 | M4 | Gallery / contact sheet + feed + report | โพสต์และเห็นใน feed |

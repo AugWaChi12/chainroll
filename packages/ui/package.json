@@ -1,5 +1,5 @@
 {
-  "name": "@deekub/ui",
+  "name": "@chainroll/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -29,7 +29,7 @@
     "react-dom": "^19"
   },
   "devDependencies": {
-    "@deekub/config": "workspace:*",
+    "@chainroll/config": "workspace:*",
     "@storybook/addon-a11y": "10.6.8",
     "@storybook/addon-docs": "10.6.8",
     "@storybook/addon-themes": "10.6.8",

@@ -1,5 +1,5 @@
-import { chainRollAddress } from '@deekub/contracts'
-import { kubMainnet, kubTestnet } from '@deekub/shared'
+import { chainRollAddress } from '@chainroll/contracts'
+import { kubMainnet, kubTestnet } from '@chainroll/shared'
 import { env } from '@/lib/env'
 import { defineChain, type Address } from 'viem'
 

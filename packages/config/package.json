@@ -1,5 +1,5 @@
 {
-  "name": "@deekub/config",
+  "name": "@chainroll/config",
   "version": "0.0.0",
   "private": true,
   "exports": {

@@ -1,20 +1,20 @@
 {
-  "name": "deekub",
+  "name": "chainroll",
   "private": true,
   "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "dev": "turbo run dev --filter=@deekub/web",
+    "dev": "turbo run dev --filter=@chainroll/web",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "lint": "eslint .",
-    "storybook": "pnpm --filter @deekub/ui storybook",
+    "storybook": "pnpm --filter @chainroll/ui storybook",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "contracts:test": "pnpm --filter @deekub/contracts test",
+    "contracts:test": "pnpm --filter @chainroll/contracts test",
     "dev:chain": "node scripts/dev-chain.mjs"
   },
   "devDependencies": {

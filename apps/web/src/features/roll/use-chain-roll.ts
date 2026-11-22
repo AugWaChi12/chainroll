@@ -1,6 +1,6 @@
 'use client'
 
-import { chainRollAbi } from '@deekub/contracts'
+import { chainRollAbi } from '@chainroll/contracts'
 import { activeChain, chainRollContract } from '@/features/wallet'
 import type { Address } from 'viem'
 import { useReadContract, useReadContracts } from 'wagmi'

@@ -1,5 +1,5 @@
 {
-  "extends": "@deekub/config/tsconfig/nextjs.json",
+  "extends": "@chainroll/config/tsconfig/nextjs.json",
   "compilerOptions": {
     "paths": { "@/*": ["./src/*"] }
   },

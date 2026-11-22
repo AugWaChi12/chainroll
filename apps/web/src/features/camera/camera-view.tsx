@@ -10,7 +10,7 @@ import {
   type FilmSource,
 } from '@/features/film'
 import { ConnectSheet, WalletButton, isBusy } from '@/features/wallet'
-import { Button, FilmStrip, FrameCounter, RebateLabel, cn } from '@deekub/ui'
+import { Button, FilmStrip, FrameCounter, RebateLabel, cn } from '@chainroll/ui'
 import { ArrowLeft, ExternalLink, ImagePlus, RefreshCcw, SwitchCamera } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
