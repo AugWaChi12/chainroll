@@ -58,20 +58,33 @@
 
 ## 5. Smart contract
 
+> โค้ดจริง: `packages/contracts/src/ChainRoll.sol` · test: `test/ChainRoll.t.sol` (26 tests + fuzz)
+
 ```solidity
-// ChainRoll.sol — เก็บแค่ hash, ไม่เก็บรูป
+// เก็บแค่ hash ไม่เก็บรูป · ทุก action มี 2 ทางเข้า
+// 1) ผู้ใช้ = msg.sender (MetaMask)
+// 2) เรียกผ่าน Bitkub NEXT sdkCallHelperRouter, ผู้ใช้จริงอยู่ใน arg ตัวท้าย `_bitkubNext`
+function claimDailyRoll(uint16 filmId) external returns (uint256 rollId);
+function claimDailyRoll(uint16 filmId, address _bitkubNext) external onlySdkCallHelperRouter returns (uint256);
+function shoot(uint256 rollId, bytes32 photoHash) external;
+function shoot(uint256 rollId, bytes32 photoHash, address _bitkubNext) external onlySdkCallHelperRouter;
+function develop(uint256 rollId) external;
+function develop(uint256 rollId, address _bitkubNext) external onlySdkCallHelperRouter;
+
+event RollClaimed(address indexed owner, uint256 indexed rollId, uint16 indexed filmId, uint8 frames);
 event Shot(address indexed shooter, uint256 indexed rollId, uint8 frame, bytes32 photoHash, uint16 filmId);
 event Developed(address indexed owner, uint256 indexed rollId, uint64 readyAt);
 
-function claimDailyRoll(uint16 filmId) external returns (uint256 rollId); // 1 ครั้ง/วัน
-function shoot(uint256 rollId, bytes32 photoHash) external;              // frame++ , revert ถ้าเต็ม
-function develop(uint256 rollId) external;                               // ต้องครบม้วนก่อน
-// admin
-function setFilm(uint16 filmId, string calldata name, uint8 frames, bool active) external; // onlyRole(CURATOR)
-function pause() external;                                                // onlyRole(ADMIN)
+// views: getFilm, getRoll, canClaim, nextClaimAt, isDeveloped, hashUsed, currentDay
+// admin: setFilm (CURATOR), setSdkCallHelperRouter / setDevelopDelay / pause / unpause (ADMIN)
 ```
-- ใช้ OpenZeppelin v5 (`AccessControl`, `Pausable`), reentrancy guard แบบ transient storage ถ้าเชนรองรับ
-- ทุกฟังก์ชันมี test ใน Foundry + gas snapshot
+- กติกา: ม้วนฟรีวันละ 1 (รีเซ็ต 00:00 เวลาไทย), จำนวนรูปถูก snapshot ตอนรับม้วน, hash ซ้ำไม่ได้, ล้างได้เมื่อครบม้วน (default รอ 1 ชม.)
+- MetaMask กับ Bitkub NEXT ใช้โควตาร่วมกันต่อ address
+- Gas (จาก `forge test --gas-report`): `shoot` ≈ 55k · `claimDailyRoll` ≈ 79k · `develop` ≈ 26–34k
+- OpenZeppelin 5.6 (`AccessControl`, `Pausable`), Solidity 0.8.30, `evm_version = cancun` *(ยืนยันกับ Zurich ก่อน mainnet)*
+- ไม่ต้องใช้ reentrancy guard — contract ไม่รับ/ส่งเงิน และไม่เรียก contract ภายนอก
+- ABI → TS: `pnpm --filter @deekub/contracts build` → `import { chainRollAbi, chainRollAddress } from '@deekub/contracts'`
+- Deploy: `forge script script/Deploy.s.sol --rpc-url kub_testnet --account <keystore> --broadcast` (key อยู่ใน keystore เข้ารหัส ไม่อยู่ใน .env)
 
 ## 5.1 Login & Wallet
 
@@ -100,7 +113,8 @@ function pause() external;                                                // onl
 
 **ต้องเช็คก่อนเขียน contract (สำคัญ)**
 - [ ] สมัคร KUB Developer Console + ขอสิทธิ์ mainnet ของ NEXT SDK (ต้องกรอกฟอร์มและรอติดต่อกลับ — **ทำทันที** เพราะอาจใช้เวลา)
-- [ ] tx จาก Bitkub NEXT ถูกส่งผ่าน contract ตัวกลางหรือไม่ — ถ้าใช่ `msg.sender` จะไม่ใช่ผู้ใช้ ต้องออกแบบ `shoot()` ให้รับ address ผู้ใช้จากตัวกลางที่เชื่อถือได้ (เช่น modifier ตรวจ caller router) แทนการใช้ `msg.sender` ตรงๆ
+- [x] tx จาก Bitkub NEXT ผ่าน `sdkCallHelperRouter` (`msg.sender` = router) และส่งผู้ใช้จริงเป็น arg ตัวท้าย `address _bitkubNext` — contract รองรับแล้ว (ข้อ 5). ฝั่งเว็บเรียกด้วย `sdk.sendCustomTx(contract, "shoot(uint256 rollId, bytes32 photoHash, address _bitkubNext)", [rollId, hash])`
+- [ ] ยืนยัน address ของ router: testnet ตาม docs คือ `0x96f4C25E4fEB02c8BCbAdb80d0088E0112F728Bc` (docs เตือนให้ยืนยันเอง), **mainnet ยังไม่มีใน docs** — ตั้งค่าได้ทีหลังด้วย `setSdkCallHelperRouter`
 - [ ] ค่า gas ของผู้ใช้ Bitkub NEXT จ่ายอย่างไร / ใครจ่าย
 
 ---
@@ -383,7 +397,7 @@ CI (GitHub Actions): `lint → typecheck → test → build` ทุก PR; previ
 |---|---|---|
 | M0 | สมัคร Developer Console + ขอสิทธิ์ NEXT SDK mainnet *(ทำคู่ขนานได้เลย)* | ได้ client id / อนุมัติ |
 | M1 | Monorepo + CI + `packages/ui` tokens & primitives + Storybook + app shell | `pnpm dev` รันได้, Storybook มี Button/Input/DataTable |
-| M1.5 | Contract + test + deploy testnet | `forge test` ผ่าน, มี address, ABI gen เป็น TS |
+| M1.5 | Contract + test + deploy testnet | ✅ contract + 26 tests + ABI→TS + deploy script (ทดสอบบน anvil แล้ว) · ⏳ deploy testnet รอ key ที่มี tKUB |
 | M2 | กล้อง + filter 3 โทน (ยังไม่ต่อเชน) | ถ่ายแล้วได้ WebP บนมือถือจริง |
 | M3 | ต่อ wallet (Bitkub NEXT + MetaMask) + `shoot()` + upload R2 | แชะแล้วเห็น tx บน explorer ทั้งสองกระเป๋า |
 | M4 | Gallery / contact sheet + feed + report | โพสต์และเห็นใน feed |

@@ -1,0 +1,30 @@
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib", "node_modules"]
+solc_version = "0.8.30"
+# KUB Zurich hard fork (2026-12-14) adds newer EVM support. Verify the exact EVM version before mainnet deploy.
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 10_000
+via_ir = false
+# deploy script writes deployments/<chainId>.json
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
+remappings = [
+  "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+  "forge-std/=lib/forge-std/src/",
+]
+
+[fuzz]
+runs = 512
+
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = false
+
+[rpc_endpoints]
+kub_testnet = "https://rpc-testnet.bitkubchain.io"
+kub_mainnet = "https://rpc.bitkubchain.io"

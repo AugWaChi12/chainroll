@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Script, console} from "forge-std/Script.sol";
+import {ChainRoll} from "../src/ChainRoll.sol";
+
+/// @notice Deploy ChainRoll + seed the launch film stocks.
+///
+/// Env (all optional):
+///   ADMIN        final admin/curator (default: deployer). Deployer renounces if different.
+///   NEXT_ROUTER  Bitkub NEXT sdkCallHelperRouter for this network (settable later by admin).
+///
+/// Usage (key stays in an encrypted keystore — never in .env):
+///   cast wallet import kub-deployer --interactive
+///   forge script script/Deploy.s.sol --rpc-url kub_testnet --account kub-deployer --broadcast
+contract Deploy is Script {
+    function run() external returns (ChainRoll cam) {
+        address router = vm.envOr("NEXT_ROUTER", address(0));
+
+        vm.startBroadcast();
+        address deployer = msg.sender;
+        address admin = vm.envOr("ADMIN", deployer);
+
+        cam = new ChainRoll(deployer, router);
+
+        // Launch stocks — names are ours, not real film brands.
+        cam.setFilm(1, "KUB 400", 24, true);
+        cam.setFilm(2, unicode"ขาวดำ 400", 24, true);
+        cam.setFilm(3, "Night 800", 24, true);
+
+        if (admin != deployer) {
+            cam.grantRole(cam.DEFAULT_ADMIN_ROLE(), admin);
+            cam.grantRole(cam.CURATOR_ROLE(), admin);
+            cam.renounceRole(cam.CURATOR_ROLE(), deployer);
+            cam.renounceRole(cam.DEFAULT_ADMIN_ROLE(), deployer);
+        }
+        vm.stopBroadcast();
+
+        string memory key = "deployment";
+        vm.serializeAddress(key, "admin", admin);
+        vm.serializeAddress(key, "sdkCallHelperRouter", router);
+        vm.serializeUint(key, "blockNumber", block.number);
+        string memory json = vm.serializeAddress(key, "chainRoll", address(cam));
+        string memory path = string.concat("deployments/", vm.toString(block.chainid), ".json");
+        vm.writeJson(json, path);
+
+        console.log("ChainRoll:", address(cam));
+        console.log("admin:    ", admin);
+        console.log("router:   ", router);
+        console.log("written:  ", path);
+    }
+}

@@ -8,3 +8,7 @@ allowBuilds:
   '@swc/core': true
   esbuild: true
   sharp: true
+  # binaries ship via optionalDependencies; postinstall not needed
+  '@foundry-rs/forge': false
+  '@foundry-rs/anvil': false
+  '@foundry-rs/cast': false

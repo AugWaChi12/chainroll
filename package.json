@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "storybook": "pnpm --filter @deekub/ui storybook",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "contracts:test": "pnpm --filter @deekub/contracts test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

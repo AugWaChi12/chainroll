@@ -2,3 +2,9 @@ pnpm-lock.yaml
 .next
 storybook-static
 docs
+packages/contracts/lib
+packages/contracts/out
+packages/contracts/cache
+packages/contracts/broadcast
+packages/contracts/abi/chainRoll.ts
+packages/contracts/abi/deployments.ts

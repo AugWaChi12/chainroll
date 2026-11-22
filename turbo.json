@@ -3,11 +3,26 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "storybook-static/**", "dist/**"]
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "storybook-static/**",
+        "dist/**",
+        "out/**",
+        "abi/**"
+      ]
     },
-    "typecheck": { "dependsOn": ["^typecheck"] },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
     "test": {},
-    "dev": { "cache": false, "persistent": true },
-    "storybook": { "cache": false, "persistent": true }
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "storybook": {
+      "cache": false,
+      "persistent": true
+    }
   }
 }
