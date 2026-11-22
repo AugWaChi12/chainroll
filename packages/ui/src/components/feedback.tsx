@@ -1,4 +1,7 @@
+'use client'
+
 import type { ComponentProps, ReactNode } from 'react'
+import { useUiLabels } from '../i18n'
 import { cn } from '../lib/cn'
 
 /** Skeleton — match the real shape of what's loading (§9.3), never a centered spinner. */
@@ -68,13 +71,8 @@ export type ErrorStateProps = {
   retryLabel?: string
 }
 
-export function ErrorState({
-  title,
-  description,
-  errorId,
-  onRetry,
-  retryLabel = 'ลองใหม่',
-}: ErrorStateProps) {
+export function ErrorState({ title, description, errorId, onRetry, retryLabel }: ErrorStateProps) {
+  const L = useUiLabels()
   return (
     <div
       role="alert"
@@ -89,7 +87,7 @@ export function ErrorState({
             onClick={onRetry}
             className="text-sm font-medium text-fg underline decoration-border-strong underline-offset-4 hover:decoration-fg"
           >
-            {retryLabel}
+            {retryLabel ?? L.retry}
           </button>
         )}
         {errorId && <span className="font-mono text-2xs text-fg-subtle">ref {errorId}</span>}

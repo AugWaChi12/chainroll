@@ -1,6 +1,6 @@
 'use client'
 
-import { getStock } from '@/features/film'
+import { getStock, useStockName } from '@/features/film'
 import {
   countdown,
   photoStore,
@@ -100,6 +100,7 @@ export function DarkroomList() {
 
 function RollCard({ roll, now }: { roll: ChainRoll; now: number }) {
   const t = useTranslations('darkroom')
+  const stockName = useStockName()
   const stock = getStock(roll.filmId)
   const stage = rollStage(roll, now)
   const thumbs = useRollThumbs(roll.id, stage === 'developed')
@@ -112,7 +113,7 @@ function RollCard({ roll, now }: { roll: ChainRoll; now: number }) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span aria-hidden className="size-4 rounded-full" style={{ background: stock.swatch }} />
-          <span className="font-medium">{stock.name}</span>
+          <span className="font-medium">{stockName(stock.id)}</span>
           <span className="font-mono text-2xs text-fg-subtle">#{String(roll.id)}</span>
         </div>
         <Badge tone={STAGE_TONE[stage]} dot>

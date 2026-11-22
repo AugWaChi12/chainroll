@@ -15,7 +15,7 @@ export type ShotRow = {
   minutesAgo: number
 }
 
-const FILMS = ['KUB 400', 'ขาวดำ 400', 'Night 800', 'อุ่น 160']
+const FILMS = ['KUB 400', 'Mono 400', 'Night 800', 'Warm 160']
 const HANDLES = ['ploy.shoots', null, 'bank_35mm', 'nong.film', null, 'tee.k', 'mint_roll', null]
 
 function hex(seed: number, len: number) {

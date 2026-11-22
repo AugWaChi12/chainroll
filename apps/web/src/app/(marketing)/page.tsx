@@ -1,6 +1,7 @@
 import { Button, RebateLabel } from '@chainroll/ui'
 import { Aperture, ArrowRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { LocaleSwitcher } from '@/features/i18n'
 import Link from 'next/link'
 
 /* Placeholder frames — painted tones instead of stock photos, so nothing looks borrowed. */
@@ -24,7 +25,7 @@ export default function LandingPage() {
   const steps = ['load', 'shoot', 'develop', 'share'] as const
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh overflow-x-clip">
       {/* top bar */}
       <header className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
         <Link href="/" className="flex items-center gap-2 font-display text-xl">
@@ -37,6 +38,7 @@ export default function LandingPage() {
               <Link href={k === 'how' ? '/how-it-works' : `/${k}`}>{t(`nav.${k}`)}</Link>
             </Button>
           ))}
+          <LocaleSwitcher className="mx-1" />
           <Button variant="inverse" size="sm" asChild>
             <Link href="/camera">{t('ctaCamera')}</Link>
           </Button>

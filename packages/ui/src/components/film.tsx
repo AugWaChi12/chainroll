@@ -3,6 +3,7 @@
 import { Check, Copy, ExternalLink } from 'lucide-react'
 import type { ComponentProps } from 'react'
 import { useState } from 'react'
+import { fmt, useUiLabels } from '../i18n'
 import { cn } from '../lib/cn'
 
 /* ── FrameCounter ─────────────────────────────────────────── */
@@ -11,18 +12,21 @@ export type FrameCounterProps = { used: number; total: number; className?: strin
 
 /** `07 / 24` — frames used on the current roll */
 export function FrameCounter({ used, total, className }: FrameCounterProps) {
+  const L = useUiLabels()
   const pad = (n: number) => String(n).padStart(2, '0')
   const left = total - used
   return (
     <span
       role="status"
-      aria-label={`ถ่ายไปแล้ว ${used} จาก ${total} รูป`}
+      aria-label={fmt(L.framesShot, { used, total })}
       className={cn('inline-flex items-baseline gap-1 font-mono tabular text-frame', className)}
     >
       <span className="text-lg">{pad(used)}</span>
       <span className="text-xs opacity-60">/ {pad(total)}</span>
       {left <= 3 && left > 0 && (
-        <span className="ml-2 text-2xs uppercase tracking-wider">เหลือ {left}</span>
+        <span className="ml-2 text-2xs uppercase tracking-wider">
+          {fmt(L.framesLeft, { left })}
+        </span>
       )}
     </span>
   )
@@ -56,6 +60,7 @@ export function truncateHash(hash: string, head = 6, tail = 4) {
 }
 
 export function TxHash({ hash, explorerUrl, className }: TxHashProps) {
+  const L = useUiLabels()
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     try {
@@ -74,7 +79,7 @@ export function TxHash({ hash, explorerUrl, className }: TxHashProps) {
       <button
         type="button"
         onClick={copy}
-        aria-label={copied ? 'คัดลอกแล้ว' : 'คัดลอก hash'}
+        aria-label={copied ? L.copied : L.copyHash}
         className="rounded-xs p-1 text-fg-subtle hover:bg-bg-sunken hover:text-fg [&_svg]:size-3.5"
       >
         {copied ? <Check /> : <Copy />}
@@ -84,7 +89,7 @@ export function TxHash({ hash, explorerUrl, className }: TxHashProps) {
           href={`${explorerUrl}${hash}`}
           target="_blank"
           rel="noreferrer"
-          aria-label="ดูบน explorer"
+          aria-label={L.viewOnExplorer}
           className="rounded-xs p-1 text-fg-subtle hover:bg-bg-sunken hover:text-fg [&_svg]:size-3.5"
         >
           <ExternalLink />
@@ -97,17 +102,12 @@ export function TxHash({ hash, explorerUrl, className }: TxHashProps) {
 /* ── FilmStrip (loader) ───────────────────────────────────── */
 
 /** Loading indicator for waits > 1s — an advancing strip of film, not a spinner. */
-export function FilmStrip({
-  className,
-  label = 'กำลังโหลด',
-}: {
-  className?: string
-  label?: string
-}) {
+export function FilmStrip({ className, label }: { className?: string; label?: string }) {
+  const L = useUiLabels()
   const perforation = 'repeating-linear-gradient(90deg, var(--bg) 0 6px, transparent 6px 12px)'
   const advance = 'film-advance 600ms linear infinite'
   return (
-    <div role="progressbar" aria-label={label} className={cn('w-40', className)}>
+    <div role="progressbar" aria-label={label ?? L.loading} className={cn('w-40', className)}>
       <div className="flex h-7 flex-col justify-between bg-bg-inverse py-[3px]">
         <div
           className="h-[3px]"
@@ -146,11 +146,12 @@ export type LatentFrameProps = {
  * Used everywhere a photo would appear before its roll is developed (PROJECT_BRIEF §7, decision 1).
  */
 export function LatentFrame({ frame, status, className, size = 'sm' }: LatentFrameProps) {
+  const L = useUiLabels()
   const n = String(frame).padStart(2, '0')
   return (
     <div
       role="img"
-      aria-label={`เฟรม ${n} — ยังไม่ได้ล้าง`}
+      aria-label={fmt(L.latentFrame, { frame: n })}
       className={cn(
         'relative overflow-hidden bg-[#120f0d]',
         "before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_30%_20%,rgba(210,58,30,0.10),transparent_60%)] before:content-['']",

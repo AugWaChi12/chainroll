@@ -40,7 +40,7 @@ export const wagmiConfig = createConfig({
             showQrModal: false,
             metadata: {
               name: 'ChainRoll',
-              description: 'กล้องฟิล์มบน KUB Chain',
+              description: 'On-chain film camera on KUB Chain',
               url: typeof window !== 'undefined' ? window.location.origin : 'https://chainroll.app',
               icons: [],
             },

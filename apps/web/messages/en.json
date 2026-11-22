@@ -1,0 +1,496 @@
+{
+  "meta": {
+    "title": "ChainRoll — a film camera on KUB Chain",
+    "description": "One click, one film look, one transaction on-chain.",
+    "pages": {
+      "camera": "Camera",
+      "darkroom": "Darkroom",
+      "feed": "Feed",
+      "films": "Films",
+      "how": "How it works",
+      "privacy": "Privacy"
+    }
+  },
+  "brand": "ChainRoll",
+  "locale": {
+    "label": "Language"
+  },
+  "ui": {
+    "loading": "Loading",
+    "retry": "Try again",
+    "copyHash": "Copy hash",
+    "copied": "Copied",
+    "viewOnExplorer": "View on explorer",
+    "framesShot": "{used} of {total} frames shot",
+    "framesLeft": "{left} left",
+    "latentFrame": "Frame {frame} — not developed yet",
+    "mainMenu": "Main menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "expandMenu": "Expand menu",
+    "collapseMenu": "Collapse menu",
+    "searchAll": "Search everything",
+    "search": "Search…",
+    "noData": "No data",
+    "noMatch": "Nothing matches \"{query}\"",
+    "noMatchHint": "Try another search or clear the filter",
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "selected": "{count} selected",
+    "cancel": "Cancel",
+    "prevPage": "Previous page",
+    "nextPage": "Next page"
+  },
+  "landing": {
+    "rebate": "KUB 96 · ISO 400 · 24 EXP",
+    "headline": "One frame\nat a time",
+    "sub": "One roll a day. Twenty-four frames. Every click is written to KUB Chain — a little slower, and every photo counts.",
+    "ctaCamera": "Open camera",
+    "stepsTitle": "From shutter to chain",
+    "steps": {
+      "load": {
+        "title": "Load",
+        "body": "Claim a free roll every day and pick the look you want."
+      },
+      "shoot": {
+        "title": "Shoot",
+        "body": "Each frame gets a fingerprint that's recorded on-chain."
+      },
+      "develop": {
+        "title": "Develop",
+        "body": "Finish the roll, send it to develop, then wait to see it."
+      },
+      "share": {
+        "title": "Share",
+        "body": "Post the ones you love — nothing you don't post is seen."
+      }
+    },
+    "privacy": "Photos never go on-chain — only their hash does. You can always delete a post.",
+    "launch": "Launching with the Zurich hard fork · 14.12",
+    "nav": {
+      "films": "Films",
+      "how": "How it works",
+      "darkroom": "Darkroom",
+      "privacy": "Privacy"
+    },
+    "ctaFilms": "See all films",
+    "footerTag": "24 EXP · no two rolls alike"
+  },
+  "camera": {
+    "back": "Back",
+    "viewfinder": "Viewfinder",
+    "starting": "Starting camera",
+    "shutter": "Take photo",
+    "flip": "Switch front/back camera",
+    "pickImage": "Pick a photo from this device",
+    "imageMode": "Photo from device",
+    "retry": "Try again",
+    "film": "Film roll",
+    "filmLocked": "Roll loaded — you can change film when it's finished",
+    "rollFull": "This roll is full",
+    "review": "Review shots",
+    "status": {
+      "denied": {
+        "title": "Camera is blocked",
+        "body": "Allow camera access for this site in your browser settings, then try again."
+      },
+      "no-camera": {
+        "title": "No camera found",
+        "body": "This device has no camera, or another app is using it. You can pick a photo instead."
+      },
+      "insecure": {
+        "title": "HTTPS required",
+        "body": "Browsers only allow the camera on https:// sites or localhost."
+      },
+      "unsupported": {
+        "title": "This browser can't use the camera",
+        "body": "Try the latest Chrome or Safari."
+      },
+      "error": {
+        "title": "Couldn't start the camera",
+        "body": "Close other apps using the camera, then try again."
+      },
+      "webgl": {
+        "title": "Film looks aren't supported here",
+        "body": "ChainRoll needs WebGL2 — try an up-to-date browser."
+      },
+      "idle": { "title": "", "body": "" },
+      "starting": { "title": "", "body": "" },
+      "live": { "title": "", "body": "" }
+    },
+    "reviewSheet": {
+      "title": "Frames on this roll",
+      "close": "Close",
+      "alt": "Frame {frame}",
+      "size": "Size",
+      "format": "File",
+      "hash": "Fingerprint",
+      "hashNote": "This hash is what's recorded on KUB Chain — the photo itself never goes on-chain.",
+      "download": "Save",
+      "chain": "On-chain",
+      "status": {
+        "pending": "Saving",
+        "confirmed": "Saved",
+        "failed": "Failed"
+      },
+      "errors": {
+        "rejected": "Cancelled in your wallet",
+        "insufficient-funds": "Not enough KUB for gas",
+        "wrong-network": "Wallet is on the wrong network — switch to KUB Chain",
+        "no-wallet": "No wallet found in this browser",
+        "quota": "Your Bitkub NEXT free transaction quota is used up",
+        "timeout": "Took too long to confirm — try again",
+        "reverted": "The chain rejected the transaction",
+        "unknown": "Something went wrong — try again"
+      },
+      "retry": "Save again",
+      "latent": "Latent image — it's on-chain, but you won't see it until the roll is finished and developed."
+    },
+    "chain": {
+      "onChain": "Every frame is recorded on KUB Chain",
+      "saving": "Saving {count} frame(s) on-chain…",
+      "failed": "{count} frame(s) failed to save — tap the photo to retry",
+      "approve": "Waiting for approval in Bitkub NEXT",
+      "openApproval": "Open approval",
+      "loading": "Reading your roll from the chain",
+      "pickFilm": "Pick a film before you claim",
+      "claim": "Claim today's free roll",
+      "claiming": "Claiming roll…",
+      "nextRoll": "Next roll at {time}",
+      "develop": "Send to develop",
+      "developing": "Sending…",
+      "developed": "Developed at {time}",
+      "errors": {
+        "rejected": "Cancelled in your wallet",
+        "insufficient-funds": "Not enough KUB for gas",
+        "wrong-network": "Wallet is on the wrong network — switch to KUB Chain",
+        "no-wallet": "No wallet found in this browser",
+        "quota": "Your Bitkub NEXT free transaction quota is used up",
+        "timeout": "Took too long to confirm — try again",
+        "reverted": "The chain rejected the transaction",
+        "unknown": "Something went wrong — try again"
+      },
+      "connectFirst": "Connect a wallet to shoot — every frame is one tx on KUB Chain",
+      "connectToShoot": "Connect wallet to start",
+      "toDarkroom": "Open in darkroom"
+    }
+  },
+  "admin": {
+    "console": "Darkroom Console",
+    "search": "Search addresses, posts, txs…",
+    "nav": {
+      "monitor": "Monitor",
+      "content": "Content",
+      "system": "System",
+      "overview": "Overview",
+      "moderation": "Moderation",
+      "films": "Film stocks",
+      "users": "Users",
+      "gas": "Gas & quotas",
+      "contract": "Contract",
+      "audit": "Audit log"
+    },
+    "overview": {
+      "eyebrow": "01 · Overview",
+      "title": "Today in the darkroom",
+      "description": "Sample data — wired to the real indexer in M3",
+      "export": "Export",
+      "refresh": "Refresh",
+      "kpi": {
+        "shots": "Frames today",
+        "txFailed": "Failed txs",
+        "activeUsers": "Active users",
+        "openReports": "Open reports",
+        "vsYesterday": "vs yesterday",
+        "needsReview": "Review within 24h"
+      },
+      "relayer": {
+        "title": "Relayer wallet runs out in {days} days",
+        "body": "Balance {balance} KUB · burning {burn} KUB/day on average",
+        "action": "Top up KUB"
+      },
+      "recent": "Latest frames",
+      "cols": {
+        "frame": "Frame",
+        "shooter": "Shooter",
+        "film": "Film",
+        "wallet": "Wallet",
+        "tx": "Tx",
+        "status": "Status",
+        "time": "Time"
+      },
+      "status": {
+        "confirmed": "Confirmed",
+        "pending": "Pending",
+        "failed": "Failed"
+      },
+      "bulkHide": "Hide selected"
+    },
+    "soon": {
+      "title": "Not developed yet",
+      "body": "Planned for M5 — see PROJECT_BRIEF §8"
+    }
+  },
+  "wallet": {
+    "eyebrow": "Connect wallet",
+    "title": "Every frame, on-chain",
+    "subtitle": "Pick the wallet you'll claim rolls and record frames with.",
+    "close": "Close",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connecting": "Connecting…",
+    "next": {
+      "body": "Sign in with your Bitkub account — no seed phrase",
+      "unavailable": "Not enabled in this build yet"
+    },
+    "injected": {
+      "detected": "Detected in this browser",
+      "missing": "No wallet found in this browser",
+      "install": "No wallet yet? Install MetaMask"
+    },
+    "dev": {
+      "title": "Dev wallet (local)",
+      "body": "Anvil test account — local chain only"
+    },
+    "privacy": "Only your photo's hash goes on-chain — the photo stays on your device.",
+    "errors": {
+      "rejected": "Cancelled in your wallet",
+      "insufficient-funds": "Not enough KUB for gas",
+      "wrong-network": "Wallet is on the wrong network — switch to KUB Chain",
+      "no-wallet": "No wallet found in this browser",
+      "quota": "Your Bitkub NEXT free transaction quota is used up",
+      "timeout": "Took too long to confirm — try again",
+      "reverted": "The chain rejected the transaction",
+      "unknown": "Something went wrong — try again"
+    },
+    "sections": {
+      "recommended": "Recommended",
+      "browser": "Browser wallets",
+      "mobile": "Mobile wallets",
+      "dev": "For developers"
+    },
+    "tags": {
+      "login": "Login",
+      "extension": "Extension",
+      "qr": "Scan QR"
+    },
+    "wc": {
+      "body": "Scan with KUB Wallet, MetaMask Mobile or any other wallet",
+      "unavailable": "Not enabled (needs a WalletConnect project ID)",
+      "scan": "Scan with your phone's wallet app — or, if you're on your phone, open it in the app directly.",
+      "qrAlt": "QR code to connect a wallet via WalletConnect",
+      "openApp": "Open in wallet app",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "cancel": "Cancel"
+    }
+  },
+  "oauth": {
+    "working": "Signing in with Bitkub NEXT…",
+    "failed": "Sign-in failed",
+    "back": "Back to camera"
+  },
+  "nav": {
+    "label": "Main menu",
+    "feed": "Feed",
+    "films": "Films",
+    "camera": "Camera",
+    "darkroom": "Darkroom",
+    "how": "How it works"
+  },
+  "darkroom": {
+    "eyebrow": "Darkroom",
+    "title": "My rolls",
+    "subtitle": "Every roll you've shot — photos appear once the roll is finished and developed.",
+    "toCamera": "Go to camera",
+    "connect": {
+      "title": "Connect a wallet to open the darkroom",
+      "body": "Your rolls belong to your wallet on KUB Chain.",
+      "cta": "Connect wallet"
+    },
+    "empty": {
+      "title": "The darkroom is empty",
+      "body": "Claim today's free roll and take your first frame.",
+      "cta": "Claim your first roll"
+    },
+    "error": "Couldn't read from the chain",
+    "loading": "Opening the darkroom",
+    "notFound": "Roll not found",
+    "back": "Darkroom",
+    "frames": "frames",
+    "sheet": "Contact sheet",
+    "frameLabel": "Frame {frame}",
+    "localNote": "Showing your latest roll on-chain plus rolls shot on this device — older rolls from other devices are coming soon.",
+    "otherDevice": "Some frames were shot on another device, so the photos aren't here (they're fully recorded on-chain).",
+    "stage": {
+      "shooting": "Shooting",
+      "full": "Full",
+      "developing": "Developing",
+      "developed": "Developed"
+    },
+    "cardAction": {
+      "shooting": "Keep shooting",
+      "full": "Develop",
+      "developing": "",
+      "developed": "View photos"
+    },
+    "panel": {
+      "shooting": "{left} frames left — everything stays latent until the roll is finished and developed.",
+      "keepShooting": "Keep shooting",
+      "fullTitle": "Roll finished",
+      "fullBody": "Send it to develop to see your photos — about {minutes} minutes (1 tx on KUB Chain).",
+      "develop": "Send to develop",
+      "developing": "Sending…",
+      "openApproval": "Open approval in Bitkub NEXT",
+      "inTank": "In the tank",
+      "inTankBody": "You can close this page — come back when the timer ends and the whole roll will fade in.",
+      "doneTitle": "Developed",
+      "doneBody": "Tap a frame to view it full screen or save it.",
+      "postSoon": "Post (soon)"
+    },
+    "errors": {
+      "rejected": "Cancelled in your wallet",
+      "insufficient-funds": "Not enough KUB for gas",
+      "wrong-network": "Wallet is on the wrong network — switch to KUB Chain",
+      "no-wallet": "No wallet found in this browser",
+      "quota": "Your Bitkub NEXT free transaction quota is used up",
+      "timeout": "Took too long to confirm — try again",
+      "reverted": "The chain rejected the transaction",
+      "unknown": "Something went wrong — try again"
+    }
+  },
+  "films": {
+    "eyebrow": "Films",
+    "title": "Pick your roll",
+    "subtitle": "Every sample below is the same scene through a different film — rendered live by the same engine as the camera.",
+    "use": "Use this film",
+    "note": "New stocks and limited rolls drop with the seasons. Film names are ChainRoll's own, not real film brands.",
+    "traits": {
+      "grain": "Grain",
+      "contrast": "Contrast",
+      "glow": "Glow"
+    },
+    "stocks": {
+      "1": {
+        "name": "KUB 400",
+        "body": "Warm, slightly faded blacks, like colour film from the corner lab — good every day, in any light."
+      },
+      "2": {
+        "name": "Mono 400",
+        "body": "Hard-contrast black and white with chunky grain — made for people, streets and harsh noon light."
+      },
+      "3": {
+        "name": "Night 800",
+        "body": "Cool tones for after dark; bright lights bloom into red halos — neon, street lamps, night markets."
+      }
+    }
+  },
+  "how": {
+    "eyebrow": "How it works",
+    "title": "From shutter to chain",
+    "subtitle": "ChainRoll is a film camera where every frame is a transaction on KUB Chain — a little slower, and every photo counts.",
+    "steps": [
+      {
+        "title": "Claim",
+        "body": "Connect a wallet and claim one free roll a day (24 frames), resetting at midnight Thai time. Pick the film first — once loaded, it's yours until the roll ends.",
+        "tx": "1 tx"
+      },
+      {
+        "title": "Shoot",
+        "body": "Each frame gets a fingerprint (hash) that's recorded on-chain. The photo stays latent — invisible until developed, just like real film.",
+        "tx": "1 tx / frame"
+      },
+      {
+        "title": "Develop",
+        "body": "After 24 frames, send the roll to develop. About an hour in the darkroom, then the whole roll fades in.",
+        "tx": "1 tx"
+      },
+      {
+        "title": "Share",
+        "body": "Post your favourites to the feed and get a link to share on LINE or X — nothing you don't post is seen.",
+        "tx": "soon"
+      }
+    ],
+    "costTitle": "Fees (gas)",
+    "costBody": "Every transaction pays gas in KUB. The numbers below use the 25 Gwei minimum gas price — real prices depend on network load.",
+    "costCols": {
+      "action": "Action",
+      "gas": "Approx. gas",
+      "kub": "Approx. KUB"
+    },
+    "costRows": {
+      "claim": "Claim a roll",
+      "shoot": "Shoot 1 frame",
+      "develop": "Develop",
+      "roll": "Whole roll (claim + 24 frames + develop)"
+    },
+    "privacyTitle": "Where your photos live",
+    "privacy": [
+      "Photos stay on your device (in your browser) — never on-chain.",
+      "The chain only stores a hash (a 32-byte fingerprint) that proves the photo was taken at that moment. It can't be turned back into the photo.",
+      "On-chain data is public and permanent — your wallet address, timestamps and film choice are visible.",
+      "Clearing your browser data deletes photos you haven't saved yet (you can save them after developing)."
+    ],
+    "walletsTitle": "Supported wallets",
+    "wallets": "Bitkub NEXT · MetaMask · OKX · Rabby and other browser wallets · KUB Wallet and mobile wallets via WalletConnect",
+    "faqTitle": "FAQ",
+    "faq": [
+      {
+        "q": "Why wait for developing?",
+        "a": "Because that's the magic of film — you shoot without knowing, then see the whole roll at once."
+      },
+      {
+        "q": "Can I delete a bad shot?",
+        "a": "No. Every click uses a real frame, like film — make each one count."
+      },
+      {
+        "q": "Will my photos follow me to a new device?",
+        "a": "The on-chain record is always there, but the photos stay on the device you shot with until you post or save them."
+      },
+      {
+        "q": "Do I need KUB?",
+        "a": "A little, for gas (see the table above). Bitkub NEXT users may have a free transaction quota set by Bitkub."
+      }
+    ],
+    "cta": "Open camera",
+    "privacyLink": "Read the privacy policy"
+  },
+  "privacyPage": {
+    "eyebrow": "Privacy",
+    "title": "Privacy policy",
+    "draft": "Draft — under review for Thailand's PDPA before launch.",
+    "sections": [
+      {
+        "h": "What we collect",
+        "p": "Your wallet address and the KUB Chain transactions you create (claiming, shooting, developing), which are public blockchain data."
+      },
+      {
+        "h": "Photos",
+        "p": "Photos are stored only in your browser. We never receive a photo unless you choose to post it. The chain holds only a hash that can't be turned back into the image."
+      },
+      {
+        "h": "Blockchain data",
+        "p": "Transactions on KUB Chain are permanent by design and can't be deleted, even if you stop using the service."
+      },
+      {
+        "h": "Posted photos",
+        "p": "Once the feed launches, photos you post are stored on our servers and shown publicly. You can delete a post at any time."
+      },
+      {
+        "h": "Third parties",
+        "p": "Bitkub NEXT and WalletConnect (Reown) are used to connect wallets and are covered by their own policies."
+      },
+      {
+        "h": "Your rights",
+        "p": "You can ask to see, correct or delete any data we hold off-chain. Contact details for the ChainRoll team will be published before launch."
+      }
+    ]
+  },
+  "feed": {
+    "eyebrow": "Feed",
+    "title": "Frames from every roll",
+    "soonTitle": "The feed is still developing",
+    "soonBody": "Soon you'll be able to post photos from your darkroom here — start by shooting your first roll.",
+    "cta": "Open camera"
+  }
+}

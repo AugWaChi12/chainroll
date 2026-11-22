@@ -244,6 +244,8 @@ admin_log  (id, actor, action, target, payload jsonb, created_at)
 ```
 - ตรวจ contrast ทุกคู่ fg/bg ≥ 4.5:1 (ข้อความ) และ ≥ 3:1 (UI) — มี test อัตโนมัติ
 
+**Fonts (22 พ.ย.):** หัวข้อ **Bricolage Grotesque** (weight 600, ตัวชิดเฉพาะภาษาอังกฤษ) · เนื้อหา **Geist** · ตัวเลข/ขอบฟิล์ม **Geist Mono** · ภาษาไทยทุกจุดตกไปที่ **Anuphan** (ไทยไม่มีหัว ทันสมัย เข้ากับ grotesk) — ห้ามใส่ letter-spacing ติดลบกับข้อความไทย
+
 **Type scale** (1.200, base 15px สำหรับไทยอ่านสบาย)
 `12 · 13 · 15 · 18 · 22 · 26 · 32 · 44 · 64` — display ใช้ serif, UI ใช้ sans, ตัวเลข/hash/เลขเฟรมใช้ mono `tabular-nums`
 
@@ -284,7 +286,7 @@ admin_log  (id, actor, action, target, payload jsonb, created_at)
 ### 9.6 Accessibility & i18n
 - WCAG 2.2 AA, ทุกอย่างใช้คีย์บอร์ดได้, focus ring ชัด, ARIA ครบ (ทดสอบด้วย axe ใน Playwright)
 - ปุ่มชัตเตอร์: Space/Enter, มี label
-- ภาษา `th` (หลัก) / `en` ด้วย next-intl, วันที่/ตัวเลขตาม locale, ปี พ.ศ. เลือกได้
+- ภาษา `th` (หลัก) / `en` ด้วย next-intl — เลือกผ่านปุ่ม TH/EN (เก็บใน cookie `NEXT_LOCALE`), ถ้าไม่เคยเลือก: เบราว์เซอร์ที่มีภาษาไทย → th, อังกฤษล้วน → en · ข้อความของ `packages/ui` ส่งผ่าน `UiLabelsProvider` · มีเทสบังคับว่า th/en มี key และ `{placeholder}` ตรงกัน
 
 ### 9.7 Signature (ฟิล์ม)
 - เลขเฟรมแบบขอบฟิล์ม `▸ 07A` สีส้มบนพื้นดำ

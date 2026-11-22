@@ -1,28 +1,18 @@
 import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
-import {
-  IBM_Plex_Mono,
-  IBM_Plex_Sans_Thai,
-  Instrument_Serif,
-  Noto_Serif_Thai,
-} from 'next/font/google'
+import { Anuphan, Bricolage_Grotesque, Geist, Geist_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { UiLabelsBridge } from '@/features/i18n'
 import { WalletProvider } from '@/features/wallet'
 import './globals.css'
 
-const display = Instrument_Serif({ subsets: ['latin'], weight: '400', variable: '--ff-display' })
-const displayTh = Noto_Serif_Thai({
-  subsets: ['thai'],
-  weight: ['400', '500'],
-  variable: '--ff-display-th',
-})
-const sans = IBM_Plex_Sans_Thai({
-  subsets: ['thai', 'latin'],
-  weight: ['300', '400', '500', '600'],
-  variable: '--ff-sans',
-})
-const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--ff-mono' })
+// Modern pairing: Bricolage Grotesque (display) · Geist (UI) · Geist Mono (numbers, film rebates)
+// Thai text falls through to Anuphan — a loopless contemporary Thai face that sits well with grotesks.
+const display = Bricolage_Grotesque({ subsets: ['latin'], variable: '--ff-display' })
+const sans = Geist({ subsets: ['latin'], variable: '--ff-sans' })
+const mono = Geist_Mono({ subsets: ['latin'], variable: '--ff-mono' })
+const thai = Anuphan({ subsets: ['thai', 'latin'], variable: '--ff-thai' })
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('meta')
@@ -44,12 +34,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html
       lang={locale}
-      className={`${display.variable} ${displayTh.variable} ${sans.variable} ${mono.variable}`}
+      className={`${display.variable} ${sans.variable} ${mono.variable} ${thai.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-dvh">
         <NextIntlClientProvider>
-          <WalletProvider>{children}</WalletProvider>
+          <UiLabelsBridge>
+            <WalletProvider>{children}</WalletProvider>
+          </UiLabelsBridge>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -1,3 +1,4 @@
+export { UiLabelsProvider, defaultUiLabels, fmt, useUiLabels, type UiLabels } from './i18n'
 export { cn } from './lib/cn'
 
 export { Button, buttonVariants, type ButtonProps } from './components/button'

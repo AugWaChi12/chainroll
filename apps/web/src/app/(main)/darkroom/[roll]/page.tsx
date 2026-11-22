@@ -1,7 +1,11 @@
+import { getTranslations } from 'next-intl/server'
 import { RollSheet } from '@/features/darkroom'
 import { notFound } from 'next/navigation'
 
-export const metadata = { title: 'ห้องมืด' }
+export async function generateMetadata() {
+  const t = await getTranslations('meta.pages')
+  return { title: t('darkroom') }
+}
 
 export default async function RollPage({ params }: PageProps<'/darkroom/[roll]'>) {
   const { roll } = await params

@@ -3,6 +3,7 @@
 import { Menu, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react'
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
 import { cn } from '../lib/cn'
+import { useUiLabels } from '../i18n'
 import { Kbd } from './feedback'
 
 export type NavItem = {
@@ -48,10 +49,11 @@ export function AppShell({
   renderLink = defaultLink,
   topbarRight,
   onSearch,
-  searchLabel = 'ค้นหาทุกอย่าง',
+  searchLabel,
   sidebarFooter,
   children,
 }: AppShellProps) {
+  const L = useUiLabels()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -68,7 +70,7 @@ export function AppShell({
   }, [onSearch])
 
   const nav = (
-    <nav aria-label="เมนูหลัก" className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-4">
+    <nav aria-label={L.mainMenu} className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-4">
       {sections.map((section, si) => (
         <div key={si} className="flex flex-col gap-0.5">
           {section.title && !collapsed && (
@@ -147,7 +149,7 @@ export function AppShell({
           <button
             type="button"
             className="rounded-xs p-1.5 text-fg-muted hover:bg-bg-sunken hover:text-fg lg:hidden"
-            aria-label="ปิดเมนู"
+            aria-label={L.closeMenu}
             onClick={() => setMobileOpen(false)}
           >
             <X className="size-4" />
@@ -155,7 +157,7 @@ export function AppShell({
           <button
             type="button"
             className="hidden rounded-xs p-1.5 text-fg-muted hover:bg-bg-sunken hover:text-fg lg:block"
-            aria-label={collapsed ? 'ขยายเมนู' : 'ย่อเมนู'}
+            aria-label={collapsed ? L.expandMenu : L.collapseMenu}
             onClick={() => setCollapsed((c) => !c)}
           >
             {collapsed ? (
@@ -184,7 +186,7 @@ export function AppShell({
           <button
             type="button"
             className="-ml-1.5 rounded-xs p-1.5 text-fg-muted hover:bg-bg-sunken hover:text-fg lg:hidden"
-            aria-label="เปิดเมนู"
+            aria-label={L.openMenu}
             onClick={() => setMobileOpen(true)}
           >
             <Menu className="size-4" />
@@ -196,7 +198,7 @@ export function AppShell({
               className="flex h-8 w-full max-w-80 items-center gap-2 rounded-sm border border-border px-2.5 text-sm text-fg-subtle hover:border-border-strong hover:text-fg-muted"
             >
               <Search className="size-4" aria-hidden />
-              <span className="flex-1 text-left">{searchLabel}</span>
+              <span className="flex-1 text-left">{searchLabel ?? L.searchAll}</span>
               <span className="hidden gap-0.5 sm:flex">
                 <Kbd>⌘</Kbd>
                 <Kbd>K</Kbd>
@@ -213,7 +215,7 @@ export function AppShell({
 
 export type PageHeaderProps = {
   title: string
-  /** Small film-rebate label above the title, e.g. "01 · ภาพรวม" */
+  /** Small film-rebate label above the title, e.g. "01 · Overview" */
   eyebrow?: string
   description?: string
   actions?: ReactNode

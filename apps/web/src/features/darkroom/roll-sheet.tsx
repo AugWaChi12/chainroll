@@ -1,7 +1,7 @@
 'use client'
 
 import { ReviewSheet, type Shot } from '@/features/camera'
-import { getStock } from '@/features/film'
+import { getStock, useStockName } from '@/features/film'
 import { countdown, photoStore, rollStage, useNowSec, useRoll } from '@/features/roll'
 import {
   activeChain,
@@ -31,6 +31,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
   const t = useTranslations('darkroom')
   const w = useWallet()
   const now = useNowSec()
+  const stockName = useStockName()
   const { roll, loading, refetch } = useRoll(rollId)
   const shots = useRollShots(rollId)
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
@@ -107,7 +108,9 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
             <span className="font-mono text-2xs tracking-wide text-frame">
               ▸ {stock.code} · #{String(roll.id)}
             </span>
-            <h1 className="font-display text-3xl leading-none md:text-4xl">{stock.name}</h1>
+            <h1 className="font-display text-3xl leading-none md:text-4xl">
+              {stockName(stock.id)}
+            </h1>
             <span className="font-mono text-xs text-fg-muted tabular">
               {String(roll.framesUsed).padStart(2, '0')} / {roll.frames} {t('frames')}
             </span>

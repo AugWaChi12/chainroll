@@ -4,3 +4,4 @@ export { FilmRenderer, WebGLUnavailableError, type FilmSource } from './renderer
 export { MAX_PHOTO_BYTES, encodeCanvas, fitQuality, type EncodedPhoto } from './encode'
 export { FilmPreview, sampleScene } from './film-preview'
 export { FilmsCatalog } from './films-catalog'
+export { useStockName } from './use-stock-name'

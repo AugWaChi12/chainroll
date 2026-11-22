@@ -44,11 +44,12 @@
   --shadow-*: initial;
   --shadow-pop: var(--elev-pop);
 
-  /* --ff-* are set by next/font in the app (or Google Fonts in Storybook) */
+  /* --ff-* are set by next/font in the app (or Google Fonts in Storybook).
+     Latin face first; Thai glyphs fall through to Anuphan. */
   --font-display:
-    var(--ff-display, 'Instrument Serif'), var(--ff-display-th, 'Noto Serif Thai'), serif;
-  --font-sans: var(--ff-sans, 'IBM Plex Sans Thai'), system-ui, sans-serif;
-  --font-mono: var(--ff-mono, 'IBM Plex Mono'), ui-monospace, monospace;
+    var(--ff-display, 'Bricolage Grotesque'), var(--ff-thai, 'Anuphan'), system-ui, sans-serif;
+  --font-sans: var(--ff-sans, 'Geist'), var(--ff-thai, 'Anuphan'), system-ui, sans-serif;
+  --font-mono: var(--ff-mono, 'Geist Mono'), var(--ff-thai, 'Anuphan'), ui-monospace, monospace;
 
   /* type scale 1.2 — base 15px */
   --text-2xs: 12px;
@@ -78,7 +79,7 @@
   html {
     background: var(--bg);
     color: var(--fg);
-    font-family: var(--ff-sans, 'IBM Plex Sans Thai'), system-ui, sans-serif;
+    font-family: var(--ff-sans, 'Geist'), var(--ff-thai, 'Anuphan'), system-ui, sans-serif;
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -158,5 +159,19 @@
     pointer-events: none;
     background: radial-gradient(ellipse 80% 60% at 50% 0%, rgb(210 58 30 / 0.16), transparent 70%);
     animation: safelight-breathe 6s ease-in-out infinite;
+  }
+}
+
+/* Grotesk display: heavier + tighter than body. Tight tracking only for Latin —
+   negative letter-spacing makes Thai vowel and tone marks collide. */
+@layer base {
+  /* class selector (not :where) so it beats preflight's `h1 { font-weight: inherit }`;
+     font-* utilities still win because they live in a later layer */
+  .font-display {
+    font-weight: 600;
+    font-optical-sizing: auto;
+  }
+  :where(:lang(en) .font-display) {
+    letter-spacing: -0.03em;
   }
 }

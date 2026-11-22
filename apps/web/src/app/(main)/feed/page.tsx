@@ -2,7 +2,10 @@ import { Button, EmptyState } from '@chainroll/ui'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 
-export const metadata = { title: 'ฟีด' }
+export async function generateMetadata() {
+  const t = await getTranslations('meta.pages')
+  return { title: t('feed') }
+}
 
 // The real feed needs the server (posts, likes) in M4. Until then, say so plainly.
 export default async function FeedPage() {

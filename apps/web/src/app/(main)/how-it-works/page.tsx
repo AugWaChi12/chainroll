@@ -3,7 +3,10 @@ import { Aperture } from 'lucide-react'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 
-export const metadata = { title: 'วิธีใช้' }
+export async function generateMetadata() {
+  const t = await getTranslations('meta.pages')
+  return { title: t('how') }
+}
 
 /** Gas measured by `forge test --gas-report` (packages/contracts). */
 const GAS = { claim: 79_000, shoot: 55_000, develop: 30_000 } as const

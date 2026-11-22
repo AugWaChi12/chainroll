@@ -67,7 +67,7 @@ export const FILM_STOCKS: readonly FilmStock[] = [
   },
   {
     id: 2,
-    name: 'ขาวดำ 400',
+    name: 'Mono 400',
     code: 'BW 400',
     iso: 400,
     frames: 24,

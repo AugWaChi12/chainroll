@@ -6,9 +6,11 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { FilmPreview } from './film-preview'
 import { FILM_STOCKS } from './stocks'
+import { useStockName } from './use-stock-name'
 
 export function FilmsCatalog() {
   const t = useTranslations('films')
+  const stockName = useStockName()
   return (
     <div className="mx-auto max-w-6xl px-4 pt-10 pb-16 md:px-8">
       <header className="mb-10 flex flex-col gap-1.5">
@@ -31,7 +33,7 @@ export function FilmsCatalog() {
               </div>
               <div className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="font-display text-2xl">{s.name}</h2>
+                  <h2 className="font-display text-2xl">{stockName(s.id)}</h2>
                   <RebateLabel>
                     ISO {s.iso} · {s.frames} EXP
                   </RebateLabel>

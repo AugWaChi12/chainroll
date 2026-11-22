@@ -13,6 +13,7 @@ import {
 } from '@tanstack/react-table'
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { fmt, useUiLabels } from '../i18n'
 import { cn } from '../lib/cn'
 import { Button } from './button'
 import { EmptyState, Skeleton } from './feedback'
@@ -44,15 +45,17 @@ export function DataTable<T>({
   getRowId,
   loading,
   selectable,
-  searchPlaceholder = 'ค้นหา…',
+  searchPlaceholder,
   bulkActions,
   toolbar,
-  emptyTitle = 'ไม่มีข้อมูล',
+  emptyTitle,
   emptyDescription,
   pageSize = 20,
   onRowClick,
   className,
 }: DataTableProps<T>) {
+  const L = useUiLabels()
+  const searchLabel = searchPlaceholder ?? L.search
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -66,7 +69,7 @@ export function DataTable<T>({
           header: ({ table }) => (
             <input
               type="checkbox"
-              aria-label="เลือกทั้งหมด"
+              aria-label={L.selectAll}
               className="size-3.5 accent-[var(--accent)]"
               checked={table.getIsAllPageRowsSelected()}
               ref={(el) => {
@@ -78,7 +81,7 @@ export function DataTable<T>({
           cell: ({ row }) => (
             <input
               type="checkbox"
-              aria-label="เลือกแถว"
+              aria-label={L.selectRow}
               className="size-3.5 accent-[var(--accent)]"
               checked={row.getIsSelected()}
               onClick={(e) => e.stopPropagation()}
@@ -119,10 +122,12 @@ export function DataTable<T>({
       <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-border px-3 py-2">
         {selected.length > 0 && bulkActions ? (
           <div className="flex flex-1 items-center gap-3">
-            <span className="font-mono text-xs tabular text-fg">{selected.length} เลือกแล้ว</span>
+            <span className="font-mono text-xs tabular text-fg">
+              {fmt(L.selected, { count: selected.length })}
+            </span>
             {bulkActions(selected)}
             <Button variant="ghost" size="sm" onClick={() => table.resetRowSelection()}>
-              ยกเลิก
+              {L.cancel}
             </Button>
           </div>
         ) : (
@@ -131,8 +136,8 @@ export function DataTable<T>({
             <input
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              placeholder={searchPlaceholder}
-              aria-label={searchPlaceholder}
+              placeholder={searchLabel}
+              aria-label={searchLabel}
               className="h-full min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-fg-subtle"
             />
           </label>
@@ -217,8 +222,10 @@ export function DataTable<T>({
         {!loading && rows.length === 0 && (
           <EmptyState
             className="m-4"
-            title={globalFilter ? `ไม่พบ "${globalFilter}"` : emptyTitle}
-            description={globalFilter ? 'ลองคำค้นอื่น หรือล้างตัวกรอง' : emptyDescription}
+            title={
+              globalFilter ? fmt(L.noMatch, { query: globalFilter }) : (emptyTitle ?? L.noData)
+            }
+            description={globalFilter ? L.noMatchHint : emptyDescription}
           />
         )}
       </div>
@@ -235,7 +242,7 @@ export function DataTable<T>({
             <Button
               variant="ghost"
               size="icon"
-              aria-label="หน้าก่อน"
+              aria-label={L.prevPage}
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
@@ -244,7 +251,7 @@ export function DataTable<T>({
             <Button
               variant="ghost"
               size="icon"
-              aria-label="หน้าถัดไป"
+              aria-label={L.nextPage}
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >

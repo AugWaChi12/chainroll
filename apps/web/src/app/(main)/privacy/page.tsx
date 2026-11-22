@@ -1,6 +1,9 @@
 import { getTranslations } from 'next-intl/server'
 
-export const metadata = { title: 'ความเป็นส่วนตัว' }
+export async function generateMetadata() {
+  const t = await getTranslations('meta.pages')
+  return { title: t('privacy') }
+}
 
 export default async function PrivacyPage() {
   const t = await getTranslations('privacyPage')

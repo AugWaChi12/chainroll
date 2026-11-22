@@ -1,5 +1,6 @@
 'use client'
 
+import { LocaleSwitcher } from '@/features/i18n'
 import { ConnectSheet, WalletButton } from '@/features/wallet'
 import { cn } from '@chainroll/ui'
 import { Aperture, BookOpen, Film, LayoutGrid, Warehouse } from 'lucide-react'
@@ -65,6 +66,7 @@ export function AppNav({ children }: { children: ReactNode }) {
               <Aperture className="size-4" aria-hidden />
               {t('camera')}
             </Link>
+            <LocaleSwitcher />
             <WalletButton onOpen={() => setConnectOpen(true)} />
           </div>
         </div>

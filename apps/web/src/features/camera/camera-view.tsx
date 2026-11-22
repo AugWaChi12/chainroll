@@ -7,6 +7,7 @@ import {
   captureSize,
   encodeCanvas,
   getStock,
+  useStockName,
   type FilmSource,
 } from '@/features/film'
 import { rollStage, useNowSec } from '@/features/roll'
@@ -28,6 +29,7 @@ export function CameraView() {
   const format = useFormatter()
   const cam = useCamera()
   const nowSec = useNowSec()
+  const stockName = useStockName()
 
   const previewRef = useRef<HTMLCanvasElement>(null)
   const rendererRef = useRef<FilmRenderer | null>(null)
@@ -303,7 +305,7 @@ export function CameraView() {
                   className="size-3.5 rounded-full"
                   style={{ background: s.swatch }}
                 />
-                {s.name}
+                {stockName(s.id)}
               </button>
             )
           })}
