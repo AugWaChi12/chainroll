@@ -9,7 +9,7 @@ export const kubMainnet = {
   name: 'KUB Chain',
   nativeCurrency: { name: 'KUB', symbol: 'KUB', decimals: 18 },
   rpcUrls: { default: { http: ['https://rpc.kubchain.io', 'https://rpc.bitkubchain.io'] } },
-  blockExplorers: { default: { name: 'bkcscan', url: 'https://www.bkcscan.com' } },
+  blockExplorers: { default: { name: 'KUBScan', url: 'https://www.kubscan.com' } },
 } as const
 
 export const kubTestnet = {
@@ -19,7 +19,7 @@ export const kubTestnet = {
   rpcUrls: {
     default: { http: ['https://rpc-testnet.bitkubchain.io', 'https://rpc-testnet.kubchain.io'] },
   },
-  blockExplorers: { default: { name: 'bkcscan testnet', url: 'https://testnet.bkcscan.com' } },
+  blockExplorers: { default: { name: 'KUBScan testnet', url: 'https://testnet.kubscan.com' } },
   testnet: true,
 } as const
 

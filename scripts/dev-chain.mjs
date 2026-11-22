@@ -13,10 +13,23 @@ const ANVIL_KEY_0 = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf
 // anvil account #9 plays the Bitkub NEXT sdkCallHelperRouter locally
 const FAKE_ROUTER = '0xa0Ee7A142d267C1f36714E4a8F75612F20a79720'
 
-const anvil = spawn(bin('anvil'), ['--port', '8545', '--chain-id', '31337', '--block-time', '1'], {
-  stdio: ['ignore', 'pipe', 'inherit'],
-  shell: process.platform === 'win32',
-})
+const anvil = spawn(
+  bin('anvil'),
+  [
+    '--port',
+    '8545',
+    '--chain-id',
+    '31337',
+    '--block-time',
+    '1',
+    '--hardfork',
+    'paris',
+  ] /* match KUB: no PUSH0 yet */,
+  {
+    stdio: ['ignore', 'pipe', 'inherit'],
+    shell: process.platform === 'win32',
+  },
+)
 
 let deployed = false
 anvil.stdout.on('data', (buf) => {

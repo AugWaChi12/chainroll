@@ -109,7 +109,7 @@ event Developed(address indexed owner, uint256 indexed rollId, uint64 readyAt);
   ```
 - เก็บ `wallet_kind` ใน `users` ไว้ดูสถิติในหน้า admin
 - OAuth client secret / token exchange ทำฝั่ง server (`/api/auth/bitkub-next/callback`) เท่านั้น
-- Chain (Whitepaper V5.2): mainnet `96`, RPC `https://rpc.kubchain.io` (สำรอง `rpc.bitkubchain.io`), block 3s, gas ขั้นต่ำ 25 Gwei · testnet `25925`, RPC `https://rpc-testnet.bitkubchain.io` (โดเมนใหม่ `rpc-testnet.kubchain.io` ยังไม่ตอบ ณ 22 พ.ย.) · L2 mainnet `9601` / L2 testnet `259251` · explorer `bkcscan.com`
+- Chain (Whitepaper V5.2): mainnet `96`, RPC `https://rpc.kubchain.io` (สำรอง `rpc.bitkubchain.io`), block 3s, gas ขั้นต่ำ 25 Gwei · testnet `25925`, RPC `https://rpc-testnet.bitkubchain.io` (โดเมนใหม่ `rpc-testnet.kubchain.io` ยังไม่ตอบ ณ 22 พ.ย.) · L2 mainnet `9601` / L2 testnet `259251` · explorer `www.kubscan.com` / `testnet.kubscan.com` (bkcscan.com redirect มาที่นี่)
 
 **ต้องเช็คก่อนเขียน contract (สำคัญ)**
 - [ ] สมัคร KUB Developer Console + ขอสิทธิ์ mainnet ของ NEXT SDK (ต้องกรอกฟอร์มและรอติดต่อกลับ — **ทำทันที** เพราะอาจใช้เวลา)
@@ -397,7 +397,7 @@ CI (GitHub Actions): `lint → typecheck → test → build` ทุก PR; previ
 |---|---|---|
 | M0 | สมัคร Developer Console + ขอสิทธิ์ NEXT SDK mainnet *(ทำคู่ขนานได้เลย)* | ได้ client id / อนุมัติ |
 | M1 | Monorepo + CI + `packages/ui` tokens & primitives + Storybook + app shell | `pnpm dev` รันได้, Storybook มี Button/Input/DataTable |
-| M1.5 | Contract + test + deploy testnet | ✅ contract + 26 tests + ABI→TS + deploy script (ทดสอบบน anvil แล้ว) · ⏳ deploy testnet รอ key ที่มี tKUB |
+| M1.5 | Contract + test + deploy testnet | ✅ **KUB testnet: `0x8a4e72D58CBEb5D1be4C24606b76665Dc8712ED5`** (22 พ.ย. 2026, ค่า deploy 0.053 tKUB, evm `paris` เพราะเชนยังไม่รองรับ PUSH0) · admin `0x243d…9350` (keystore `chainroll-deployer`) |
 | M2 | กล้อง + filter 3 โทน (ยังไม่ต่อเชน) | ✅ กล้อง + WebGL2 film shader 3 โทน + WebP ≤300KB + keccak hash + ม้วน 24 รูป (ทดสอบในเบราว์เซอร์ด้วยรูปจากเครื่อง) · ⏳ ทดสอบกล้องจริงบนมือถือ (`pnpm --filter @chainroll/web dev:https`) · iOS Safari เข้ารหัส WebP ไม่ได้ → ใช้ JPEG แทน |
 | M3a | ต่อ wallet + บันทึกลงเชน | ✅ WalletAdapter (MetaMask / Bitkub NEXT SDK / dev wallet), tx state machine, claim → shoot → develop บนเชน, รูปเก็บใน IndexedDB (รีโหลดไม่หาย) · ทดสอบครบวงบน anvil (hash ในแอป = event บนเชน) · ⏳ Bitkub NEXT ยังไม่ได้ทดสอบจริง (รอ Client ID) |
 | M3b | Server: upload R2 + Supabase + SIWE session + indexer | รอบัญชี Cloudflare R2 + Supabase |

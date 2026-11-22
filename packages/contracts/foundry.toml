@@ -5,8 +5,9 @@ script = "script"
 out = "out"
 libs = ["lib", "node_modules"]
 solc_version = "0.8.30"
-# KUB Zurich hard fork (2026-12-14) adds newer EVM support. Verify the exact EVM version before mainnet deploy.
-evm_version = "cancun"
+# KUB testnet + mainnet reject PUSH0 (checked 2026-11-22 via eth_call), i.e. pre-Shanghai.
+# Stay on "paris" until the Zurich hard fork (2026-12-14) is live, then re-probe and bump.
+evm_version = "paris"
 optimizer = true
 optimizer_runs = 10_000
 via_ir = false
