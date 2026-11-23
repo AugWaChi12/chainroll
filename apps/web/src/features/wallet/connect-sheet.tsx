@@ -367,8 +367,8 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
             w.authenticated ? 'bg-success' : 'bg-warning',
           )}
         />
-        <span className="hidden max-w-24 truncate sm:inline">{w.walletName}</span>
-        <span className="hidden sm:inline">·</span>
+        <span className="hidden max-w-24 truncate xl:inline">{w.walletName}</span>
+        <span className="hidden xl:inline">·</span>
         <span className="sm:hidden">
           {w.address.slice(0, 4)}…{w.address.slice(-4)}
         </span>

@@ -68,20 +68,20 @@ export function AppNav({ children }: { children: ReactNode }) {
             <Aperture className="size-5 text-accent" aria-hidden />
             ChainRoll
           </Link>
-          <nav aria-label={t('label')} className="hidden items-center gap-1 md:flex">
+          <nav aria-label={t('label')} className="hidden shrink-0 items-center gap-0.5 md:flex lg:gap-1">
             {[...LEFT, ...RIGHT].map((i) => (
               <Link
                 key={i.href}
                 href={i.href}
                 aria-current={active(i.href) ? 'page' : undefined}
                 className={cn(
-                  'relative rounded-xs px-3 py-1.5 text-sm transition-colors',
+                  'relative shrink-0 rounded-xs px-2 py-1.5 text-sm whitespace-nowrap transition-colors lg:px-3',
                   active(i.href) ? 'text-fg' : 'text-fg-muted hover:text-fg',
                 )}
               >
                 {t(i.key)}
                 {active(i.href) && (
-                  <span aria-hidden className="absolute inset-x-3 -bottom-[13px] h-0.5 bg-accent" />
+                  <span aria-hidden className="absolute inset-x-2 -bottom-[13px] h-0.5 bg-accent lg:inset-x-3" />
                 )}
               </Link>
             ))}
