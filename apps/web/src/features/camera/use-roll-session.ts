@@ -123,10 +123,10 @@ export function useRollSession(defaultFrames: number) {
       }
       setHud({ ...task, stage: 'signing', errorCode: undefined })
       try {
-        // Pre-flight real KUB gas check so mobile WalletConnect never hangs silently at 0 KUB
+        // Pre-flight real KUB gas check (getKubBalance returns KUB as a number)
         if (wallet.address && wallet.kind !== 'bitkub-next') {
           const bal = await getKubBalance(wallet.address)
-          if (bal !== null && bal < 500_000_000_000_000n) {
+          if (bal !== null && bal < 0.0005) {
             if (task.kind === 'shoot') {
               patchShot(task.digest, { status: 'failed', errorCode: 'insufficient-funds' })
             }
