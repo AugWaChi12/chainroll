@@ -265,7 +265,7 @@ export function BlockConfirmHud({
           )}
 
           {(stage === 'signing' || stage === 'mining') && (
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <FilmStrip className="w-28" label={t(`stages.${stage}`)} />
               {approvalUrl ? (
                 <a
@@ -277,21 +277,43 @@ export function BlockConfirmHud({
                   {t('openApproval')}
                   <ExternalLink className="size-3" />
                 </a>
+              ) : stage === 'signing' ? (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-2xs text-[#a39a90]">{t('checkWalletHint')}</span>
+                  <a
+                    href="kubwallet://"
+                    className="inline-flex items-center gap-1 rounded-xs border border-frame/50 bg-frame/10 px-2 py-1 font-mono text-2xs text-frame hover:bg-frame/20"
+                  >
+                    <Wallet className="size-3" />
+                    KUB Wallet
+                  </a>
+                </div>
               ) : (
-                <span className="font-mono text-2xs text-[#a39a90]">
-                  {stage === 'signing' ? t('checkWalletHint') : t('waitingBlockHint')}
-                </span>
+                <span className="font-mono text-2xs text-[#a39a90]">{t('waitingBlockHint')}</span>
               )}
             </div>
           )}
 
           {stage === 'failed' && (
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-danger">
-                {task.errorCode
-                  ? t(`errors.${task.errorCode}` as Parameters<typeof t>[0])
-                  : t('errors.unknown')}
-              </span>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-danger">
+                  {task.errorCode
+                    ? t(`errors.${task.errorCode}` as Parameters<typeof t>[0])
+                    : t('errors.unknown')}
+                </span>
+                {task.errorCode === 'insufficient-funds' && activeChain.id === 25925 && (
+                  <a
+                    href="https://faucet.kubchain.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 font-mono text-2xs text-frame underline"
+                  >
+                    faucet.kubchain.com (tKUB ฟรี)
+                    <ExternalLink className="size-3" />
+                  </a>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Button variant="primary" size="sm" onClick={onConfirm}>
                   <Check />

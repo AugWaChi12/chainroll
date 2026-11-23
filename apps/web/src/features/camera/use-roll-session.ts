@@ -12,6 +12,7 @@ import {
 import {
   activeChain,
   classifyTxError,
+  getKubBalance,
   txReducer,
   useWallet,
   waitForNextKubBlock,
@@ -122,6 +123,17 @@ export function useRollSession(defaultFrames: number) {
       }
       setHud({ ...task, stage: 'signing', errorCode: undefined })
       try {
+        // Pre-flight real KUB gas check so mobile WalletConnect never hangs silently at 0 KUB
+        if (wallet.address && wallet.kind !== 'bitkub-next') {
+          const bal = await getKubBalance(wallet.address)
+          if (bal !== null && bal < 500_000_000_000_000n) {
+            if (task.kind === 'shoot') {
+              patchShot(task.digest, { status: 'failed', errorCode: 'insufficient-funds' })
+            }
+            setHud({ ...task, stage: 'failed', errorCode: 'insufficient-funds' })
+            return
+          }
+        }
         if (task.kind === 'claim') {
           let txHash: `0x${string}` | undefined
           await adapter.claimDailyRoll(task.filmId, {
@@ -190,7 +202,7 @@ export function useRollSession(defaultFrames: number) {
         void chain.refetch()
       }
     },
-    [chain, executeOnPageConfirm, patchShot, roll, wallet.adapter],
+    [chain, executeOnPageConfirm, patchShot, roll, wallet.adapter, wallet.address, wallet.kind],
   )
 
   const addShot = useCallback(
