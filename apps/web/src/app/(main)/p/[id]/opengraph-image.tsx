@@ -23,33 +23,54 @@ function frameMark(frame: number): string {
   return `${String(frame).padStart(2, '0')}${frame % 2 ? 'A' : ''}`
 }
 
-let thaiFontPromise: Promise<ArrayBuffer | null> | null = null
+type LoadedOgFont = {
+  name: string
+  data: ArrayBuffer
+  style: 'normal'
+  weight: 600
+}
 
-function loadThaiFont(): Promise<ArrayBuffer | null> {
-  if (!thaiFontPromise) {
-    thaiFontPromise = (async () => {
-      try {
-        const cssRes = await fetch(
-          'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@600&display=swap',
-          {
-            // Request TTF instead of WOFF2 so Satori can parse it directly
-            headers: { 'User-Agent': 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1)' },
-            signal: AbortSignal.timeout(3000),
-          },
-        )
-        if (!cssRes.ok) return null
-        const css = await cssRes.text()
-        const match = css.match(/src:\s*url\((https?:\/\/[^)]+)\)/)
-        if (!match?.[1]) return null
-        const fontRes = await fetch(match[1], { signal: AbortSignal.timeout(3000) })
-        if (!fontRes.ok) return null
-        return await fontRes.arrayBuffer()
-      } catch {
-        return null
-      }
+let ogFontsPromise: Promise<LoadedOgFont[]> | null = null
+
+function isValidOpenTypeBuffer(buf: ArrayBuffer): boolean {
+  if (buf.byteLength < 12) return false
+  const v = new Uint8Array(buf, 0, 4)
+  // TrueType (00 01 00 00), OpenType CFF (OTTO), or WOFF (wOFF)
+  const isTtf = v[0] === 0x00 && v[1] === 0x01 && v[2] === 0x00 && v[3] === 0x00
+  const isOtf = v[0] === 0x4f && v[1] === 0x54 && v[2] === 0x54 && v[3] === 0x4f
+  const isWoff = v[0] === 0x77 && v[1] === 0x4f && v[2] === 0x46 && v[3] === 0x46
+  return isTtf || isOtf || isWoff
+}
+
+async function fetchValidFont(url: string): Promise<ArrayBuffer | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
+    if (!res.ok) return null
+    const buf = await res.arrayBuffer()
+    return isValidOpenTypeBuffer(buf) ? buf : null
+  } catch {
+    return null
+  }
+}
+
+function loadOgFonts(): Promise<LoadedOgFont[]> {
+  if (!ogFontsPromise) {
+    ogFontsPromise = (async () => {
+      const [thai, latin] = await Promise.all([
+        fetchValidFont(
+          'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-thai@latest/thai-600-normal.ttf',
+        ),
+        fetchValidFont(
+          'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-thai@latest/latin-600-normal.ttf',
+        ),
+      ])
+      const fonts: LoadedOgFont[] = []
+      if (latin) fonts.push({ name: 'Noto Sans Latin', data: latin, style: 'normal', weight: 600 })
+      if (thai) fonts.push({ name: 'Noto Sans Thai', data: thai, style: 'normal', weight: 600 })
+      return fonts
     })()
   }
-  return thaiFontPromise
+  return ogFontsPromise
 }
 
 async function loadLocalSampleDataUrl(scene: PostOgSummary['scene']): Promise<string | null> {
@@ -59,7 +80,7 @@ async function loadLocalSampleDataUrl(scene: PostOgSummary['scene']): Promise<st
   ]
   for (const p of candidates) {
     try {
-      const buf = await readFile(p)
+      const buf = await readFile(/* turbopackIgnore: true */ p)
       return `data:image/jpeg;base64,${buf.toString('base64')}`
     } catch {
       /* try next candidate path */
@@ -124,9 +145,9 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     /* fallback to default card if DB unavailable */
   }
 
-  const [photoSrc, thaiFont] = await Promise.all([
+  const [photoSrc, ogFonts] = await Promise.all([
     resolvePhotoDataUrl(post?.imageUrl ?? null, post?.scene ?? 'nature'),
-    loadThaiFont(),
+    loadOgFonts(),
   ])
 
   const mark = post ? frameMark(post.frame) : '01A'
@@ -158,7 +179,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           backgroundColor: '#0E0C0B',
           color: '#F2EDE4',
           padding: '40px 52px',
-          fontFamily: thaiFont ? '"Noto Sans Thai", sans-serif' : 'sans-serif',
+          fontFamily: ogFonts.length > 0 ? '"Noto Sans Latin", "Noto Sans Thai", sans-serif' : 'sans-serif',
           justifyContent: 'space-between',
           borderTop: '8px solid #D23A1E',
         }}
@@ -356,16 +377,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     ),
     {
       ...size,
-      fonts: thaiFont
-        ? [
-            {
-              name: 'Noto Sans Thai',
-              data: thaiFont,
-              style: 'normal',
-              weight: 600,
-            },
-          ]
-        : undefined,
+      fonts: ogFonts.length > 0 ? ogFonts : undefined,
     },
   )
 }
