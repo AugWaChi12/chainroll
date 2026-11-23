@@ -345,17 +345,20 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
           type="button"
           disabled={w.authenticating}
           onClick={() => void w.signIn()}
-          className="inline-flex items-center gap-1 rounded-xs border border-frame/70 bg-frame/15 px-2 py-1 font-mono text-2xs text-frame transition-colors hover:bg-frame/25 disabled:opacity-50"
+          title={t('verifyWallet')}
+          className="inline-flex h-7 items-center gap-1 rounded-xs border border-frame/70 bg-frame/15 px-1.5 font-mono text-[11px] whitespace-nowrap text-frame transition-colors hover:bg-frame/25 disabled:opacity-50 sm:h-8 sm:px-2 sm:text-2xs"
         >
-          <ShieldCheck className="size-3" />
-          <span>{w.authenticating ? t('verifying') : t('verifyWallet')}</span>
+          <ShieldCheck className="size-3.5 shrink-0 sm:size-3" />
+          <span className="hidden sm:inline">
+            {w.authenticating ? t('verifying') : t('verifyWallet')}
+          </span>
         </button>
       )}
       <button
         type="button"
         onClick={() => void w.disconnect()}
         title={t('disconnect')}
-        className="flex shrink-0 items-center gap-1.5 rounded-xs border border-border px-2 py-1 font-mono text-2xs text-fg-muted hover:text-fg"
+        className="flex h-7 shrink-0 items-center gap-1.5 rounded-xs border border-border px-2 font-mono text-[11px] whitespace-nowrap text-fg-muted hover:text-fg sm:h-8 sm:text-2xs"
       >
         <span
           aria-hidden
@@ -366,7 +369,10 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
         />
         <span className="hidden max-w-24 truncate sm:inline">{w.walletName}</span>
         <span className="hidden sm:inline">·</span>
-        <span>
+        <span className="sm:hidden">
+          {w.address.slice(0, 4)}…{w.address.slice(-4)}
+        </span>
+        <span className="hidden sm:inline">
           {w.address.slice(0, 6)}…{w.address.slice(-4)}
         </span>
       </button>

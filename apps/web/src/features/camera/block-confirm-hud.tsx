@@ -116,7 +116,7 @@ export function BlockConfirmHud({
       >
         <div
           className={cn(
-            'flex flex-col gap-3.5 rounded-sm border bg-[#120f0d]/95 p-4 text-[#f2ede4] shadow-[var(--elev-pop)] backdrop-blur-md',
+            'flex max-h-[82dvh] flex-col gap-3 overflow-y-auto rounded-sm border bg-[#120f0d]/95 p-3.5 text-[#f2ede4] shadow-[var(--elev-pop)] backdrop-blur-md sm:gap-3.5 sm:p-4',
             stage === 'confirmed'
               ? 'border-success/60 shadow-[inset_2px_0_0_var(--success)]'
               : stage === 'failed'

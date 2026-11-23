@@ -252,14 +252,22 @@ export function CameraView() {
             ? t(`chain.errors.${session.action.code}`)
             : t('chain.onChain')
 
+  const hasUrgentStatus = Boolean(
+    !session.onChain ||
+      session.approvalUrl ||
+      pendingCount > 0 ||
+      failedCount > 0 ||
+      session.action.status === 'failed',
+  )
+
   return (
     <div data-mode="analog" className="grain flex h-dvh flex-col overflow-hidden bg-bg text-fg">
       {/* top bar */}
-      <header className="relative z-10 flex h-14 shrink-0 items-center justify-between gap-2 px-3">
+      <header className="relative z-10 flex h-11 shrink-0 items-center justify-between gap-2 px-3 sm:h-14">
         <Link
           href="/"
           aria-label={t('back')}
-          className="rounded-xs p-2 text-fg-muted hover:text-fg"
+          className="rounded-xs p-1.5 text-fg-muted hover:text-fg sm:p-2"
         >
           <ArrowLeft className="size-5" />
         </Link>
@@ -269,12 +277,13 @@ export function CameraView() {
         <FrameCounter used={used} total={frames} />
       </header>
 
-      {/* chain status strip */}
-      <div className="flex min-h-9 shrink-0 items-center justify-between gap-2 px-4 pb-2 text-2xs">
+      {/* chain status strip — compact on mobile */}
+      <div className="flex min-h-8 shrink-0 items-center justify-between gap-2 px-3 pb-1.5 text-2xs sm:min-h-9 sm:px-4 sm:pb-2">
         <span
           role="status"
           className={cn(
-            'truncate',
+            'min-w-0 truncate',
+            !hasUrgentStatus && 'hidden sm:inline',
             failedCount > 0 || session.action.status === 'failed' ? 'text-danger' : 'text-fg-muted',
           )}
         >
@@ -290,11 +299,11 @@ export function CameraView() {
             </a>
           )}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {roll && used > 0 && (
             <Link
               href={`/darkroom/${roll.id}`}
-              className="rounded-xs border border-frame/40 bg-frame/10 px-2 py-1 font-mono text-2xs text-frame hover:bg-frame/20"
+              className="inline-flex h-7 items-center rounded-xs border border-frame/40 bg-frame/10 px-2 font-mono text-[11px] whitespace-nowrap text-frame hover:bg-frame/20 sm:h-8 sm:text-2xs"
             >
               {t('chain.earlyDevelopLink', { used })}
             </Link>
@@ -344,8 +353,65 @@ export function CameraView() {
             </span>
           )}
 
+          {/* Floating translucent Pro 35mm HUD inside viewfinder */}
+          {live && (
+            <div className="absolute top-2.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-black/55 px-2 py-1 font-mono text-[10px] backdrop-blur-xs">
+              <button
+                type="button"
+                aria-pressed={dateStamp}
+                onClick={() => setDateStamp((v) => !v)}
+                className={cn(
+                  'inline-flex h-5 items-center gap-1 rounded-full px-1.5 whitespace-nowrap transition-colors',
+                  dateStamp ? 'bg-frame/25 text-frame' : 'text-white/70 hover:text-white',
+                )}
+              >
+                <Calendar className="size-2.5" />
+                <span>{t('pro.date')}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={showGrid}
+                onClick={() => setShowGrid((v) => !v)}
+                className={cn(
+                  'inline-flex h-5 items-center gap-1 rounded-full px-1.5 whitespace-nowrap transition-colors',
+                  showGrid ? 'bg-frame/25 text-frame' : 'text-white/70 hover:text-white',
+                )}
+              >
+                <Grid3x3 className="size-2.5" />
+                <span>{t('pro.grid')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const idx = EV_STEPS.indexOf(ev)
+                  const next = EV_STEPS[(idx + 1) % EV_STEPS.length]!
+                  setEv(next)
+                }}
+                className={cn(
+                  'inline-flex h-5 items-center gap-1 rounded-full px-1.5 tabular whitespace-nowrap transition-colors',
+                  ev !== 0 ? 'bg-frame/25 text-frame' : 'text-white/70 hover:text-white',
+                )}
+              >
+                <Sun className="size-2.5" />
+                <span>{ev > 0 ? `+${ev.toFixed(1)}` : ev.toFixed(1)}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={!muted}
+                onClick={() => setMuted((v) => !v)}
+                aria-label={muted ? t('pro.muted') : t('pro.sfx')}
+                className={cn(
+                  'inline-flex h-5 items-center rounded-full px-1.5 transition-colors',
+                  !muted ? 'text-white/90 hover:text-white' : 'text-white/40 hover:text-white/70',
+                )}
+              >
+                {muted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
+              </button>
+            </div>
+          )}
+
           {usingImage && (
-            <span className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/60 px-2 py-0.5 font-mono text-2xs text-frame">
+            <span className="absolute top-11 left-1/2 -translate-x-1/2 bg-black/60 px-2 py-0.5 font-mono text-2xs text-frame">
               {t('imageMode')}
             </span>
           )}
@@ -403,76 +469,9 @@ export function CameraView() {
         </div>
       </div>
 
-      {/* pro 35mm viewfinder toggles + film picker */}
-      <div className="shrink-0 px-3 pt-2.5">
-        <div className="mb-2 flex items-center justify-center gap-1.5 font-mono text-[11px]">
-          <button
-            type="button"
-            aria-pressed={dateStamp}
-            onClick={() => setDateStamp((v) => !v)}
-            className={cn(
-              'inline-flex h-7 items-center gap-1 rounded-xs border px-2 transition-colors',
-              dateStamp
-                ? 'border-frame/70 bg-frame/15 text-frame'
-                : 'border-border bg-bg-raised text-fg-muted hover:text-fg',
-            )}
-          >
-            <Calendar className="size-3" />
-            <span>{t('pro.date')}</span>
-          </button>
-
-          <button
-            type="button"
-            aria-pressed={showGrid}
-            onClick={() => setShowGrid((v) => !v)}
-            className={cn(
-              'inline-flex h-7 items-center gap-1 rounded-xs border px-2 transition-colors',
-              showGrid
-                ? 'border-frame/70 bg-frame/15 text-frame'
-                : 'border-border bg-bg-raised text-fg-muted hover:text-fg',
-            )}
-          >
-            <Grid3x3 className="size-3" />
-            <span>{t('pro.grid')}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              const idx = EV_STEPS.indexOf(ev)
-              const next = EV_STEPS[(idx + 1) % EV_STEPS.length]!
-              setEv(next)
-            }}
-            className={cn(
-              'inline-flex h-7 items-center gap-1 rounded-xs border px-2 tabular transition-colors',
-              ev !== 0
-                ? 'border-frame/70 bg-frame/15 text-frame'
-                : 'border-border bg-bg-raised text-fg-muted hover:text-fg',
-            )}
-          >
-            <Sun className="size-3" />
-            <span>
-              EV {ev > 0 ? `+${ev.toFixed(1)}` : ev.toFixed(1)}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            aria-pressed={!muted}
-            onClick={() => setMuted((v) => !v)}
-            className={cn(
-              'inline-flex h-7 items-center gap-1 rounded-xs border px-2 transition-colors',
-              !muted
-                ? 'border-border-strong bg-bg-sunken text-fg'
-                : 'border-border bg-bg-raised text-fg-subtle hover:text-fg',
-            )}
-          >
-            {muted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
-            <span>{muted ? t('pro.muted') : t('pro.sfx')}</span>
-          </button>
-        </div>
-
-        <div role="radiogroup" aria-label={t('film')} className="flex justify-center gap-2">
+      {/* film picker */}
+      <div className="shrink-0 px-3 pt-2">
+        <div role="radiogroup" aria-label={t('film')} className="flex justify-center gap-1.5 sm:gap-2">
           {FILM_STOCKS.map((s) => {
             const selected = s.id === filmId
             const locked = filmLocked && !selected
@@ -514,7 +513,7 @@ export function CameraView() {
       </div>
 
       {/* controls */}
-      <div className="grid h-32 shrink-0 grid-cols-3 items-center px-6 pb-[env(safe-area-inset-bottom)]">
+      <div className="grid h-24 shrink-0 grid-cols-3 items-center px-5 pb-[env(safe-area-inset-bottom)] sm:h-28 sm:px-6">
         <div className="flex justify-start">
           {lastShot ? (
             <button

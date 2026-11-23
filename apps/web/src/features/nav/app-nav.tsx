@@ -9,10 +9,12 @@ import {
   Film,
   History,
   LayoutGrid,
+  Menu,
   ShieldCheck,
   User,
   Warehouse,
   WifiOff,
+  X,
 } from 'lucide-react'
 import type { Route } from 'next'
 import { useTranslations } from 'next-intl'
@@ -40,6 +42,7 @@ export function AppNav({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { address } = useWallet()
   const [connectOpen, setConnectOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [online, setOnline] = useState(true)
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
 
@@ -83,7 +86,7 @@ export function AppNav({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             <Link
               href="/camera"
               className="hidden h-8 items-center gap-2 rounded-sm bg-accent px-3 text-xs font-medium text-accent-fg hover:bg-accent-hover md:flex"
@@ -96,7 +99,7 @@ export function AppNav({ children }: { children: ReactNode }) {
               title={t('verify')}
               aria-label={t('verify')}
               className={cn(
-                'inline-flex size-8 items-center justify-center rounded-xs border transition-colors',
+                'hidden size-8 items-center justify-center rounded-xs border transition-colors md:inline-flex',
                 active('/verify')
                   ? 'border-border-strong bg-bg-sunken text-fg'
                   : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
@@ -109,7 +112,7 @@ export function AppNav({ children }: { children: ReactNode }) {
               title={t('activity')}
               aria-label={t('activity')}
               className={cn(
-                'inline-flex size-8 items-center justify-center rounded-xs border transition-colors',
+                'hidden size-8 items-center justify-center rounded-xs border transition-colors md:inline-flex',
                 active('/activity')
                   ? 'border-border-strong bg-bg-sunken text-fg'
                   : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
@@ -123,7 +126,7 @@ export function AppNav({ children }: { children: ReactNode }) {
                 title={t('profile')}
                 aria-label={t('profile')}
                 className={cn(
-                  'inline-flex size-8 items-center justify-center rounded-xs border transition-colors',
+                  'hidden size-8 items-center justify-center rounded-xs border transition-colors md:inline-flex',
                   active('/u')
                     ? 'border-border-strong bg-bg-sunken text-fg'
                     : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
@@ -132,10 +135,73 @@ export function AppNav({ children }: { children: ReactNode }) {
                 <User className="size-4" />
               </Link>
             )}
-            <LocaleSwitcher />
+            <div className="hidden md:block">
+              <LocaleSwitcher />
+            </div>
             <WalletButton onOpen={() => setConnectOpen(true)} />
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-expanded={menuOpen}
+              aria-label={t('label')}
+              className={cn(
+                'inline-flex size-8 items-center justify-center rounded-xs border transition-colors md:hidden',
+                menuOpen
+                  ? 'border-border-strong bg-bg-sunken text-fg'
+                  : 'border-border bg-bg-raised text-fg-muted hover:text-fg',
+              )}
+            >
+              {menuOpen ? <X className="size-4" /> : <Menu className="size-4" />}
+            </button>
           </div>
         </div>
+
+        {/* Compact mobile overflow menu */}
+        {menuOpen && (
+          <div className="border-t border-border bg-bg-raised px-4 py-3 md:hidden">
+            <div className="flex flex-col gap-1.5">
+              <Link
+                href="/verify"
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-xs px-2.5 py-2 text-sm',
+                  active('/verify') ? 'bg-bg-sunken text-fg' : 'text-fg-muted hover:bg-bg-sunken/60',
+                )}
+              >
+                <ShieldCheck className="size-4 text-frame" />
+                <span>{t('verify')}</span>
+              </Link>
+              <Link
+                href="/activity"
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-xs px-2.5 py-2 text-sm',
+                  active('/activity') ? 'bg-bg-sunken text-fg' : 'text-fg-muted hover:bg-bg-sunken/60',
+                )}
+              >
+                <History className="size-4 text-frame" />
+                <span>{t('activity')}</span>
+              </Link>
+              {address && (
+                <Link
+                  href={`/u/${address}` as Route}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-xs px-2.5 py-2 text-sm',
+                    active('/u') ? 'bg-bg-sunken text-fg' : 'text-fg-muted hover:bg-bg-sunken/60',
+                  )}
+                >
+                  <User className="size-4 text-frame" />
+                  <span>{t('profile')}</span>
+                </Link>
+              )}
+              <div className="mt-1 flex items-center justify-between border-t border-border pt-2.5">
+                <span className="font-mono text-2xs text-fg-subtle">Language / ภาษา</span>
+                <LocaleSwitcher />
+              </div>
+            </div>
+          </div>
+        )}
         {!online && (
           <div
             role="status"
