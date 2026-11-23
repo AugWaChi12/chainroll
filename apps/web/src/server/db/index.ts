@@ -138,6 +138,7 @@ export async function fetchAppStateFromDb(): Promise<{
         LEFT JOIN public.users u ON u.address = p.shooter
         WHERE p.hidden_at IS NULL
         ORDER BY p.created_at DESC
+        LIMIT 100
       `,
       sql`SELECT post_id, user_address FROM public.likes`,
       sql`SELECT post_id, reporter, reason, note, created_at FROM public.reports ORDER BY created_at ASC`,
@@ -325,6 +326,203 @@ export async function fetchAppStateFromDb(): Promise<{
   }
 
   return { posts, profiles, prints, preMintOffers, audit, rolls }
+}
+
+export type FeedPageParams = {
+  limit?: number
+  cursor?: string | null
+  filmId?: number | null
+  printsOnly?: boolean
+  sort?: 'latest' | 'popular'
+}
+
+export type FeedPageResult = {
+  items: DbPostDto[]
+  nextCursor: string | null
+  totalCount: number
+}
+
+type FeedCursorPayload = {
+  t: string // ISO timestamp
+  id: string
+  l?: number // total likes (used when sort === 'popular')
+}
+
+function encodeFeedCursor(payload: FeedCursorPayload): string {
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url')
+}
+
+function decodeFeedCursor(raw: string | null | undefined): FeedCursorPayload | null {
+  if (!raw || raw.length > 256) return null
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as Partial<FeedCursorPayload>
+    if (typeof parsed.t !== 'string' || typeof parsed.id !== 'string') return null
+    if (Number.isNaN(Date.parse(parsed.t))) return null
+    if (parsed.l !== undefined && (typeof parsed.l !== 'number' || !Number.isFinite(parsed.l))) {
+      return null
+    }
+    return { t: parsed.t, id: parsed.id, l: parsed.l }
+  } catch {
+    return null
+  }
+}
+
+export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<FeedPageResult> {
+  const sql = getSql()
+  const limit = Math.max(1, Math.min(50, Math.floor(params.limit ?? 20)))
+  const sort = params.sort === 'popular' ? 'popular' : 'latest'
+  const filmId = params.filmId && params.filmId > 0 ? Math.floor(params.filmId) : null
+  const printsOnly = Boolean(params.printsOnly)
+  const cursor = decodeFeedCursor(params.cursor)
+
+  const filmClause = filmId ? sql`AND p.film_id = ${filmId}` : sql``
+  const printsClause = printsOnly
+    ? sql`AND EXISTS (
+        SELECT 1 FROM public.prints pr
+        WHERE pr.post_id = p.id OR lower(pr.photo_hash) = lower(p.photo_hash)
+      )`
+    : sql``
+
+  const countPromise = sql`
+    SELECT COUNT(*)::int AS total
+    FROM public.posts p
+    WHERE p.hidden_at IS NULL
+      ${filmClause}
+      ${printsClause}
+  `
+
+  const rowsPromise =
+    sort === 'popular'
+      ? sql`
+          WITH ranked AS (
+            SELECT p.id, p.shooter, u.handle, p.roll_id, p.frame, p.film_id, p.photo_hash, p.tx_hash,
+                   p.r2_public_url, p.scene, p.featured, p.caption, p.like_count, p.created_at,
+                   (p.like_count + COALESCE(lc.cnt, 0))::int AS total_likes
+            FROM public.posts p
+            LEFT JOIN public.users u ON u.address = p.shooter
+            LEFT JOIN (
+              SELECT post_id, COUNT(*)::int AS cnt
+              FROM public.likes
+              GROUP BY post_id
+            ) lc ON lc.post_id = p.id
+            WHERE p.hidden_at IS NULL
+              ${filmClause}
+              ${printsClause}
+          )
+          SELECT *
+          FROM ranked
+          ${
+            cursor && cursor.l !== undefined
+              ? sql`WHERE (
+                  total_likes < ${cursor.l}
+                  OR (total_likes = ${cursor.l} AND created_at < ${cursor.t}::timestamptz)
+                  OR (total_likes = ${cursor.l} AND created_at = ${cursor.t}::timestamptz AND id < ${cursor.id})
+                )`
+              : sql``
+          }
+          ORDER BY total_likes DESC, created_at DESC, id DESC
+          LIMIT ${limit + 1}
+        `
+      : sql`
+          SELECT p.id, p.shooter, u.handle, p.roll_id, p.frame, p.film_id, p.photo_hash, p.tx_hash,
+                 p.r2_public_url, p.scene, p.featured, p.caption, p.like_count, p.created_at
+          FROM public.posts p
+          LEFT JOIN public.users u ON u.address = p.shooter
+          WHERE p.hidden_at IS NULL
+            ${filmClause}
+            ${printsClause}
+            ${
+              cursor
+                ? sql`AND (
+                    p.created_at < ${cursor.t}::timestamptz
+                    OR (p.created_at = ${cursor.t}::timestamptz AND p.id < ${cursor.id})
+                  )`
+                : sql``
+            }
+          ORDER BY p.created_at DESC, p.id DESC
+          LIMIT ${limit + 1}
+        `
+
+  const [countRows, rawRows] = await Promise.all([countPromise, rowsPromise])
+  const totalCount = Number(countRows[0]?.total ?? 0)
+
+  const hasMore = rawRows.length > limit
+  const pageRows = hasMore ? rawRows.slice(0, limit) : rawRows
+  const postIds = pageRows.map((r) => String(r.id))
+
+  const likesByPost = new Map<string, string[]>()
+  const reportsByPost = new Map<string, DbPostDto['reports']>()
+
+  if (postIds.length > 0) {
+    const [likeRows, reportRows] = await Promise.all([
+      sql`SELECT post_id, user_address FROM public.likes WHERE post_id = ANY(${postIds})`,
+      sql`
+        SELECT post_id, reporter, reason, note, created_at
+        FROM public.reports
+        WHERE post_id = ANY(${postIds})
+        ORDER BY created_at ASC
+      `,
+    ])
+
+    for (const l of likeRows) {
+      const pid = String(l.post_id)
+      const list = likesByPost.get(pid) ?? []
+      list.push(String(l.user_address).toLowerCase())
+      likesByPost.set(pid, list)
+    }
+
+    for (const rep of reportRows) {
+      const pid = String(rep.post_id)
+      const list = reportsByPost.get(pid) ?? []
+      list.push({
+        reporter: String(rep.reporter),
+        reason: rep.reason as DbPostDto['reports'][number]['reason'],
+        note: rep.note ? String(rep.note) : undefined,
+        createdAt: new Date(String(rep.created_at)).getTime(),
+      })
+      reportsByPost.set(pid, list)
+    }
+  }
+
+  const items: DbPostDto[] = pageRows.map((p) => {
+    const pid = String(p.id)
+    const sceneVal = String(p.scene ?? 'nature')
+    const validScene = (
+      ['nature', 'portrait', 'night', 'indoor'].includes(sceneVal) ? sceneVal : 'nature'
+    ) as DbPostDto['scene']
+
+    return {
+      id: pid,
+      shooter: String(p.shooter).toLowerCase(),
+      handle: p.handle ? String(p.handle) : null,
+      rollId: Number(p.roll_id),
+      frame: Number(p.frame),
+      filmId: Number(p.film_id),
+      photoHash: String(p.photo_hash),
+      txHash: p.tx_hash ? String(p.tx_hash) : undefined,
+      caption: String(p.caption ?? ''),
+      createdAt: new Date(String(p.created_at)).getTime(),
+      baseLikes: Number(p.like_count ?? 0),
+      likes: likesByPost.get(pid) ?? [],
+      imageDataUrl: p.r2_public_url ? String(p.r2_public_url) : undefined,
+      scene: validScene,
+      featured: Boolean(p.featured),
+      reports: reportsByPost.get(pid) ?? [],
+    }
+  })
+
+  let nextCursor: string | null = null
+  if (hasMore && pageRows.length > 0) {
+    const last = pageRows[pageRows.length - 1]!
+    const lastIso = new Date(String(last.created_at)).toISOString()
+    nextCursor = encodeFeedCursor({
+      t: lastIso,
+      id: String(last.id),
+      l: sort === 'popular' ? Number(last.total_likes ?? 0) : undefined,
+    })
+  }
+
+  return { items, nextCursor, totalCount }
 }
 
 export type DbMutationPayload =

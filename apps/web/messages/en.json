@@ -960,6 +960,10 @@
     "dismiss": "Dismiss",
     "emptyTitle": "No frames on this film yet",
     "emptyBody": "See all films or be the first to post a frame shot on this stock.",
+    "loadingMore": "Loading more frames…",
+    "loadMore": "Load more",
+    "endOfFeed": "End of feed ({count} frames)",
+    "showingCount": "Showing {shown} / {total} frames",
     "report": {
       "trigger": "Report",
       "title": "Report this frame",
