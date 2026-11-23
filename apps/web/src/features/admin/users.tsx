@@ -15,8 +15,14 @@ import {
 import { Ban, Check, Download, Flame, Gift, RotateCcw } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useMemo, useState } from 'react'
-import { downloadCsv, recordAudit } from './audit-store'
-import { initialUsers, type AdminUserRow } from './mock-data'
+import {
+  downloadCsv,
+  recordAudit,
+  resetAdminUserStreak,
+  setAdminUserBan,
+  useAdminStore,
+} from './audit-store'
+import type { AdminUserRow } from './mock-data'
 
 const DEFAULT_ACTOR = '0x243d78f9c2a0114e9b6c88a12f00431d9a4c9350'
 
@@ -24,35 +30,34 @@ export function AdminUsers() {
   const t = useTranslations('admin.users')
   const format = useFormatter()
   const { address: adminAddress } = useWallet()
+  const { users } = useAdminStore()
 
-  const [users, setUsers] = useState<AdminUserRow[]>(initialUsers)
-  const [selectedAddr, setSelectedAddr] = useState<string>(initialUsers[0]!.address)
+  const [selectedAddr, setSelectedAddr] = useState<string>('')
   const [reason, setReason] = useState<string>('')
   const [feedback, setFeedback] = useState<string | null>(null)
 
   const selected = useMemo(
-    () => users.find((u) => u.address === selectedAddr) ?? users[0]!,
+    () => users.find((u) => u.address === selectedAddr) ?? users[0] ?? null,
     [users, selectedAddr],
   )
 
   const toggleBan = (user: AdminUserRow) => {
     const nextStatus = user.status === 'banned' ? 'active' : 'banned'
-    setUsers((prev) =>
-      prev.map((u) => (u.address === user.address ? { ...u, status: nextStatus } : u)),
-    )
+    const detail = reason.trim() || t(`defaultReason.${nextStatus}`)
+    setAdminUserBan(user.address, nextStatus === 'banned', detail)
     recordAudit({
       actor: adminAddress ?? DEFAULT_ACTOR,
       category: 'users',
       action: nextStatus === 'banned' ? 'user.ban' : 'user.unban',
       target: user.handle ? `${user.handle} (${truncateHash(user.address)})` : user.address,
-      detail: reason.trim() || t(`defaultReason.${nextStatus}`),
+      detail,
     })
     setReason('')
     setFeedback(t(`feedback.${nextStatus}`, { user: user.handle ?? truncateHash(user.address) }))
   }
 
   const resetStreak = (user: AdminUserRow) => {
-    setUsers((prev) => prev.map((u) => (u.address === user.address ? { ...u, streak: 0 } : u)))
+    resetAdminUserStreak(user.address)
     recordAudit({
       actor: adminAddress ?? DEFAULT_ACTOR,
       category: 'users',
@@ -64,9 +69,6 @@ export function AdminUsers() {
   }
 
   const grantRoll = (user: AdminUserRow) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.address === user.address ? { ...u, rolls: u.rolls + 1 } : u)),
-    )
     recordAudit({
       actor: adminAddress ?? DEFAULT_ACTOR,
       category: 'users',
@@ -213,6 +215,7 @@ export function AdminUsers() {
         </div>
 
         {/* User Inspector */}
+        {selected && (
         <aside className="flex flex-col gap-4 self-start border border-border bg-bg-raised p-4 md:p-5 lg:col-span-4">
           <div className="flex items-start justify-between gap-2 border-b border-border pb-3">
             <div className="flex flex-col gap-1">
@@ -287,6 +290,7 @@ export function AdminUsers() {
             </Button>
           </div>
         </aside>
+        )}
       </div>
     </>
   )

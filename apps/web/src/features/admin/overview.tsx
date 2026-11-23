@@ -1,5 +1,6 @@
 'use client'
 
+import { useWallet } from '@/features/wallet'
 import {
   Badge,
   Button,
@@ -8,6 +9,7 @@ import {
   KPIStat,
   PageHeader,
   TxHash,
+  cn,
   truncateHash,
   type ColumnDef,
 } from '@chainroll/ui'
@@ -15,18 +17,20 @@ import { kubTestnet } from '@chainroll/shared'
 import { Download, Fuel, RefreshCw, TriangleAlert } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useMemo } from 'react'
-import { downloadCsv, useAdminStore } from './audit-store'
-import { kpis, recentShots, type ShotRow } from './mock-data'
+import { bulkHidePosts, downloadCsv, refreshAdminDashboard, useAdminStore } from './audit-store'
+import { kpis as seedKpis, type ShotRow } from './mock-data'
 
+const DEFAULT_ACTOR = '0x243d78f9c2a0114e9b6c88a12f00431d9a4c9350'
 const STATUS_TONE = { confirmed: 'success', pending: 'warning', failed: 'danger' } as const
 
 export function AdminOverview() {
   const t = useTranslations('admin.overview')
   const format = useFormatter()
-  const { moderation } = useAdminStore()
+  const { address } = useWallet()
+  const { kpis, recentShots, moderation, loading } = useAdminStore()
   const openReports = moderation.filter((m) => m.status === 'pending').length
   const n = (v: number) => format.number(v)
-  const daysLeft = Math.floor(kpis.relayer.balance / kpis.relayer.burnPerDay)
+  const daysLeft = Math.floor(seedKpis.relayer.balance / seedKpis.relayer.burnPerDay)
 
   const columns = useMemo<ColumnDef<ShotRow, unknown>[]>(
     () => [
@@ -108,8 +112,13 @@ export function AdminOverview() {
         description={t('description')}
         actions={
           <>
-            <Button variant="ghost" size="sm">
-              <RefreshCw />
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={loading}
+              onClick={() => void refreshAdminDashboard()}
+            >
+              <RefreshCw className={cn(loading && 'animate-spin')} />
               {t('refresh')}
             </Button>
             <Button
@@ -151,8 +160,8 @@ export function AdminOverview() {
               <span className="text-sm font-medium">{t('relayer.title', { days: daysLeft })}</span>
               <span className="font-mono text-xs text-fg-muted">
                 {t('relayer.body', {
-                  balance: n(kpis.relayer.balance),
-                  burn: n(kpis.relayer.burnPerDay),
+                  balance: n(seedKpis.relayer.balance),
+                  burn: n(seedKpis.relayer.burnPerDay),
                 })}
               </span>
             </div>
@@ -166,25 +175,22 @@ export function AdminOverview() {
         <KPIGrid>
           <KPIStat
             label={t('kpi.shots')}
-            value={n(kpis.shots.value)}
-            delta={kpis.shots.delta}
-            hint={t('kpi.vsYesterday')}
-            trend={kpis.shots.trend}
+            value={n(kpis.shotsToday)}
+            hint={`${n(kpis.shotsTotal)} total`}
+            trend={seedKpis.shots.trend}
           />
           <KPIStat
             label={t('kpi.txFailed')}
-            value={n(kpis.txFailed.value)}
-            delta={kpis.txFailed.delta}
+            value={n(kpis.txFailed)}
             higherIsBetter={false}
             hint={t('kpi.vsYesterday')}
-            trend={kpis.txFailed.trend}
+            trend={seedKpis.txFailed.trend}
           />
           <KPIStat
             label={t('kpi.activeUsers')}
-            value={n(kpis.activeUsers.value)}
-            delta={kpis.activeUsers.delta}
+            value={n(kpis.activeUsers)}
             hint={t('kpi.vsYesterday')}
-            trend={kpis.activeUsers.trend}
+            trend={seedKpis.activeUsers.trend}
           />
           <KPIStat
             label={t('kpi.openReports')}
@@ -202,9 +208,18 @@ export function AdminOverview() {
             getRowId={(r) => r.id}
             selectable
             pageSize={12}
-            bulkActions={() => (
-              <Button variant="danger" size="sm">
-                {t('bulkHide')}
+            bulkActions={(selectedRows) => (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() =>
+                  bulkHidePosts(
+                    selectedRows.map((r) => r.id),
+                    address ?? DEFAULT_ACTOR,
+                  )
+                }
+              >
+                {t('bulkHide')} ({selectedRows.length})
               </Button>
             )}
           />

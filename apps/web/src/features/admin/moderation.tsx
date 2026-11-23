@@ -92,7 +92,7 @@ export function AdminModeration() {
       const nextCandidate = items[activeIndex + 1] ?? items[activeIndex - 1] ?? null
       const reasonText = note.trim() || t(`defaultNotes.${decision}`)
 
-      setModerationDecision(activeItem.id, decision)
+      setModerationDecision(activeItem.id, decision, reasonText)
       const actionKey =
         decision === 'approved'
           ? 'post.approve'
@@ -321,11 +321,20 @@ export function AdminModeration() {
               <div className="grid gap-5 md:grid-cols-12">
                 {/* Frame preview */}
                 <div className="flex flex-col gap-2 bg-[#0e0c0b] p-2.5 md:col-span-5">
-                  <FilmPreview
-                    look={getStock(activeItem.filmId).look}
-                    scene={activeItem.scene}
-                    className="aspect-[2/3] w-full"
-                  />
+                  {activeItem.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={activeItem.imageUrl}
+                      alt={activeItem.caption || activeItem.postId}
+                      className="aspect-[2/3] w-full object-cover"
+                    />
+                  ) : (
+                    <FilmPreview
+                      look={getStock(activeItem.filmId).look}
+                      scene={activeItem.scene}
+                      className="aspect-[2/3] w-full"
+                    />
+                  )}
                   <div className="flex items-center justify-between font-mono text-2xs text-frame">
                     <span>▸ {activeItem.frame}</span>
                     <span>{activeItem.film}</span>

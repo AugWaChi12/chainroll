@@ -27,6 +27,7 @@ export type ModerationItem = {
   filmId: number
   film: string
   scene: SampleSceneKind
+  imageUrl?: string | null
   shooter: string
   handle: string | null
   caption: string

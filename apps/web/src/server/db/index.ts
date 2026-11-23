@@ -603,6 +603,333 @@ export async function fetchPostByIdFromDb(id: string): Promise<PostOgSummary | n
   }
 }
 
+export type DbAdminDashboardDto = {
+  kpis: {
+    shotsToday: number
+    shotsTotal: number
+    txFailed: number
+    activeUsers: number
+    openReports: number
+    hiddenPosts: number
+  }
+  recentShots: {
+    id: string
+    postId?: string
+    frame: string
+    shooter: string
+    handle: string | null
+    film: string
+    wallet: 'bitkub-next' | 'metamask'
+    txHash: string
+    status: 'confirmed' | 'pending' | 'failed'
+    minutesAgo: number
+  }[]
+  moderation: {
+    id: string
+    postId: string
+    frame: string
+    filmId: number
+    film: string
+    scene: 'nature' | 'portrait' | 'night' | 'indoor'
+    imageUrl: string | null
+    shooter: string
+    handle: string | null
+    caption: string
+    photoHash: string
+    reason: 'nsfw' | 'spam' | 'copyright' | 'harassment'
+    confidence: number | null
+    reporter: string
+    reportCount: number
+    minutesAgo: number
+    status: 'pending' | 'approved' | 'hidden' | 'banned'
+  }[]
+  users: {
+    address: string
+    handle: string | null
+    wallet: 'bitkub-next' | 'metamask'
+    rolls: number
+    shots: number
+    posts: number
+    streak: number
+    reports: number
+    status: 'active' | 'banned'
+    lastActiveMinutes: number
+  }[]
+}
+
+const FILM_NAME_FALLBACK: Record<number, string> = {
+  1: 'KUB 400',
+  2: 'BW 400',
+  3: 'Night 800',
+}
+
+function formatFrameCode(frame: number): string {
+  return `${String(frame).padStart(2, '0')}${frame % 2 ? 'A' : ''}`
+}
+
+export async function fetchAdminDashboardFromDb(): Promise<DbAdminDashboardDto> {
+  const sql = getSql()
+  const nowMs = Date.now()
+
+  const [kpiRows, postShotRows, reportRows, userRows] = await Promise.all([
+    sql`
+      SELECT
+        (SELECT COUNT(*)::int FROM public.shots WHERE created_at > now() - interval '24 hours') AS shots_24h,
+        (SELECT COUNT(*)::int FROM public.posts WHERE created_at > now() - interval '24 hours') AS posts_24h,
+        (SELECT COUNT(*)::int FROM public.shots) AS shots_total,
+        (SELECT COUNT(*)::int FROM public.posts) AS posts_total,
+        (SELECT COUNT(*)::int FROM public.shots WHERE status = 'failed') AS tx_failed,
+        (SELECT COUNT(*)::int FROM public.users) AS active_users,
+        (SELECT COUNT(*)::int FROM public.reports WHERE status = 'pending') AS open_reports,
+        (SELECT COUNT(*)::int FROM public.posts WHERE hidden_at IS NOT NULL) AS hidden_posts
+    `,
+    sql`
+      SELECT p.id, p.frame, p.shooter, u.handle, u.wallet_kind, p.film_id, f.name AS film_name,
+             COALESCE(p.tx_hash, p.photo_hash) AS tx_hash, p.hidden_at, p.created_at
+      FROM public.posts p
+      LEFT JOIN public.users u ON u.address = p.shooter
+      LEFT JOIN public.films f ON f.id = p.film_id
+      ORDER BY p.created_at DESC
+      LIMIT 30
+    `,
+    sql`
+      SELECT r.id, r.post_id, r.reporter, r.reason, r.ai_confidence, r.status, r.created_at,
+             p.frame, p.film_id, f.name AS film_name, p.scene, p.r2_public_url,
+             p.shooter, u.handle, p.caption, p.photo_hash, p.hidden_at,
+             (SELECT COUNT(*)::int FROM public.reports r2 WHERE r2.post_id = r.post_id) AS report_count
+      FROM public.reports r
+      JOIN public.posts p ON p.id = r.post_id
+      LEFT JOIN public.users u ON u.address = p.shooter
+      LEFT JOIN public.films f ON f.id = p.film_id
+      ORDER BY
+        CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END ASC,
+        r.created_at DESC
+      LIMIT 100
+    `,
+    sql`
+      SELECT u.address, u.handle, u.wallet_kind, u.streak, u.banned_at, u.updated_at,
+             COALESCE(rl.roll_count, 0)::int AS rolls,
+             COALESCE(rl.shots_used, 0)::int AS shots_used,
+             COALESCE(ps.post_count, 0)::int AS posts,
+             COALESCE(rp.report_count, 0)::int AS reports
+      FROM public.users u
+      LEFT JOIN (
+        SELECT owner, COUNT(*)::int AS roll_count, COALESCE(SUM(frames_used), 0)::int AS shots_used
+        FROM public.rolls
+        GROUP BY owner
+      ) rl ON rl.owner = u.address
+      LEFT JOIN (
+        SELECT shooter, COUNT(*)::int AS post_count
+        FROM public.posts
+        GROUP BY shooter
+      ) ps ON ps.shooter = u.address
+      LEFT JOIN (
+        SELECT p.shooter, COUNT(*)::int AS report_count
+        FROM public.reports r
+        JOIN public.posts p ON p.id = r.post_id
+        GROUP BY p.shooter
+      ) rp ON rp.shooter = u.address
+      ORDER BY COALESCE(ps.post_count, 0) DESC, u.updated_at DESC
+      LIMIT 100
+    `,
+  ])
+
+  const k = kpiRows[0]
+  const shotsToday = Math.max(Number(k?.shots_24h ?? 0), Number(k?.posts_24h ?? 0))
+  const shotsTotal = Math.max(Number(k?.shots_total ?? 0), Number(k?.posts_total ?? 0))
+
+  const recentShots: DbAdminDashboardDto['recentShots'] = postShotRows.map((row) => {
+    const createdMs = new Date(String(row.created_at)).getTime()
+    const filmId = Number(row.film_id)
+    return {
+      id: String(row.id),
+      postId: String(row.id),
+      frame: formatFrameCode(Number(row.frame)),
+      shooter: String(row.shooter).toLowerCase(),
+      handle: row.handle ? String(row.handle) : null,
+      film: row.film_name ? String(row.film_name) : (FILM_NAME_FALLBACK[filmId] ?? `Film #${filmId}`),
+      wallet: String(row.wallet_kind) === 'bitkub-next' ? 'bitkub-next' : 'metamask',
+      txHash: String(row.tx_hash ?? ''),
+      status: row.hidden_at ? 'failed' : 'confirmed',
+      minutesAgo: Math.max(0, Math.round((nowMs - createdMs) / 60_000)),
+    }
+  })
+
+  const moderation: DbAdminDashboardDto['moderation'] = reportRows.map((r) => {
+    const createdMs = new Date(String(r.created_at)).getTime()
+    const filmId = Number(r.film_id)
+    const sceneVal = String(r.scene ?? 'nature')
+    const validScene = (
+      ['nature', 'portrait', 'night', 'indoor'].includes(sceneVal) ? sceneVal : 'nature'
+    ) as DbAdminDashboardDto['moderation'][number]['scene']
+
+    return {
+      id: String(r.id),
+      postId: String(r.post_id),
+      frame: formatFrameCode(Number(r.frame)),
+      filmId,
+      film: r.film_name ? String(r.film_name) : (FILM_NAME_FALLBACK[filmId] ?? `Film #${filmId}`),
+      scene: validScene,
+      imageUrl: r.r2_public_url ? String(r.r2_public_url) : null,
+      shooter: String(r.shooter).toLowerCase(),
+      handle: r.handle ? String(r.handle) : null,
+      caption: String(r.caption ?? ''),
+      photoHash: String(r.photo_hash),
+      reason: r.reason as DbAdminDashboardDto['moderation'][number]['reason'],
+      confidence: r.ai_confidence !== null && r.ai_confidence !== undefined ? Number(r.ai_confidence) : null,
+      reporter: String(r.reporter),
+      reportCount: Number(r.report_count ?? 1),
+      minutesAgo: Math.max(0, Math.round((nowMs - createdMs) / 60_000)),
+      status: r.status as DbAdminDashboardDto['moderation'][number]['status'],
+    }
+  })
+
+  const users: DbAdminDashboardDto['users'] = userRows.map((u) => {
+    const updatedMs = new Date(String(u.updated_at)).getTime()
+    const postsCount = Number(u.posts ?? 0)
+    const shotsCount = Math.max(Number(u.shots_used ?? 0), postsCount)
+    return {
+      address: String(u.address).toLowerCase(),
+      handle: u.handle ? String(u.handle) : null,
+      wallet: String(u.wallet_kind) === 'bitkub-next' ? 'bitkub-next' : 'metamask',
+      rolls: Number(u.rolls ?? 0),
+      shots: shotsCount,
+      posts: postsCount,
+      streak: Number(u.streak ?? 0),
+      reports: Number(u.reports ?? 0),
+      status: u.banned_at ? 'banned' : 'active',
+      lastActiveMinutes: Math.max(0, Math.round((nowMs - updatedMs) / 60_000)),
+    }
+  })
+
+  return {
+    kpis: {
+      shotsToday,
+      shotsTotal,
+      txFailed: Number(k?.tx_failed ?? 0),
+      activeUsers: Number(k?.active_users ?? 0),
+      openReports: Number(k?.open_reports ?? 0),
+      hiddenPosts: Number(k?.hidden_posts ?? 0),
+    },
+    recentShots,
+    moderation,
+    users,
+  }
+}
+
+export type AdminActionPayload =
+  | {
+      type: 'moderation.decide'
+      reportId: string
+      postId: string
+      shooter: string
+      decision: 'pending' | 'approved' | 'hidden' | 'banned'
+      note?: string
+    }
+  | {
+      type: 'post.bulkHide'
+      postIds: string[]
+      note?: string
+    }
+  | {
+      type: 'user.setBan'
+      address: string
+      banned: boolean
+      note?: string
+    }
+  | {
+      type: 'user.resetStreak'
+      address: string
+    }
+
+export async function applyAdminActionInDb(
+  payload: AdminActionPayload,
+  actorAddress: string,
+): Promise<void> {
+  const sql = getSql()
+  const actor = actorAddress.toLowerCase()
+
+  switch (payload.type) {
+    case 'moderation.decide': {
+      const resolvedAt = payload.decision === 'pending' ? null : new Date()
+      const resolvedBy = payload.decision === 'pending' ? null : actor
+
+      // Update report status if reportId is a valid UUID
+      if (/^[0-9a-f-]{36}$/i.test(payload.reportId)) {
+        await sql`
+          UPDATE public.reports
+          SET status = ${payload.decision},
+              resolved_by = ${resolvedBy},
+              resolved_at = ${resolvedAt}
+          WHERE id = ${payload.reportId}::uuid
+        `
+      } else {
+        await sql`
+          UPDATE public.reports
+          SET status = ${payload.decision},
+              resolved_by = ${resolvedBy},
+              resolved_at = ${resolvedAt}
+          WHERE post_id = ${payload.postId}
+        `
+      }
+
+      if (payload.decision === 'hidden' || payload.decision === 'banned') {
+        await sql`
+          UPDATE public.posts
+          SET hidden_at = now(), visibility = 'hidden'
+          WHERE id = ${payload.postId}
+        `
+      } else {
+        await sql`
+          UPDATE public.posts
+          SET hidden_at = NULL, visibility = 'public'
+          WHERE id = ${payload.postId}
+        `
+      }
+
+      if (payload.decision === 'banned') {
+        await sql`
+          UPDATE public.users
+          SET banned_at = now(), updated_at = now()
+          WHERE address = ${payload.shooter.toLowerCase()}
+        `
+      }
+      return
+    }
+
+    case 'post.bulkHide': {
+      if (payload.postIds.length === 0) return
+      await sql`
+        UPDATE public.posts
+        SET hidden_at = now(), visibility = 'hidden'
+        WHERE id = ANY(${payload.postIds})
+      `
+      return
+    }
+
+    case 'user.setBan': {
+      const addr = payload.address.toLowerCase()
+      await sql`
+        UPDATE public.users
+        SET banned_at = ${payload.banned ? new Date() : null},
+            updated_at = now()
+        WHERE address = ${addr}
+      `
+      return
+    }
+
+    case 'user.resetStreak': {
+      const addr = payload.address.toLowerCase()
+      await sql`
+        UPDATE public.users
+        SET streak = 0, updated_at = now()
+        WHERE address = ${addr}
+      `
+      return
+    }
+  }
+}
+
 export type DbMutationPayload =
   | {
       type: 'post.create'
