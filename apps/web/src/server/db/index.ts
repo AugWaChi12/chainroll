@@ -930,6 +930,116 @@ export async function applyAdminActionInDb(
   }
 }
 
+export type PhotoVerificationDto = {
+  verified: true
+  source: 'post' | 'shot'
+  photoHash: string
+  postId: string | null
+  rollId: number
+  frame: number
+  filmId: number
+  filmName: string
+  shooter: string
+  shooterHandle: string | null
+  txHash: string | null
+  caption: string | null
+  imageUrl: string | null
+  createdAt: number
+  print: {
+    tokenId: number
+    owner: string
+    ownerHandle: string | null
+    askPriceKub: number | null
+  } | null
+}
+
+export async function fetchVerificationByHashFromDb(
+  photoHash: string,
+): Promise<PhotoVerificationDto | null> {
+  const sql = getSql()
+  const norm = photoHash.toLowerCase()
+
+  // 1. Check public posts (joined with users, films, and 1/1 prints)
+  const postRows = await sql`
+    SELECT p.id, p.roll_id, p.frame, p.film_id, f.name AS film_name, p.photo_hash,
+           p.tx_hash, p.shooter, u.handle AS shooter_handle, p.caption, p.r2_public_url,
+           p.created_at,
+           pr.token_id, pr.owner AS print_owner, pu.handle AS print_owner_handle, pr.ask_price_kub
+    FROM public.posts p
+    LEFT JOIN public.users u ON u.address = p.shooter
+    LEFT JOIN public.films f ON f.id = p.film_id
+    LEFT JOIN public.prints pr
+      ON pr.post_id = p.id OR lower(pr.photo_hash) = lower(p.photo_hash)
+    LEFT JOIN public.users pu ON pu.address = pr.owner
+    WHERE lower(p.photo_hash) = ${norm}
+    LIMIT 1
+  `
+
+  const p = postRows[0]
+  if (p) {
+    const filmId = Number(p.film_id)
+    return {
+      verified: true,
+      source: 'post',
+      photoHash: String(p.photo_hash).toLowerCase(),
+      postId: String(p.id),
+      rollId: Number(p.roll_id),
+      frame: Number(p.frame),
+      filmId,
+      filmName: p.film_name ? String(p.film_name) : (FILM_NAME_FALLBACK[filmId] ?? `Film #${filmId}`),
+      shooter: String(p.shooter).toLowerCase(),
+      shooterHandle: p.shooter_handle ? String(p.shooter_handle) : null,
+      txHash: p.tx_hash ? String(p.tx_hash) : null,
+      caption: p.caption ? String(p.caption) : null,
+      imageUrl: p.r2_public_url ? String(p.r2_public_url) : null,
+      createdAt: new Date(String(p.created_at)).getTime(),
+      print:
+        p.token_id !== null && p.token_id !== undefined
+          ? {
+              tokenId: Number(p.token_id),
+              owner: String(p.print_owner).toLowerCase(),
+              ownerHandle: p.print_owner_handle ? String(p.print_owner_handle) : null,
+              askPriceKub: p.ask_price_kub !== null ? Number(p.ask_price_kub) : null,
+            }
+          : null,
+    }
+  }
+
+  // 2. Check private/unposted darkroom shots recorded on-chain
+  const shotRows = await sql`
+    SELECT s.roll_id, s.frame, s.photo_hash, s.tx_hash, s.created_at,
+           r.owner AS shooter, r.film_id, f.name AS film_name, u.handle AS shooter_handle
+    FROM public.shots s
+    JOIN public.rolls r ON r.id = s.roll_id
+    LEFT JOIN public.users u ON u.address = r.owner
+    LEFT JOIN public.films f ON f.id = r.film_id
+    WHERE lower(s.photo_hash) = ${norm}
+    LIMIT 1
+  `
+
+  const s = shotRows[0]
+  if (!s) return null
+
+  const filmId = Number(s.film_id)
+  return {
+    verified: true,
+    source: 'shot',
+    photoHash: String(s.photo_hash).toLowerCase(),
+    postId: null,
+    rollId: Number(s.roll_id),
+    frame: Number(s.frame),
+    filmId,
+    filmName: s.film_name ? String(s.film_name) : (FILM_NAME_FALLBACK[filmId] ?? `Film #${filmId}`),
+    shooter: String(s.shooter).toLowerCase(),
+    shooterHandle: s.shooter_handle ? String(s.shooter_handle) : null,
+    txHash: s.tx_hash ? String(s.tx_hash) : null,
+    caption: null,
+    imageUrl: null,
+    createdAt: new Date(String(s.created_at)).getTime(),
+    print: null,
+  }
+}
+
 export type DbMutationPayload =
   | {
       type: 'post.create'

@@ -746,6 +746,7 @@
     "camera": "Camera",
     "darkroom": "Darkroom",
     "how": "How it works",
+    "verify": "Verify authentic photo",
     "activity": "Transaction activity",
     "profile": "My profile",
     "offline": "Offline — you can keep shooting; frames sync on-chain once you're back online"
@@ -800,7 +801,9 @@
       "doneTitle": "Developed",
       "doneBody": "Tap a frame to view it full screen or save it.",
       "postSoon": "Post (soon)",
-      "postToFeed": "Post a frame to feed"
+      "postToFeed": "Post a frame to feed",
+      "exportSheet": "Export Contact Sheet (PNG)",
+      "exportingSheet": "Rendering sheet…"
     },
     "errors": {
       "rejected": "Cancelled in your wallet",
@@ -811,6 +814,38 @@
       "timeout": "Took too long to confirm — try again",
       "reverted": "The chain rejected the transaction",
       "unknown": "Something went wrong — try again"
+    }
+  },
+  "verify": {
+    "eyebrow": "On-chain provenance",
+    "title": "Verify Authentic 35mm Photo",
+    "subtitle": "Drop an image file or paste a keccak256 photo hash to verify against KUB Chain records — hashing runs 100% locally in your browser with zero uploads.",
+    "dropTitle": "Drop a photo here or tap to choose a file",
+    "dropHint": "Instant client-side keccak256 check — even a 1-pixel crop, filter, or AI edit changes the fingerprint completely.",
+    "fileSelected": "Checking file: {name}",
+    "hashLabel": "Or paste a photo fingerprint (photoHash 0x…)",
+    "checkBtn": "Verify on-chain",
+    "trySample": "Try a live frame:",
+    "errors": {
+      "invalidHash": "Please enter a 64-hex-character photoHash starting with 0x",
+      "failed": "Could not verify right now — please try again"
+    },
+    "fields": {
+      "shooter": "Photographer",
+      "rollFrame": "Roll / Frame / Film",
+      "timestamp": "Recorded timestamp",
+      "photoHash": "Photo fingerprint (keccak256)",
+      "txHash": "Transaction (Tx)",
+      "owner": "Current 1/1 Print owner"
+    },
+    "result": {
+      "verifiedBadge": "VERIFIED ORIGINAL 35MM",
+      "verifiedTitle": "Authentic ChainRoll 35mm Frame",
+      "viewPost": "View post & certificate",
+      "viewExplorer": "Inspect on KUBScan",
+      "unverifiedBadge": "UNVERIFIED OR MODIFIED",
+      "unverifiedTitle": "No matching fingerprint found",
+      "unverifiedBody": "This file was either not shot with ChainRoll, or it has been cropped, re-compressed, filtered, or AI-edited after being recorded on KUB Chain."
     }
   },
   "films": {

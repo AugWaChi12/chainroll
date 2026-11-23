@@ -3,7 +3,17 @@
 import { LocaleSwitcher } from '@/features/i18n'
 import { ConnectSheet, WalletButton, useWallet } from '@/features/wallet'
 import { cn } from '@chainroll/ui'
-import { Aperture, BookOpen, Film, History, LayoutGrid, User, Warehouse, WifiOff } from 'lucide-react'
+import {
+  Aperture,
+  BookOpen,
+  Film,
+  History,
+  LayoutGrid,
+  ShieldCheck,
+  User,
+  Warehouse,
+  WifiOff,
+} from 'lucide-react'
 import type { Route } from 'next'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
@@ -80,6 +90,19 @@ export function AppNav({ children }: { children: ReactNode }) {
             >
               <Aperture className="size-4" aria-hidden />
               {t('camera')}
+            </Link>
+            <Link
+              href="/verify"
+              title={t('verify')}
+              aria-label={t('verify')}
+              className={cn(
+                'inline-flex size-8 items-center justify-center rounded-xs border transition-colors',
+                active('/verify')
+                  ? 'border-border-strong bg-bg-sunken text-fg'
+                  : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
+              )}
+            >
+              <ShieldCheck className="size-4" />
             </Link>
             <Link
               href="/activity"

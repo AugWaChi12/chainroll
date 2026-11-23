@@ -1,7 +1,7 @@
 'use client'
 
 import { BlockConfirmHud, ReviewSheet, type BlockHudTask, type Shot } from '@/features/camera'
-import { PostComposerModal, useFeedStore, type PublishableFrame } from '@/features/feed'
+import { PostComposerModal, getProfileMeta, useFeedStore, type PublishableFrame } from '@/features/feed'
 import { getStock, useStockName } from '@/features/film'
 import { countdown, developRollOnPage, photoStore, rollStage, useNowSec, useRoll } from '@/features/roll'
 import {
@@ -15,12 +15,13 @@ import {
 } from '@/features/wallet'
 import { chainRollAbi } from '@chainroll/contracts'
 import { Badge, Button, EmptyState, FilmStrip, LatentFrame, cn } from '@chainroll/ui'
-import { Aperture, ArrowLeft, Beaker, Check, Send } from 'lucide-react'
+import { Aperture, ArrowLeft, Beaker, Check, Download, Loader2, Send } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { keccak256, stringToHex } from 'viem'
 import { useReadContract } from 'wagmi'
+import { exportContactSheetPng } from './contact-sheet-export'
 
 const STAGE_TONE = {
   shooting: 'frame',
@@ -40,6 +41,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
   const { posts } = useFeedStore()
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
   const [composerFrame, setComposerFrame] = useState<number | null>(null)
+  const [exportingSheet, setExportingSheet] = useState(false)
   const [tx, dispatch] = useReducer(txReducer, { status: 'idle' })
   const [hudTask, setHudTask] = useState<BlockHudTask | null>(null)
 
@@ -287,15 +289,49 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                 <p className="font-medium text-success">{t('panel.doneTitle')}</p>
                 <p className="text-sm text-fg-muted">{t('panel.doneBody')}</p>
               </div>
-              {isOwner && publishableFrames.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant="primary"
-                  onClick={() => setComposerFrame(publishableFrames[0]!.frame)}
+                  variant="secondary"
+                  disabled={exportingSheet}
+                  onClick={async () => {
+                    setExportingSheet(true)
+                    try {
+                      const profile = getProfileMeta(roll.owner)
+                      await exportContactSheetPng({
+                        rollId: roll.id,
+                        stockCode: stock.code,
+                        stockName: stockName(stock.id),
+                        owner: roll.owner,
+                        ownerHandle: profile.handle,
+                        totalFrames: roll.frames,
+                        framesUsed: roll.framesUsed,
+                        frames: Array.from({ length: roll.frames }, (_, idx) => {
+                          const s = shots[idx]
+                          return {
+                            frame: idx + 1,
+                            url: s?.url,
+                            exposed: idx + 1 <= roll.framesUsed || Boolean(s),
+                          }
+                        }),
+                      })
+                    } finally {
+                      setExportingSheet(false)
+                    }
+                  }}
                 >
-                  <Send />
-                  {t('panel.postToFeed')}
+                  {exportingSheet ? <Loader2 className="animate-spin" /> : <Download />}
+                  {exportingSheet ? t('panel.exportingSheet') : t('panel.exportSheet')}
                 </Button>
-              )}
+                {isOwner && publishableFrames.length > 0 && (
+                  <Button
+                    variant="primary"
+                    onClick={() => setComposerFrame(publishableFrames[0]!.frame)}
+                  >
+                    <Send />
+                    {t('panel.postToFeed')}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </section>
