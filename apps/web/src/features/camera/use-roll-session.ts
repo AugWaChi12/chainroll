@@ -172,6 +172,7 @@ export function useRollSession(defaultFrames: number) {
           setHud((cur) => (cur?.digest === task.digest && cur.stage === 'confirmed' ? null : cur))
         }, 3200)
       } catch (err) {
+        console.error('[ChainRoll tx failed]', task.kind, err)
         const { code, reason } = classifyTxError(err)
         if (task.kind === 'shoot') {
           if (reason === 'HashAlreadyUsed') {

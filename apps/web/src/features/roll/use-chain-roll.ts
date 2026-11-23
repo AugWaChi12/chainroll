@@ -67,8 +67,10 @@ export function useChainRoll(address: Address | null) {
       }
     : null
 
-  // Prefer real on-chain wagmi roll whenever present on KUB Chain
-  const roll: ChainRoll | null = wagmiRoll ?? onPageChainRoll
+  // When a live ChainRoll contract is configured, ALWAYS use the real on-chain wagmi roll.
+  // Never fall back to legacy off-chain/DB rolls (id 101+) which do not exist on ChainRoll.sol
+  // and would cause ChainRoll.shoot() to revert on KUB Chain!
+  const roll: ChainRoll | null = chainRollContract ? wagmiRoll : onPageChainRoll
 
   // On-chain canClaim is authoritative when contract read succeeded; allow claiming if no roll exists
   const canClaim =
@@ -76,10 +78,9 @@ export function useChainRoll(address: Address | null) {
 
   return {
     loading:
-      !onPageChainRoll &&
       enabled &&
       (status.isLoading || (rollId !== undefined && rollId > 0n && rollQuery.isLoading)),
-    error: onPageChainRoll ? null : (status.error ?? rollQuery.error),
+    error: status.error ?? rollQuery.error,
     roll,
     canClaim,
     nextClaimAt: Number(status.data?.[2] ?? 0n),
