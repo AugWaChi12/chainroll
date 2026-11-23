@@ -37,6 +37,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://chainroll:${POSTGRES_PASSWORD}@db:5432/chainroll
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required in .env}
       NEXT_PUBLIC_CHAIN: ${NEXT_PUBLIC_CHAIN:-testnet}
       NEXT_PUBLIC_CHAINROLL_ADDRESS: ${NEXT_PUBLIC_CHAINROLL_ADDRESS:-}
       NEXT_PUBLIC_WC_PROJECT_ID: ${NEXT_PUBLIC_WC_PROJECT_ID:-}

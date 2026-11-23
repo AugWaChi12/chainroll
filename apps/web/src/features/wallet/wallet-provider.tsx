@@ -19,6 +19,7 @@ import {
   useConnectors,
   useDisconnect,
   useReconnect,
+  useSignMessage,
   useSwitchChain,
   type Connector,
 } from 'wagmi'
@@ -48,6 +49,10 @@ type WalletContextValue = {
   /** display name of the connected wallet, e.g. "MetaMask" */
   walletName: string | null
   connecting: boolean
+  /** true when the wallet has a verified SIWE HttpOnly session on the server */
+  authenticated: boolean
+  authenticating: boolean
+  signIn: () => Promise<boolean>
   options: WalletOption[]
   connect: (optionId: string) => Promise<void>
   disconnect: () => Promise<void>
@@ -73,9 +78,12 @@ function WalletState({ children }: { children: ReactNode }) {
   const { connectAsync } = useConnect()
   const { disconnectAsync } = useDisconnect()
   const { reconnect } = useReconnect()
+  const { signMessageAsync } = useSignMessage()
   const { switchChainAsync } = useSwitchChain()
   const [next, setNext] = useState<{ sdk: BitkubChainSDK; address: Address } | null>(null)
   const [connecting, setConnecting] = useState(false)
+  const [authenticated, setAuthenticated] = useState(false)
+  const [authenticating, setAuthenticating] = useState(false)
   const [wcUri, setWcUri] = useState<string | null>(null)
   const [hasWindowEthereum, setHasWindowEthereum] = useState(false)
 
@@ -171,24 +179,93 @@ function WalletState({ children }: { children: ReactNode }) {
 
   const activeAddress = next?.address ?? account.address ?? null
 
-  // Auto-detect wallet connection / account switch:
-  // 1) Patch user record in DB (`user.touch`)
-  // 2) Broadcast `chainroll:wallet-connected` so rolls, posts, prints & offers re-sync from /api/state
-  // 3) Auto-switch injected wallets to active KUB Chain if on another network
-  useEffect(() => {
-    if (!activeAddress || typeof window === 'undefined') return
-    void window
-      .fetch('/api/state', {
+  /** Cryptographic SIWE sign-in (gas-free EIP-191 personal_sign) -> sets HttpOnly session cookie. */
+  const signIn = useCallback(async (): Promise<boolean> => {
+    if (!activeAddress || typeof window === 'undefined') return false
+    setAuthenticating(true)
+    try {
+      const nonceRes = await window.fetch('/api/auth/nonce', { cache: 'no-store' })
+      const nonceData = (await nonceRes.json()) as { ok?: boolean; nonce?: string }
+      if (!nonceData.ok || !nonceData.nonce) return false
+
+      const message = [
+        `${window.location.host} wants you to sign in with your KUB Chain account:`,
+        activeAddress,
+        '',
+        'Sign in to ChainRoll to verify wallet ownership (gas-free).',
+        '',
+        `URI: ${window.location.origin}`,
+        'Version: 1',
+        `Chain ID: ${activeChain.id}`,
+        `Nonce: ${nonceData.nonce}`,
+        `Issued At: ${new Date().toISOString()}`,
+      ].join('\n')
+
+      const signature = await signMessageAsync({ message })
+      const verifyRes = await window.fetch('/api/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'user.touch', address: activeAddress }),
+        body: JSON.stringify({
+          address: activeAddress,
+          chainId: activeChain.id,
+          nonce: nonceData.nonce,
+          message,
+          signature,
+        }),
       })
-      .finally(() => {
-        window.dispatchEvent(
-          new CustomEvent('chainroll:wallet-connected', { detail: { address: activeAddress } }),
+      const verified = (await verifyRes.json()) as { ok?: boolean; authenticated?: boolean }
+      if (!verified.ok || !verified.authenticated) return false
+
+      setAuthenticated(true)
+      void window
+        .fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'user.touch', address: activeAddress }),
+        })
+        .finally(() => {
+          window.dispatchEvent(
+            new CustomEvent('chainroll:wallet-connected', { detail: { address: activeAddress } }),
+          )
+        })
+        .catch(() => {})
+      return true
+    } catch {
+      return false
+    } finally {
+      setAuthenticating(false)
+    }
+  }, [activeAddress, signMessageAsync])
+
+  // Check existing HttpOnly SIWE session whenever wallet connects or switches account
+  useEffect(() => {
+    if (!activeAddress || typeof window === 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear session flag on disconnect
+      setAuthenticated(false)
+      return
+    }
+    let alive = true
+    void window
+      .fetch('/api/auth/session', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { authenticated?: boolean; address?: string | null } | null) => {
+        if (!alive) return
+        const matches = Boolean(
+          data?.authenticated &&
+            data.address &&
+            data.address.toLowerCase() === activeAddress.toLowerCase(),
         )
+        setAuthenticated(matches)
+        if (matches) {
+          window.dispatchEvent(
+            new CustomEvent('chainroll:wallet-connected', { detail: { address: activeAddress } }),
+          )
+        }
       })
       .catch(() => {})
+    return () => {
+      alive = false
+    }
   }, [activeAddress])
 
   useEffect(() => {
@@ -226,6 +303,10 @@ function WalletState({ children }: { children: ReactNode }) {
   }, [activeAddress, reconnect])
 
   const disconnect = useCallback(async () => {
+    setAuthenticated(false)
+    if (typeof window !== 'undefined') {
+      void window.fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
+    }
     if (next) {
       await next.sdk.logout().catch(() => {})
       setNext(null)
@@ -258,6 +339,9 @@ function WalletState({ children }: { children: ReactNode }) {
             : connector.name
           : null,
       connecting: connecting || account.isConnecting,
+      authenticated,
+      authenticating,
+      signIn,
       options,
       connect,
       disconnect,
@@ -268,11 +352,14 @@ function WalletState({ children }: { children: ReactNode }) {
     account.address,
     account.connector,
     account.isConnecting,
+    authenticated,
+    authenticating,
     connect,
     connecting,
     disconnect,
     next,
     options,
+    signIn,
     wcUri,
   ])
 

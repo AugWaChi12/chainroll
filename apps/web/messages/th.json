@@ -635,6 +635,8 @@
       "body": "บัญชี anvil สำหรับทดสอบบนเครื่อง — ใช้ได้เฉพาะ chain local"
     },
     "privacy": "บนเชนมีแค่ hash ของรูป — ตัวรูปอยู่ในเครื่องคุณ",
+    "verifyWallet": "ยืนยันตัวตน",
+    "verifying": "กำลังเซ็น…",
     "errors": {
       "rejected": "ยกเลิกในกระเป๋า",
       "insufficient-funds": "KUB ในกระเป๋าไม่พอจ่ายค่า gas",

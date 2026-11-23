@@ -1,7 +1,17 @@
 'use client'
 
 import { Button, cn } from '@chainroll/ui'
-import { ArrowLeft, Check, Copy, FlaskConical, QrCode, Smartphone, Wallet, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  FlaskConical,
+  QrCode,
+  ShieldCheck,
+  Smartphone,
+  Wallet,
+  X,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import QRCode from 'qrcode'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -329,18 +339,37 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
       </Button>
     )
   return (
-    <button
-      type="button"
-      onClick={() => void w.disconnect()}
-      title={t('disconnect')}
-      className="flex shrink-0 items-center gap-1.5 rounded-xs border border-border px-2 py-1 font-mono text-2xs text-fg-muted hover:text-fg"
-    >
-      <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-success" />
-      <span className="hidden max-w-24 truncate sm:inline">{w.walletName}</span>
-      <span className="hidden sm:inline">·</span>
-      <span>
-        {w.address.slice(0, 6)}…{w.address.slice(-4)}
-      </span>
-    </button>
+    <div className="flex shrink-0 items-center gap-1.5">
+      {!w.authenticated && (
+        <button
+          type="button"
+          disabled={w.authenticating}
+          onClick={() => void w.signIn()}
+          className="inline-flex items-center gap-1 rounded-xs border border-frame/70 bg-frame/15 px-2 py-1 font-mono text-2xs text-frame transition-colors hover:bg-frame/25 disabled:opacity-50"
+        >
+          <ShieldCheck className="size-3" />
+          <span>{w.authenticating ? t('verifying') : t('verifyWallet')}</span>
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => void w.disconnect()}
+        title={t('disconnect')}
+        className="flex shrink-0 items-center gap-1.5 rounded-xs border border-border px-2 py-1 font-mono text-2xs text-fg-muted hover:text-fg"
+      >
+        <span
+          aria-hidden
+          className={cn(
+            'size-1.5 shrink-0 rounded-full',
+            w.authenticated ? 'bg-success' : 'bg-warning',
+          )}
+        />
+        <span className="hidden max-w-24 truncate sm:inline">{w.walletName}</span>
+        <span className="hidden sm:inline">·</span>
+        <span>
+          {w.address.slice(0, 6)}…{w.address.slice(-4)}
+        </span>
+      </button>
+    </div>
   )
 }

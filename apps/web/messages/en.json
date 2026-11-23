@@ -699,6 +699,8 @@
       "body": "Anvil test account — local chain only"
     },
     "privacy": "Only your photo's hash goes on-chain — the photo stays on your device.",
+    "verifyWallet": "Verify SIWE",
+    "verifying": "Signing…",
     "errors": {
       "rejected": "Cancelled in your wallet",
       "insufficient-funds": "Not enough KUB for gas",
