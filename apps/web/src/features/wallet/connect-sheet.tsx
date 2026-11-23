@@ -277,6 +277,12 @@ function QrPanel({ uri, onBack }: { uri: string; onBack: () => void }) {
       </div>
       <div className="mt-3 flex w-full flex-wrap justify-center gap-2">
         <Button size="sm" variant="primary" asChild>
+          <a href={`https://applink.kubwallet.com/wc?uri=${encodeURIComponent(uri)}`}>
+            <Smartphone />
+            {t('openKubWallet')}
+          </a>
+        </Button>
+        <Button size="sm" variant="secondary" asChild>
           <a href={uri}>
             <Smartphone />
             {t('openApp')}

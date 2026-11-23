@@ -223,7 +223,8 @@ function hydrateOnce() {
   }
 
   // Sync live state from Docker Postgres / Supabase via /api/state
-  if (typeof window.fetch === 'function') {
+  const pullFromApi = () => {
+    if (typeof window.fetch !== 'function') return
     void window
       .fetch('/api/state', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
@@ -248,6 +249,8 @@ function hydrateOnce() {
       )
       .catch(() => {})
   }
+  pullFromApi()
+  window.addEventListener('chainroll:wallet-connected', pullFromApi)
 }
 
 function syncToDb(payload: unknown) {

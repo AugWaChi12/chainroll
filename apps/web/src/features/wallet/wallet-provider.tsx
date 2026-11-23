@@ -18,6 +18,7 @@ import {
   useConnect,
   useConnectors,
   useDisconnect,
+  useSwitchChain,
   type Connector,
 } from 'wagmi'
 import { bitkubNextEnabled } from '@/lib/env'
@@ -70,6 +71,7 @@ function WalletState({ children }: { children: ReactNode }) {
   const connectors = useConnectors()
   const { connectAsync } = useConnect()
   const { disconnectAsync } = useDisconnect()
+  const { switchChainAsync } = useSwitchChain()
   const [next, setNext] = useState<{ sdk: BitkubChainSDK; address: Address } | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [wcUri, setWcUri] = useState<string | null>(null)
@@ -164,6 +166,40 @@ function WalletState({ children }: { children: ReactNode }) {
     },
     [connectAsync, connectors],
   )
+
+  const activeAddress = next?.address ?? account.address ?? null
+
+  // Auto-detect wallet connection / account switch:
+  // 1) Patch user record in DB (`user.touch`)
+  // 2) Broadcast `chainroll:wallet-connected` so rolls, posts, prints & offers re-sync from /api/state
+  // 3) Auto-switch injected wallets to active KUB Chain if on another network
+  useEffect(() => {
+    if (!activeAddress || typeof window === 'undefined') return
+    void window
+      .fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'user.touch', address: activeAddress }),
+      })
+      .finally(() => {
+        window.dispatchEvent(
+          new CustomEvent('chainroll:wallet-connected', { detail: { address: activeAddress } }),
+        )
+      })
+      .catch(() => {})
+  }, [activeAddress])
+
+  useEffect(() => {
+    if (
+      account.isConnected &&
+      account.connector &&
+      kindOf(account.connector) === 'injected' &&
+      account.chainId &&
+      account.chainId !== activeChain.id
+    ) {
+      void switchChainAsync({ chainId: activeChain.id }).catch(() => {})
+    }
+  }, [account.chainId, account.connector, account.isConnected, switchChainAsync])
 
   const disconnect = useCallback(async () => {
     if (next) {

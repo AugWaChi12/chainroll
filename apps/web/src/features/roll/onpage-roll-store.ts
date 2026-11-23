@@ -24,9 +24,8 @@ function emit() {
   for (const fn of listeners) fn()
 }
 
-function hydrateFromApiOnce() {
-  if (hydratedFromApi || typeof window === 'undefined') return
-  hydratedFromApi = true
+function fetchRollsFromApi() {
+  if (typeof window === 'undefined') return
   void fetch('/api/state', { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : null))
     .then((data: { ok?: boolean; rolls?: OnPageRoll[] } | null) => {
@@ -63,6 +62,13 @@ function hydrateFromApiOnce() {
     .catch(() => {
       // fallback to local state
     })
+}
+
+function hydrateFromApiOnce() {
+  if (hydratedFromApi || typeof window === 'undefined') return
+  hydratedFromApi = true
+  fetchRollsFromApi()
+  window.addEventListener('chainroll:wallet-connected', fetchRollsFromApi)
 }
 
 function syncRollToApi(payload: unknown) {

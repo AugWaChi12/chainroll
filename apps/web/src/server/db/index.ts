@@ -353,6 +353,7 @@ export type DbMutationPayload =
       note?: string
     }
   | { type: 'profile.save'; address: string; handle: string | null; bio: string }
+  | { type: 'user.touch'; address: string }
   | {
       type: 'print.upsert'
       print: DbPrintDto
@@ -540,6 +541,11 @@ export async function applyDbMutation(payload: DbMutationPayload): Promise<void>
 
     case 'audit.remove': {
       await sql`DELETE FROM public.admin_log WHERE id = ${payload.id}`
+      return
+    }
+
+    case 'user.touch': {
+      await ensureUser(sql, payload.address)
       return
     }
 

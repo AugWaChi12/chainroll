@@ -725,7 +725,8 @@
       "unavailable": "Not enabled (needs a WalletConnect project ID)",
       "scan": "Scan with your phone's wallet app — or, if you're on your phone, open it in the app directly.",
       "qrAlt": "QR code to connect a wallet via WalletConnect",
-      "openApp": "Open in wallet app",
+      "openKubWallet": "Open in KUB Wallet",
+      "openApp": "Other wallet app",
       "copy": "Copy link",
       "copied": "Copied",
       "cancel": "Cancel"
