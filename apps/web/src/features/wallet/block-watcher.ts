@@ -29,6 +29,15 @@ export async function getKubBalance(address: Address): Promise<number | null> {
   }
 }
 
+/** Waits for an actual KUB Chain transaction receipt and returns its block number. */
+export async function waitForKubTxReceipt(hash: `0x${string}`): Promise<bigint | null> {
+  const receipt = await getKubPublicClient().waitForTransactionReceipt({
+    hash,
+    pollingInterval: 250,
+  })
+  return receipt.blockNumber
+}
+
 /**
  * Waits in real time for the next actual block on KUB Chain (1s block time via `activeChain` RPC).
  * Falls back gracefully after `timeoutMs` if the RPC is unreachable/offline.

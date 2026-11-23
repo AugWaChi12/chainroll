@@ -1,3 +1,3 @@
 export { chainRollAbi } from './chainRoll'
 export { chainRollPrintsAbi } from './chainRollPrints'
-export { chainRollAddress } from './deployments'
+export { chainRollAddress, chainRollPrintsAddress } from './deployments'

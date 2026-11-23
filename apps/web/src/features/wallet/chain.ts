@@ -1,4 +1,4 @@
-import { chainRollAddress } from '@chainroll/contracts'
+import { chainRollAddress, chainRollPrintsAddress } from '@chainroll/contracts'
 import { kubMainnet, kubTestnet } from '@chainroll/shared'
 import { env } from '@/lib/env'
 import { defineChain, type Address } from 'viem'
@@ -26,6 +26,9 @@ const LOCAL_ADDRESS: Address = '0x5FbDB2315678afecb367f032d93F642f64180aa3'
 export const chainRollContract: Address | undefined =
   (env.NEXT_PUBLIC_CHAINROLL_ADDRESS as Address | undefined) ??
   (activeChain.id === localChain.id ? LOCAL_ADDRESS : chainRollAddress[activeChain.id])
+
+export const chainRollPrintsContract: Address | undefined =
+  chainRollPrintsAddress[activeChain.id]
 
 export function explorerTxUrl(hash: string): string | undefined {
   const base = activeChain.blockExplorers?.default.url

@@ -1161,8 +1161,10 @@
         "step3": "Confirmed",
         "stages": {
           "awaiting-confirm": "Awaiting confirm",
+          "signing": "Awaiting wallet",
           "mining": "Mining block",
-          "confirmed": "Block confirmed"
+          "confirmed": "Block confirmed",
+          "failed": "Failed"
         },
         "contractLabel": "Contract call",
         "valueLabel": "Transaction value",

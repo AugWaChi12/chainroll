@@ -67,14 +67,12 @@ export function useChainRoll(address: Address | null) {
       }
     : null
 
-  // Prefer on-page confirmed roll when available or newer
-  const roll: ChainRoll | null =
-    onPageChainRoll && (!wagmiRoll || onPageChainRoll.id >= wagmiRoll.id)
-      ? onPageChainRoll
-      : wagmiRoll
+  // Prefer real on-chain wagmi roll whenever present on KUB Chain
+  const roll: ChainRoll | null = wagmiRoll ?? onPageChainRoll
 
-  // If the user has no active roll yet, allow claiming immediately
-  const canClaim = !roll ? true : (status.data?.[1] ?? false)
+  // On-chain canClaim is authoritative when contract read succeeded; allow claiming if no roll exists
+  const canClaim =
+    status.data !== undefined ? Boolean(status.data[1]) : !roll
 
   return {
     loading:

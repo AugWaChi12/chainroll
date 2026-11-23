@@ -218,17 +218,18 @@ export function useRollSession(defaultFrames: number) {
         stage: 'awaiting-confirm',
       }
       if (autoConfirm) {
-        executeOnPageConfirm(task)
+        void executeWalletConfirm(task)
       } else {
         setHud(task)
       }
     },
-    [autoConfirm, executeOnPageConfirm, full, onChain, roll, rollKey, used],
+    [autoConfirm, executeWalletConfirm, full, onChain, roll, rollKey, used],
   )
 
+  // Primary confirm button fires a REAL KUB Chain on-chain transaction via wallet.adapter
   const confirmHudShot = useCallback(() => {
-    if (hud) executeOnPageConfirm(hud)
-  }, [executeOnPageConfirm, hud])
+    if (hud) void executeWalletConfirm(hud)
+  }, [executeWalletConfirm, hud])
 
   const signHudViaWallet = useCallback(() => {
     if (hud) void executeWalletConfirm(hud)

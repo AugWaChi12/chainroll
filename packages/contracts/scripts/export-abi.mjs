@@ -26,16 +26,19 @@ if (existsSync(printsPath)) {
 }
 
 const deployments = {}
+const printsDeployments = {}
 const depDir = join(root, 'deployments')
 if (existsSync(depDir)) {
   for (const f of readdirSync(depDir).filter((f) => /^\d+\.json$/.test(f) && f !== '31337.json')) {
     const d = JSON.parse(readFileSync(join(depDir, f), 'utf8'))
-    deployments[Number(f.replace('.json', ''))] = d.chainRoll
+    const cid = Number(f.replace('.json', ''))
+    if (d.chainRoll) deployments[cid] = d.chainRoll
+    if (d.chainRollPrints) printsDeployments[cid] = d.chainRollPrints
   }
 }
 writeFileSync(
   join(outDir, 'deployments.ts'),
-  `${header}export const chainRollAddress: Partial<Record<number, \`0x\${string}\`>> = ${JSON.stringify(deployments, null, 2)}\n`,
+  `${header}export const chainRollAddress: Partial<Record<number, \`0x\${string}\`>> = ${JSON.stringify(deployments, null, 2)}\nexport const chainRollPrintsAddress: Partial<Record<number, \`0x\${string}\`>> = ${JSON.stringify(printsDeployments, null, 2)}\n`,
 )
 
 console.log(

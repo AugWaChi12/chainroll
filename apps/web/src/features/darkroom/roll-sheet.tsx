@@ -404,8 +404,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
       {hudTask && (
         <BlockConfirmHud
           task={hudTask}
-          onConfirm={confirmDevelopOnPage}
-          onSignWallet={w.adapter ? () => void signDevelopViaWallet() : undefined}
+          onConfirm={() => void signDevelopViaWallet()}
           onRetry={() => void signDevelopViaWallet()}
           onDismiss={() => setHudTask(null)}
         />

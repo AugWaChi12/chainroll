@@ -1,13 +1,21 @@
 'use client'
 
-import { activeChain, getKubBalance, waitForNextKubBlock } from '@/features/wallet'
+import { chainRollPrintsAbi } from '@chainroll/contracts'
+import {
+  activeChain,
+  chainRollPrintsContract,
+  classifyTxError,
+  getKubBalance,
+  waitForKubTxReceipt,
+} from '@/features/wallet'
 import { Badge, Button, Input, RebateLabel, TxHash, truncateHash } from '@chainroll/ui'
 import { Check, Coins, Gavel, Sparkles, Tag, X } from 'lucide-react'
 import type { Route } from 'next'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { keccak256, stringToHex, type Address } from 'viem'
+import { keccak256, parseEther, stringToHex, type Address } from 'viem'
+import { useWriteContract } from 'wagmi'
 import { MarketBlockHud, type MarketBlockTask } from './market-block-hud'
 import type { FeedPost } from './post-store'
 import {
@@ -28,6 +36,10 @@ import {
   setPrintAskPrice,
   usePrintMarketStore,
 } from './print-market'
+
+function offerExpirySec(): bigint {
+  return BigInt(Math.floor(Date.now() / 1000) + 72 * 3600)
+}
 
 export function PrintMarketPanel({
   post,
@@ -89,14 +101,17 @@ export function PrintMarketPanel({
     }
     return true
   }
+  const { writeContractAsync } = useWriteContract()
   const [pendingTx, setPendingTx] = useState<{
     task: MarketBlockTask
-    run: () => `0x${string}` | string | undefined
+    sendOnChain: () => Promise<`0x${string}`>
+    run: (txHash: `0x${string}`) => void
   } | null>(null)
 
   const queueBlockTx = (
     task: Omit<MarketBlockTask, 'stage' | 'digest'> & { digestSeed: string },
-    run: () => `0x${string}` | string | undefined,
+    sendOnChain: () => Promise<`0x${string}`>,
+    run: (txHash: `0x${string}`) => void,
   ) => {
     setPendingTx({
       task: {
@@ -107,23 +122,36 @@ export function PrintMarketPanel({
         digest: keccak256(stringToHex(task.digestSeed)),
         stage: 'awaiting-confirm',
       },
+      sendOnChain,
       run,
     })
   }
 
   const confirmBlockTx = async () => {
     if (!pendingTx) return
-    const { task, run } = pendingTx
-    setPendingTx({ task: { ...task, stage: 'mining' }, run })
-    const { blockNumber } = await waitForNextKubBlock()
-    const tx = run()
-    const txHash = (tx && tx.startsWith('0x')
-      ? tx
-      : keccak256(stringToHex(`${task.contractFn}:${task.digest}`))) as `0x${string}`
-    setPendingTx({ task: { ...task, stage: 'confirmed', txHash, blockNumber }, run })
-    window.setTimeout(() => {
-      setPendingTx((cur) => (cur?.task.digest === task.digest ? null : cur))
-    }, 1800)
+    const { task, sendOnChain, run } = pendingTx
+    setPendingTx({ task: { ...task, stage: 'signing', errorMessage: undefined }, sendOnChain, run })
+    try {
+      const txHash = await sendOnChain()
+      setPendingTx({ task: { ...task, stage: 'mining', txHash }, sendOnChain, run })
+      const blockNumber = await waitForKubTxReceipt(txHash)
+      run(txHash)
+      setPendingTx({ task: { ...task, stage: 'confirmed', txHash, blockNumber }, sendOnChain, run })
+      window.setTimeout(() => {
+        setPendingTx((cur) => (cur?.task.digest === task.digest ? null : cur))
+      }, 2400)
+    } catch (err) {
+      const { code, reason } = classifyTxError(err)
+      setPendingTx({
+        task: {
+          ...task,
+          stage: 'failed',
+          errorMessage: reason ? `${code}: ${reason}` : code,
+        },
+        sendOnChain,
+        run,
+      })
+    }
   }
 
   const isPhotographer = Boolean(
@@ -145,6 +173,7 @@ export function PrintMarketPanel({
       onRequireConnect()
       return
     }
+    if (!chainRollPrintsContract) return
     const parsed = Number(mintPriceInput)
     const ask = Number.isFinite(parsed) && parsed > 0 ? parsed : null
     queueBlockTx(
@@ -154,6 +183,19 @@ export function PrintMarketPanel({
         contractFn: `ChainRollPrints.mintPrint(#${post.rollId}, ${post.frame}, ${ask ?? 0})`,
         digestSeed: `mint:${post.photoHash}:${ask ?? 0}`,
       },
+      () =>
+        writeContractAsync({
+          address: chainRollPrintsContract!,
+          abi: chainRollPrintsAbi,
+          chainId: activeChain.id,
+          functionName: 'mintPrint',
+          args: [
+            BigInt(post.rollId),
+            post.frame,
+            post.photoHash as `0x${string}`,
+            ask ? parseEther(String(ask)) : 0n,
+          ],
+        }),
       () => {
         const minted = mintPrintEdition({
           postId: post.id,
@@ -165,13 +207,12 @@ export function PrintMarketPanel({
           askPriceKub: ask,
         })
         setNotice(t('notices.minted', { tokenId: String(minted.tokenId).padStart(2, '0') }))
-        return minted.mintTxHash
       },
     )
   }
 
   const handleUpdatePrice = (delist = false) => {
-    if (!print || !viewerAddress) return
+    if (!print || !viewerAddress || !chainRollPrintsContract) return
     const parsed = delist ? null : Number(editPriceInput)
     const ask = parsed !== null && Number.isFinite(parsed) && parsed > 0 ? parsed : null
     queueBlockTx(
@@ -181,17 +222,24 @@ export function PrintMarketPanel({
         contractFn: `ChainRollPrints.setAskPrice(#${print.tokenId}, ${ask ?? 0})`,
         digestSeed: `ask:${print.tokenId}:${ask ?? 0}`,
       },
+      () =>
+        writeContractAsync({
+          address: chainRollPrintsContract!,
+          abi: chainRollPrintsAbi,
+          chainId: activeChain.id,
+          functionName: 'setAskPrice',
+          args: [BigInt(print.tokenId), ask ? parseEther(String(ask)) : 0n],
+        }),
       () => {
         setPrintAskPrice({ tokenId: print.tokenId, actor: viewerAddress, askPriceKub: ask })
         setEditingPrice(false)
         setNotice(ask ? t('notices.priceUpdated', { price: ask }) : t('notices.delisted'))
-        return undefined
       },
     )
   }
 
   const handleBuyNow = async () => {
-    if (!print || !print.askPriceKub) return
+    if (!print || !print.askPriceKub || !chainRollPrintsContract) return
     if (!viewerAddress) {
       onRequireConnect()
       return
@@ -207,17 +255,25 @@ export function PrintMarketPanel({
         valueKub: price,
         digestSeed: `buy:${print.tokenId}:${viewerAddress}:${price}`,
       },
+      () =>
+        writeContractAsync({
+          address: chainRollPrintsContract!,
+          abi: chainRollPrintsAbi,
+          chainId: activeChain.id,
+          functionName: 'buyPrint',
+          args: [BigInt(print.tokenId)],
+          value: parseEther(String(price)),
+        }),
       () => {
         if (buyPrintEdition({ tokenId: print.tokenId, buyer: viewerAddress })) {
           setNotice(t('notices.bought', { price }))
         }
-        return undefined
       },
     )
   }
 
   const handleMakeOffer = async () => {
-    if (!print) return
+    if (!print || !chainRollPrintsContract) return
     if (!viewerAddress) {
       onRequireConnect()
       return
@@ -233,6 +289,7 @@ export function PrintMarketPanel({
       return
     }
     if (!(await checkSufficientKub(amount))) return
+    const expiresAt = offerExpirySec()
     queueBlockTx(
       {
         badge: `OFFER 1/1 #${String(print.tokenId).padStart(2, '0')}`,
@@ -241,6 +298,15 @@ export function PrintMarketPanel({
         valueKub: amount,
         digestSeed: `offer:${print.tokenId}:${viewerAddress}:${amount}`,
       },
+      () =>
+        writeContractAsync({
+          address: chainRollPrintsContract!,
+          abi: chainRollPrintsAbi,
+          chainId: activeChain.id,
+          functionName: 'makeOffer',
+          args: [BigInt(print.tokenId), expiresAt],
+          value: parseEther(String(amount)),
+        }),
       () => {
         const res = makePrintOffer({
           tokenId: print.tokenId,
@@ -249,11 +315,10 @@ export function PrintMarketPanel({
         })
         if (!res.ok) {
           setOfferError(t('errors.offerTooLow', { min: res.minRequired }))
-          return undefined
+          return
         }
         setNotice(t('notices.offerPlaced', { amount: amount.toFixed(2) }))
         setOfferInput(String(minimumNextOfferKub(amount)))
-        return undefined
       },
     )
   }
@@ -277,6 +342,8 @@ export function PrintMarketPanel({
         return
       }
       if (!(await checkSufficientKub(amount))) return
+      if (!chainRollPrintsContract) return
+      const expiresAt = offerExpirySec()
       queueBlockTx(
         {
           badge: 'PRE-MINT OFFER',
@@ -285,6 +352,15 @@ export function PrintMarketPanel({
           valueKub: amount,
           digestSeed: `premint:${post.photoHash}:${viewerAddress}:${amount}`,
         },
+        () =>
+          writeContractAsync({
+            address: chainRollPrintsContract!,
+            abi: chainRollPrintsAbi,
+            chainId: activeChain.id,
+            functionName: 'makePreMintOffer',
+            args: [post.photoHash as `0x${string}`, expiresAt],
+            value: parseEther(String(amount)),
+          }),
         () => {
           const res = makePreMintOffer({
             photoHash: post.photoHash,
@@ -293,17 +369,16 @@ export function PrintMarketPanel({
           })
           if (!res.ok) {
             setOfferError(t('errors.offerTooLow', { min: res.minRequired }))
-            return undefined
+            return
           }
           setNotice(t('preMintNoticePlaced', { amount: amount.toFixed(2) }))
           setOfferInput(String(minimumNextOfferKub(amount)))
-          return res.offer.txHash
         },
       )
     }
 
     const handleAcceptPreMint = (offerId: string, amountKub: number) => {
-      if (!viewerAddress || !isPhotographer) return
+      if (!viewerAddress || !isPhotographer || !chainRollPrintsContract) return
       queueBlockTx(
         {
           badge: 'MINT & ACCEPT',
@@ -311,6 +386,14 @@ export function PrintMarketPanel({
           contractFn: `ChainRollPrints.acceptPreMintOffer(${amountKub.toFixed(2)} KUB)`,
           digestSeed: `acceptPremint:${post.photoHash}:${offerId}`,
         },
+        () =>
+          writeContractAsync({
+            address: chainRollPrintsContract!,
+            abi: chainRollPrintsAbi,
+            chainId: activeChain.id,
+            functionName: 'acceptPreMintOffer',
+            args: [post.photoHash as `0x${string}`, parseEther(String(amountKub))],
+          }),
         () => {
           const created = acceptPreMintOffer({
             postId: post.id,
@@ -328,9 +411,7 @@ export function PrintMarketPanel({
                 amount: amountKub.toFixed(2),
               }),
             )
-            return created.mintTxHash
           }
-          return undefined
         },
       )
     }
@@ -716,7 +797,7 @@ export function PrintMarketPanel({
                         variant="primary"
                         size="sm"
                         onClick={() => {
-                          if (!viewerAddress) return
+                          if (!viewerAddress || !chainRollPrintsContract) return
                           queueBlockTx(
                             {
                               badge: `ACCEPT #${String(print.tokenId).padStart(2, '0')}`,
@@ -724,6 +805,14 @@ export function PrintMarketPanel({
                               contractFn: `ChainRollPrints.acceptOffer(#${print.tokenId}, ${off.amountKub.toFixed(2)} KUB)`,
                               digestSeed: `accept:${print.tokenId}:${off.id}`,
                             },
+                            () =>
+                              writeContractAsync({
+                                address: chainRollPrintsContract!,
+                                abi: chainRollPrintsAbi,
+                                chainId: activeChain.id,
+                                functionName: 'acceptOffer',
+                                args: [BigInt(print.tokenId), parseEther(String(off.amountKub))],
+                              }),
                             () => {
                               if (
                                 acceptPrintOffer({
@@ -738,7 +827,6 @@ export function PrintMarketPanel({
                                   }),
                                 )
                               }
-                              return undefined
                             },
                           )
                         }}

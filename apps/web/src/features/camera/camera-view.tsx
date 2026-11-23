@@ -509,7 +509,6 @@ export function CameraView() {
           autoConfirm={session.autoConfirm}
           onToggleAutoConfirm={session.setAutoConfirm}
           onConfirm={session.confirmHudShot}
-          onSignWallet={session.wallet.adapter ? session.signHudViaWallet : undefined}
           onRetry={
             session.hud.kind === 'shoot'
               ? () => session.retry(session.hud!.digest)

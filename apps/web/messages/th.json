@@ -1097,8 +1097,10 @@
         "step3": "บันทึกสำเร็จ",
         "stages": {
           "awaiting-confirm": "รอยืนยันบนหน้าเว็บ",
+          "signing": "รอเซ็นในกระเป๋า",
           "mining": "กำลังขึ้นบล็อก",
-          "confirmed": "บล็อกยืนยันแล้ว"
+          "confirmed": "บล็อกยืนยันแล้ว",
+          "failed": "ไม่สำเร็จ"
         },
         "contractLabel": "คำสั่ง Smart Contract",
         "valueLabel": "มูลค่าธุรกรรม",

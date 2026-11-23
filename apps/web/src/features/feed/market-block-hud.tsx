@@ -5,7 +5,7 @@ import { Badge, Button, FilmStrip, RebateLabel, TxHash, cn } from '@chainroll/ui
 import { Check, Cpu, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-export type MarketTxStage = 'awaiting-confirm' | 'mining' | 'confirmed'
+export type MarketTxStage = 'awaiting-confirm' | 'signing' | 'mining' | 'confirmed' | 'failed'
 
 export type MarketBlockTask = {
   badge: string
@@ -16,6 +16,7 @@ export type MarketBlockTask = {
   stage: MarketTxStage
   txHash?: `0x${string}`
   blockNumber?: bigint | null
+  errorMessage?: string
 }
 
 export function MarketBlockHud({
@@ -51,7 +52,9 @@ export function MarketBlockHud({
             'flex flex-col gap-3.5 rounded-sm border bg-[#120f0d]/95 p-4 text-[#f2ede4] shadow-[var(--elev-pop)] backdrop-blur-md',
             stage === 'confirmed'
               ? 'border-success/60 shadow-[inset_2px_0_0_var(--success)]'
-              : 'border-frame/60 shadow-[inset_2px_0_0_var(--frame)]',
+              : stage === 'failed'
+                ? 'border-danger/60 shadow-[inset_2px_0_0_var(--danger)]'
+                : 'border-frame/60 shadow-[inset_2px_0_0_var(--frame)]',
           )}
         >
           {/* Header */}
@@ -59,13 +62,22 @@ export function MarketBlockHud({
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
                 <RebateLabel>{task.badge}</RebateLabel>
-                <Badge tone={stage === 'confirmed' ? 'success' : 'frame'} dot>
+                <Badge
+                  tone={
+                    stage === 'confirmed'
+                      ? 'success'
+                      : stage === 'failed'
+                        ? 'danger'
+                        : 'frame'
+                  }
+                  dot
+                >
                   {t(`stages.${stage}`)}
                 </Badge>
               </div>
               <p className="text-sm font-semibold text-[#f2ede4]">{task.headline}</p>
             </div>
-            {stage !== 'mining' && (
+            {stage !== 'mining' && stage !== 'signing' && (
               <button
                 type="button"
                 onClick={onDismiss}
@@ -166,10 +178,19 @@ export function MarketBlockHud({
             </div>
           )}
 
-          {stage === 'mining' && (
+          {(stage === 'signing' || stage === 'mining') && (
             <div className="flex items-center justify-between gap-3">
-              <FilmStrip className="w-28" label={t('stages.mining')} />
+              <FilmStrip className="w-28" label={t(`stages.${stage}`)} />
               <span className="font-mono text-2xs text-[#a39a90]">{t('waitingBlockHint')}</span>
+            </div>
+          )}
+
+          {stage === 'failed' && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs text-danger">{task.errorMessage ?? t('stages.failed')}</span>
+              <Button variant="secondary" size="sm" onClick={onConfirm}>
+                {t('confirmBtn')}
+              </Button>
             </div>
           )}
 
