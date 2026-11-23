@@ -71,7 +71,50 @@ export function PostComposerModal({
     try {
       let imageDataUrl: string | undefined
       if (active.blob) {
-        imageDataUrl = await blobToDataUrl(active.blob)
+        // Try direct browser -> Cloudflare R2 presigned upload (public CDN + private 1/1 master)
+        const contentType =
+          active.blob.type === 'image/jpeg' ? 'image/jpeg' : ('image/webp' as const)
+        try {
+          const signRes = await window.fetch('/api/upload-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              photoHash: active.hash,
+              contentType,
+              bytes: active.blob.size,
+            }),
+          })
+          if (signRes.ok) {
+            const signed = (await signRes.json()) as {
+              ok?: boolean
+              publicPutUrl?: string
+              privatePutUrl?: string
+              publicUrl?: string
+            }
+            if (signed.ok && signed.publicPutUrl && signed.privatePutUrl && signed.publicUrl) {
+              const [pubUp, privUp] = await Promise.all([
+                window.fetch(signed.publicPutUrl, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': contentType },
+                  body: active.blob,
+                }),
+                window.fetch(signed.privatePutUrl, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': contentType },
+                  body: active.blob,
+                }),
+              ])
+              if (pubUp.ok && privUp.ok) {
+                imageDataUrl = signed.publicUrl
+              }
+            }
+          }
+        } catch {
+          // fallback to compressed data URL when R2 is not configured
+        }
+        if (!imageDataUrl) {
+          imageDataUrl = await blobToDataUrl(active.blob)
+        }
       }
       const fallbackScene = SAMPLE_SCENES[(active.frame - 1) % SAMPLE_SCENES.length]
       const post = createPost({

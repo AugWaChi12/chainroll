@@ -96,6 +96,22 @@ export function PostDetailView({ postId }: { postId: string }) {
       a.click()
     }
 
+    // Prefer 60-second signed private R2 master download when configured
+    try {
+      const dlRes = await window.fetch(`/api/prints/${post.photoHash}/download`, {
+        cache: 'no-store',
+      })
+      if (dlRes.ok) {
+        const dlData = (await dlRes.json()) as { ok?: boolean; url?: string }
+        if (dlData.ok && dlData.url) {
+          triggerDownload(dlData.url, 'webp')
+          return
+        }
+      }
+    } catch {
+      // fallback to local / public source below
+    }
+
     if (post.imageDataUrl) {
       triggerDownload(post.imageDataUrl, 'webp')
       return
