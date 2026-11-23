@@ -8,7 +8,6 @@ import {
   encodeCanvas,
   getStock,
   useStockName,
-  type FilmSource,
 } from '@/features/film'
 import { rollStage, useNowSec } from '@/features/roll'
 import { ConnectSheet, WalletButton, isBusy } from '@/features/wallet'
@@ -18,7 +17,6 @@ import {
   Calendar,
   ExternalLink,
   Grid3x3,
-  ImagePlus,
   RefreshCcw,
   Sun,
   SwitchCamera,
@@ -27,10 +25,9 @@ import {
 } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ReviewSheet } from './review-sheet'
 import { BlockConfirmHud } from './block-confirm-hud'
-import { verifyPhotoTakenToday } from './exif-guard'
 import { haptic, playShutter } from './shutter-fx'
 import { useCamera, type CameraStatus } from './use-camera'
 import { useRollSession } from './use-roll-session'
@@ -104,17 +101,14 @@ export function CameraView() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of the URL
     if (FILM_STOCKS.some((s) => s.id === id)) setPickedFilm(id)
   }, [])
-  const [image, setImage] = useState<ImageBitmap | null>(null)
   const [busy, setBusy] = useState(false)
   const [flash, setFlash] = useState(false)
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
   const [dateStamp, setDateStamp] = useState(true)
   const [showGrid, setShowGrid] = useState(false)
   const [ev, setEv] = useState<(typeof EV_STEPS)[number]>(0)
   const [muted, setMuted] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   const session = useRollSession(getStock(pickedFilm).frames)
   const { shots, used, frames, full, phase, roll } = session
@@ -128,12 +122,7 @@ export function CameraView() {
   const quartzDate = useMemo(() => formatQuartzDate(), [])
   const filmLocked = phase === 'open'
 
-  const usingImage = image !== null
-  const source = useCallback(
-    (): FilmSource | null => image ?? cam.video.current,
-    [image, cam.video],
-  )
-  const live = usingImage || cam.status === 'live'
+  const live = cam.status === 'live'
 
   // ── preview renderer ─────────────────────────────────────
   useEffect(() => {
@@ -166,38 +155,27 @@ export function CameraView() {
     }
   }, [])
 
-  // Release uploaded ImageBitmap on replace or unmount to prevent GPU memory leaks on iOS
-  useEffect(() => {
-    return () => {
-      image?.close()
-    }
-  }, [image])
-
   // ── render loop ──────────────────────────────────────────
   useEffect(() => {
     let raf = 0
-    let last = 0
-    const loop = (now: number) => {
+    const loop = () => {
       raf = requestAnimationFrame(loop)
-      // still images only need grain to shimmer — ~15fps is plenty
-      if (usingImage && now - last < 66) return
-      last = now
-      const src = source()
+      const src = cam.video.current
       if (src && rendererRef.current) {
         rendererRef.current.render(src, activeLook, {
-          mirror: !usingImage && cam.facing === 'user',
+          mirror: cam.facing === 'user',
         })
       }
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [source, activeLook, usingImage, cam.facing])
+  }, [cam.video, activeLook, cam.facing])
 
   // ── capture ──────────────────────────────────────────────
   const canShoot = live && !busy && !glError && !full && phase === 'open'
 
   const shoot = async () => {
-    const src = source()
+    const src = cam.video.current
     if (!src || !canShoot) return
     setBusy(true)
     playShutter(muted)
@@ -205,8 +183,8 @@ export function CameraView() {
     setFlash(true)
     setTimeout(() => setFlash(false), 80)
     try {
-      const sw = src instanceof HTMLVideoElement ? src.videoWidth : src.width
-      const sh = src instanceof HTMLVideoElement ? src.videoHeight : src.height
+      const sw = src.videoWidth
+      const sh = src.videoHeight
       const { width, height } = captureSize(sw, sh)
       captureRef.current ??= new FilmRenderer(document.createElement('canvas'), {
         preserveDrawingBuffer: true,
@@ -214,7 +192,7 @@ export function CameraView() {
       const r = captureRef.current
       r.setSize(width, height)
       r.render(src, activeLook, {
-        mirror: !usingImage && cam.facing === 'user',
+        mirror: cam.facing === 'user',
         seed: Math.random(),
       })
       const finalCanvas = dateStamp ? burnQuartzDateStamp(r.canvas, quartzDate) : r.canvas
@@ -224,24 +202,7 @@ export function CameraView() {
     }
   }
 
-  const onPickFile = async (file: File | undefined) => {
-    if (!file) return
-    setUploadError(null)
-    const check = await verifyPhotoTakenToday(file)
-    if (!check.ok) {
-      setUploadError(
-        check.reason === 'not-today'
-          ? t('uploadRejectedNotToday')
-          : t('uploadRejectedNoExif'),
-      )
-      return
-    }
-    const bmp = await createImageBitmap(file)
-    image?.close()
-    setImage(bmp)
-  }
-
-  const blocked = !usingImage && BLOCKING.includes(cam.status)
+  const blocked = BLOCKING.includes(cam.status)
   const lastShot = shots.at(-1)
   const developed = Boolean(roll && rollStage(roll, nowSec) === 'developed')
   const actionBusy = isBusy(session.action)
@@ -419,21 +380,6 @@ export function CameraView() {
             </div>
           )}
 
-          {usingImage && (
-            <span className="absolute top-11 left-1/2 -translate-x-1/2 bg-black/60 px-2 py-0.5 font-mono text-2xs text-frame">
-              {t('imageMode')}
-            </span>
-          )}
-          {uploadError && (
-            <div
-              role="alert"
-              onClick={() => setUploadError(null)}
-              className="absolute inset-x-3 top-3 z-20 cursor-pointer border border-danger/60 bg-black/90 px-3 py-2 text-center text-xs text-danger backdrop-blur-xs"
-            >
-              {uploadError}
-            </div>
-          )}
-
           {!live && !blocked && !glError && (
             <div className="absolute inset-0 grid place-items-center">
               <FilmStrip label={t('starting')} />
@@ -456,12 +402,6 @@ export function CameraView() {
                   <Button size="sm" onClick={cam.retry}>
                     <RefreshCcw />
                     {t('retry')}
-                  </Button>
-                )}
-                {!glError && (
-                  <Button size="sm" variant="ghost" onClick={() => fileRef.current?.click()}>
-                    <ImagePlus />
-                    {t('pickImage')}
                   </Button>
                 )}
               </div>
@@ -636,15 +576,7 @@ export function CameraView() {
         </div>
 
         <div className="flex justify-end gap-1">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            aria-label={t('pickImage')}
-            className="rounded-full p-3 text-fg-muted hover:text-fg"
-          >
-            <ImagePlus className="size-5" />
-          </button>
-          {cam.canFlip && !usingImage && (
+          {cam.canFlip && (
             <button
               type="button"
               onClick={cam.flip}
@@ -656,19 +588,6 @@ export function CameraView() {
           )}
         </div>
       </div>
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        tabIndex={-1}
-        aria-hidden
-        onChange={(e) => {
-          void onPickFile(e.target.files?.[0])
-          e.target.value = ''
-        }}
-      />
 
       {session.hud && (
         <BlockConfirmHud
