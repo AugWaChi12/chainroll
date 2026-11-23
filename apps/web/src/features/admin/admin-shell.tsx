@@ -1,12 +1,10 @@
 'use client'
 
 import { LocaleSwitcher } from '@/features/i18n'
-import { ConnectSheet, WalletButton, activeChain, chainRollContract, useWallet } from '@/features/wallet'
-import { chainRollAbi } from '@chainroll/contracts'
+import { ConnectSheet, WalletButton, activeChain, useWallet } from '@/features/wallet'
 import { AppShell, Badge, Button, Kbd, RebateLabel, cn, type NavSection } from '@chainroll/ui'
 import {
   Aperture,
-  Eye,
   FileClock,
   Film,
   Flag,
@@ -16,7 +14,7 @@ import {
   Rows4,
   ScrollText,
   Search,
-  ShieldAlert,
+  ShieldCheck,
   Users,
   Wallet,
   X,
@@ -26,20 +24,19 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { keccak256, stringToHex, zeroAddress, type Hex } from 'viem'
-import { useReadContracts } from 'wagmi'
-import { useAdminStore } from './audit-store'
+import { refreshAdminDashboard, useAdminStore } from './audit-store'
 
 const DENSITY_KEY = 'chainroll.admin.density'
-const DEFAULT_ADMIN_ROLE: Hex =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
-const CURATOR_ROLE: Hex = keccak256(stringToHex('CURATOR_ROLE'))
+const ADMIN_WALLETS = new Set([
+  '0x7b61e12c720fcd4aa01b572bff203af760c7ddd4',
+  '0x8a90e75d423174f57f6b9cd947b97b4fbd5ed4e5',
+])
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const t = useTranslations('admin')
   const pathname = usePathname()
   const router = useRouter()
-  const { address } = useWallet()
+  const { address, authenticated, authenticating, signIn } = useWallet()
   const { moderation } = useAdminStore()
   const pendingReports = moderation.filter((m) => m.status === 'pending').length
 
@@ -48,31 +45,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [cmdOpen, setCmdOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
-  const [previewBypass, setPreviewBypass] = useState(true)
 
-  const roleCheck = useReadContracts({
-    contracts: [
-      {
-        address: chainRollContract!,
-        abi: chainRollAbi,
-        chainId: activeChain.id,
-        functionName: 'hasRole',
-        args: [DEFAULT_ADMIN_ROLE, address ?? zeroAddress],
-      },
-      {
-        address: chainRollContract!,
-        abi: chainRollAbi,
-        chainId: activeChain.id,
-        functionName: 'hasRole',
-        args: [CURATOR_ROLE, address ?? zeroAddress],
-      },
-    ],
-    query: { enabled: Boolean(chainRollContract && address) },
-  })
+  const isAllowedAdmin = Boolean(address && ADMIN_WALLETS.has(address.toLowerCase()))
 
-  const hasOnChainRole = Boolean(
-    address && (roleCheck.data?.[0]?.result || roleCheck.data?.[1]?.result),
-  )
+  // Refresh live DB dashboard automatically once admin SIWE session is verified
+  useEffect(() => {
+    if (isAllowedAdmin && authenticated) {
+      void refreshAdminDashboard()
+    }
+  }, [isAllowedAdmin, authenticated])
 
   useEffect(() => {
     const saved = window.localStorage.getItem(DENSITY_KEY)
@@ -196,25 +177,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         }
         sidebarFooter={<span className="font-mono text-2xs text-fg-subtle">v0.5 · M5</span>}
       >
-        {!hasOnChainRole && (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warning/40 bg-bg-sunken px-4 py-2 text-xs md:px-8">
-            <div className="flex items-center gap-2 text-fg-muted">
-              <ShieldAlert className="size-3.5 shrink-0 text-warning" />
-              <span>{address ? t('guard.readOnlyWallet') : t('guard.readOnlyGuest')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPreviewBypass((v) => !v)}
-                className="font-mono text-2xs text-frame underline underline-offset-4 hover:text-fg"
-              >
-                {previewBypass ? t('guard.testGateBtn') : t('guard.enterPreviewBtn')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!hasOnChainRole && !previewBypass ? (
+        {!isAllowedAdmin || !authenticated ? (
           <div className="mx-auto max-w-2xl px-4 py-16 md:px-8">
             <div className="flex flex-col items-start gap-4 border border-danger/40 bg-bg-raised p-6 shadow-[inset_2px_0_0_var(--danger)]">
               <RebateLabel>403 · {t('guard.eyebrow')}</RebateLabel>
@@ -223,7 +186,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <dl className="w-full border border-border bg-bg p-3 font-mono text-xs">
                 <div className="flex flex-wrap justify-between gap-2 py-1">
                   <dt className="text-fg-subtle">{t('guard.requiredRole')}</dt>
-                  <dd className="text-frame">DEFAULT_ADMIN_ROLE · CURATOR_ROLE</dd>
+                  <dd className="text-frame">OWNER ADMIN ALLOWLIST + SIWE</dd>
                 </div>
                 <div className="flex flex-wrap justify-between gap-2 border-t border-border py-1">
                   <dt className="text-fg-subtle">{t('guard.currentWallet')}</dt>
@@ -231,16 +194,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 </div>
               </dl>
               <div className="flex flex-wrap gap-2">
-                {!address && (
+                {!address ? (
                   <Button variant="primary" size="sm" onClick={() => setConnectOpen(true)}>
                     <Wallet />
                     {t('guard.connectBtn')}
                   </Button>
-                )}
-                <Button variant="secondary" size="sm" onClick={() => setPreviewBypass(true)}>
-                  <Eye />
-                  {t('guard.enterPreviewBtn')}
-                </Button>
+                ) : isAllowedAdmin ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={authenticating}
+                    onClick={() => void signIn()}
+                  >
+                    <ShieldCheck />
+                    {authenticating ? 'Verifying SIWE…' : 'Verify SIWE to Enter Darkroom'}
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>

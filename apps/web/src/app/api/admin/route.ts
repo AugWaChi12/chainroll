@@ -48,6 +48,23 @@ export async function GET(req: Request) {
     )
   }
 
+  // Strictly require verified SIWE session from an authorized admin wallet
+  const session = await getServerSession()
+  if (!session) {
+    return NextResponse.json(
+      { ok: false, code: 'AUTH_REQUIRED', error: 'Sign-In With Ethereum session required' },
+      { status: 401 },
+    )
+  }
+
+  const allowed = await isOnChainAdminOrCurator(session.address)
+  if (!allowed) {
+    return NextResponse.json(
+      { ok: false, code: 'FORBIDDEN_ROLE', error: 'Admin wallet access required' },
+      { status: 403 },
+    )
+  }
+
   try {
     const dashboard = await fetchAdminDashboardFromDb()
     return NextResponse.json({ ok: true, ...dashboard })

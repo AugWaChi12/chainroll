@@ -2,19 +2,12 @@ import 'server-only'
 
 import crypto from 'node:crypto'
 import { cookies } from 'next/headers'
-import { createPublicClient, fallback, http, verifyMessage, type Address } from 'viem'
-import { chainRollAbi, chainRollAddress } from '@chainroll/contracts'
-import { kubMainnet, kubTestnet } from '@chainroll/shared'
+import { verifyMessage, type Address } from 'viem'
 
 export const SESSION_COOKIE = 'chainroll_session'
 export const NONCE_COOKIE = 'chainroll_nonce'
 const SESSION_TTL_SEC = 60 * 60 * 24 * 7 // 7 days
 const NONCE_TTL_SEC = 60 * 5 // 5 minutes
-
-const DEFAULT_ADMIN_ROLE =
-  '0x0000000000000000000000000000000000000000000000000000000000000000' as const
-const CURATOR_ROLE =
-  '0x850d585eb7f024ccee5e68e55f2c26cc72e1e6ee456acf62135757a5eb9d4a10' as const // keccak256("CURATOR_ROLE")
 
 const globalForSecret = globalThis as unknown as { __chainrollDevSecret?: string }
 
@@ -138,47 +131,20 @@ export async function verifySiweSignature(input: {
   }
 }
 
-// ── Server-side On-Chain RBAC Verification (cached 60s) ──
-const roleCache = new Map<string, { allowed: boolean; exp: number }>()
+// ── Server-side Strict Admin Allowlist (Owner Wallets Only) ──
+const DEFAULT_ADMIN_WALLETS = [
+  '0x7b61e12c720fcd4aa01b572bff203af760c7ddd4',
+  '0x8a90e75d423174f57f6b9cd947b97b4fbd5ed4e5',
+]
 
-function activeServerChain() {
-  return process.env.NEXT_PUBLIC_CHAIN === 'mainnet' ? kubMainnet : kubTestnet
+function getAdminAllowlist(): Set<string> {
+  const fromEnv = (process.env.ADMIN_WALLETS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => /^0x[0-9a-f]{40}$/.test(s))
+  return new Set(fromEnv.length > 0 ? fromEnv : DEFAULT_ADMIN_WALLETS)
 }
 
 export async function isOnChainAdminOrCurator(address: string): Promise<boolean> {
-  const norm = address.toLowerCase()
-  const cached = roleCache.get(norm)
-  if (cached && cached.exp > Date.now()) return cached.allowed
-
-  const chain = activeServerChain()
-  const contractAddr =
-    (process.env.NEXT_PUBLIC_CHAINROLL_ADDRESS as Address | undefined) ??
-    chainRollAddress[chain.id]
-  if (!contractAddr) return false
-
-  try {
-    const client = createPublicClient({
-      chain,
-      transport: fallback(chain.rpcUrls.default.http.map((url: string) => http(url))),
-    })
-    const [isAdmin, isCurator] = await Promise.all([
-      client.readContract({
-        address: contractAddr,
-        abi: chainRollAbi,
-        functionName: 'hasRole',
-        args: [DEFAULT_ADMIN_ROLE, norm as Address],
-      }),
-      client.readContract({
-        address: contractAddr,
-        abi: chainRollAbi,
-        functionName: 'hasRole',
-        args: [CURATOR_ROLE, norm as Address],
-      }),
-    ])
-    const allowed = Boolean(isAdmin || isCurator)
-    roleCache.set(norm, { allowed, exp: Date.now() + 60_000 })
-    return allowed
-  } catch {
-    return false
-  }
+  return getAdminAllowlist().has(address.toLowerCase())
 }
