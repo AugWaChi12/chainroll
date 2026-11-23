@@ -18,6 +18,7 @@ import {
   useConnect,
   useConnectors,
   useDisconnect,
+  useReconnect,
   useSwitchChain,
   type Connector,
 } from 'wagmi'
@@ -71,6 +72,7 @@ function WalletState({ children }: { children: ReactNode }) {
   const connectors = useConnectors()
   const { connectAsync } = useConnect()
   const { disconnectAsync } = useDisconnect()
+  const { reconnect } = useReconnect()
   const { switchChainAsync } = useSwitchChain()
   const [next, setNext] = useState<{ sdk: BitkubChainSDK; address: Address } | null>(null)
   const [connecting, setConnecting] = useState(false)
@@ -200,6 +202,28 @@ function WalletState({ children }: { children: ReactNode }) {
       void switchChainAsync({ chainId: activeChain.id }).catch(() => {})
     }
   }, [account.chainId, account.connector, account.isConnected, switchChainAsync])
+
+  // When returning from a mobile wallet app (e.g. KUB Wallet), Safari/Chrome wakes up from a frozen tab.
+  // Trigger wagmi reconnect + data sync so WalletConnect sessions approved in the app are detected immediately.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onResume = () => {
+      if (document.visibilityState !== 'visible') return
+      if (!activeAddress) {
+        reconnect()
+      } else {
+        window.dispatchEvent(
+          new CustomEvent('chainroll:wallet-connected', { detail: { address: activeAddress } }),
+        )
+      }
+    }
+    document.addEventListener('visibilitychange', onResume)
+    window.addEventListener('focus', onResume)
+    return () => {
+      document.removeEventListener('visibilitychange', onResume)
+      window.removeEventListener('focus', onResume)
+    }
+  }, [activeAddress, reconnect])
 
   const disconnect = useCallback(async () => {
     if (next) {

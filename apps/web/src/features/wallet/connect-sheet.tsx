@@ -27,6 +27,11 @@ export function ConnectSheet({ open, onClose }: { open: boolean; onClose: () => 
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
+  // Auto-close sheet as soon as wallet connects (e.g., returning from KUB Wallet mobile app)
+  useEffect(() => {
+    if (open && w.address) onClose()
+  }, [open, w.address, onClose])
+
   if (!open) return null
 
   const go = async (o: WalletOption) => {
