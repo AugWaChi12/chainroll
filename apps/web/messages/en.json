@@ -161,6 +161,12 @@
     "filmLocked": "Roll loaded — you can change film when it's finished",
     "rollFull": "This roll is full",
     "review": "Review shots",
+    "pro": {
+      "date": "DATE",
+      "grid": "GRID",
+      "sfx": "SFX",
+      "muted": "MUTE"
+    },
     "status": {
       "denied": {
         "title": "Camera is blocked",

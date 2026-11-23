@@ -13,10 +13,21 @@ import {
 import { rollStage, useNowSec } from '@/features/roll'
 import { ConnectSheet, WalletButton, isBusy } from '@/features/wallet'
 import { Button, FilmStrip, FrameCounter, LatentFrame, RebateLabel, cn } from '@chainroll/ui'
-import { ArrowLeft, ExternalLink, ImagePlus, RefreshCcw, SwitchCamera } from 'lucide-react'
+import {
+  ArrowLeft,
+  Calendar,
+  ExternalLink,
+  Grid3x3,
+  ImagePlus,
+  RefreshCcw,
+  Sun,
+  SwitchCamera,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ReviewSheet } from './review-sheet'
 import { BlockConfirmHud } from './block-confirm-hud'
 import { verifyPhotoTakenToday } from './exif-guard'
@@ -25,6 +36,54 @@ import { useCamera, type CameraStatus } from './use-camera'
 import { useRollSession } from './use-roll-session'
 
 const BLOCKING: CameraStatus[] = ['denied', 'no-camera', 'insecure', 'unsupported', 'error']
+const EV_STEPS = [-1, -0.5, 0, 0.5, 1] as const
+
+function formatQuartzDate(): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const yy = parts.find((p) => p.type === 'year')?.value ?? '26'
+  const mm = parts.find((p) => p.type === 'month')?.value ?? '01'
+  const dd = parts.find((p) => p.type === 'day')?.value ?? '01'
+  return `'${yy} ${mm} ${dd}`
+}
+
+function burnQuartzDateStamp(sourceCanvas: HTMLCanvasElement, stamp: string): HTMLCanvasElement {
+  const out = document.createElement('canvas')
+  out.width = sourceCanvas.width
+  out.height = sourceCanvas.height
+  const ctx = out.getContext('2d')
+  if (!ctx) return sourceCanvas
+
+  ctx.drawImage(sourceCanvas, 0, 0)
+
+  const fontSize = Math.max(22, Math.round(out.width * 0.044))
+  const padX = Math.round(out.width * 0.055)
+  const padY = Math.round(out.height * 0.042)
+
+  ctx.save()
+  ctx.font = `700 ${fontSize}px ui-monospace, "Courier New", monospace`
+  ctx.textAlign = 'right'
+  ctx.textBaseline = 'bottom'
+
+  // Outer amber-orange LED bloom (classic 90s quartz back glow)
+  ctx.shadowColor = 'rgba(255, 78, 12, 0.92)'
+  ctx.shadowBlur = Math.round(fontSize * 0.45)
+  ctx.fillStyle = 'rgba(255, 118, 32, 0.95)'
+  ctx.fillText(stamp, out.width - padX, out.height - padY)
+
+  // Inner bright quartz core
+  ctx.shadowColor = 'rgba(255, 175, 70, 0.85)'
+  ctx.shadowBlur = Math.round(fontSize * 0.14)
+  ctx.fillStyle = 'rgba(255, 198, 108, 0.96)'
+  ctx.fillText(stamp, out.width - padX, out.height - padY)
+  ctx.restore()
+
+  return out
+}
 
 export function CameraView() {
   const t = useTranslations('camera')
@@ -51,6 +110,10 @@ export function CameraView() {
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [dateStamp, setDateStamp] = useState(true)
+  const [showGrid, setShowGrid] = useState(false)
+  const [ev, setEv] = useState<(typeof EV_STEPS)[number]>(0)
+  const [muted, setMuted] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const session = useRollSession(getStock(pickedFilm).frames)
@@ -58,6 +121,11 @@ export function CameraView() {
   // an open on-chain roll fixes the film; otherwise the picker decides
   const filmId = roll ? roll.filmId : pickedFilm
   const stock = getStock(filmId)
+  const activeLook = useMemo(
+    () => ({ ...stock.look, exposure: stock.look.exposure + ev }),
+    [stock.look, ev],
+  )
+  const quartzDate = useMemo(() => formatQuartzDate(), [])
   const filmLocked = phase === 'open'
 
   const usingImage = image !== null
@@ -107,14 +175,14 @@ export function CameraView() {
       last = now
       const src = source()
       if (src && rendererRef.current) {
-        rendererRef.current.render(src, stock.look, {
+        rendererRef.current.render(src, activeLook, {
           mirror: !usingImage && cam.facing === 'user',
         })
       }
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [source, stock.look, usingImage, cam.facing])
+  }, [source, activeLook, usingImage, cam.facing])
 
   // ── capture ──────────────────────────────────────────────
   const canShoot = live && !busy && !glError && !full && phase === 'open'
@@ -123,7 +191,7 @@ export function CameraView() {
     const src = source()
     if (!src || !canShoot) return
     setBusy(true)
-    playShutter()
+    playShutter(muted)
     haptic()
     setFlash(true)
     setTimeout(() => setFlash(false), 80)
@@ -136,11 +204,12 @@ export function CameraView() {
       })
       const r = captureRef.current
       r.setSize(width, height)
-      r.render(src, stock.look, {
+      r.render(src, activeLook, {
         mirror: !usingImage && cam.facing === 'user',
         seed: Math.random(),
       })
-      await session.addShot(await encodeCanvas(r.canvas), filmId)
+      const finalCanvas = dateStamp ? burnQuartzDateStamp(r.canvas, quartzDate) : r.canvas
+      await session.addShot(await encodeCanvas(finalCanvas), filmId)
     } finally {
       setBusy(false)
     }
@@ -251,6 +320,30 @@ export function CameraView() {
           ].map((c) => (
             <span key={c} aria-hidden className={`absolute size-4 border-frame/70 ${c}`} />
           ))}
+
+          {/* Rule-of-thirds viewfinder grid */}
+          {showGrid && live && (
+            <div aria-hidden className="pointer-events-none absolute inset-0">
+              <span className="absolute inset-y-0 left-1/3 w-px bg-white/25" />
+              <span className="absolute inset-y-0 left-2/3 w-px bg-white/25" />
+              <span className="absolute inset-x-0 top-1/3 h-px bg-white/25" />
+              <span className="absolute inset-x-0 top-2/3 h-px bg-white/25" />
+            </div>
+          )}
+
+          {/* 90s Quartz Date Imprint live preview */}
+          {dateStamp && live && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute right-4 bottom-3.5 font-mono text-sm font-bold tracking-widest text-[#ffc66c] select-none sm:text-base"
+              style={{
+                textShadow: '0 0 8px rgba(255, 78, 12, 0.95), 0 0 3px rgba(255, 165, 64, 0.9)',
+              }}
+            >
+              {quartzDate}
+            </span>
+          )}
+
           {usingImage && (
             <span className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/60 px-2 py-0.5 font-mono text-2xs text-frame">
               {t('imageMode')}
@@ -310,8 +403,75 @@ export function CameraView() {
         </div>
       </div>
 
-      {/* film picker */}
-      <div className="shrink-0 px-3 pt-3">
+      {/* pro 35mm viewfinder toggles + film picker */}
+      <div className="shrink-0 px-3 pt-2.5">
+        <div className="mb-2 flex items-center justify-center gap-1.5 font-mono text-[11px]">
+          <button
+            type="button"
+            aria-pressed={dateStamp}
+            onClick={() => setDateStamp((v) => !v)}
+            className={cn(
+              'inline-flex h-7 items-center gap-1 rounded-xs border px-2 transition-colors',
+              dateStamp
+                ? 'border-frame/70 bg-frame/15 text-frame'
+                : 'border-border bg-bg-raised text-fg-muted hover:text-fg',
+            )}
+          >
+            <Calendar className="size-3" />
+            <span>{t('pro.date')}</span>
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={showGrid}
+            onClick={() => setShowGrid((v) => !v)}
+            className={cn(
+              'inline-flex h-7 items-center gap-1 rounded-xs border px-2 transition-colors',
+              showGrid
+                ? 'border-frame/70 bg-frame/15 text-frame'
+                : 'border-border bg-bg-raised text-fg-muted hover:text-fg',
+            )}
+          >
+            <Grid3x3 className="size-3" />
+            <span>{t('pro.grid')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const idx = EV_STEPS.indexOf(ev)
+              const next = EV_STEPS[(idx + 1) % EV_STEPS.length]!
+              setEv(next)
+            }}
+            className={cn(
+              'inline-flex h-7 items-center gap-1 rounded-xs border px-2 tabular transition-colors',
+              ev !== 0
+                ? 'border-frame/70 bg-frame/15 text-frame'
+                : 'border-border bg-bg-raised text-fg-muted hover:text-fg',
+            )}
+          >
+            <Sun className="size-3" />
+            <span>
+              EV {ev > 0 ? `+${ev.toFixed(1)}` : ev.toFixed(1)}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={!muted}
+            onClick={() => setMuted((v) => !v)}
+            className={cn(
+              'inline-flex h-7 items-center gap-1 rounded-xs border px-2 transition-colors',
+              !muted
+                ? 'border-border-strong bg-bg-sunken text-fg'
+                : 'border-border bg-bg-raised text-fg-subtle hover:text-fg',
+            )}
+          >
+            {muted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
+            <span>{muted ? t('pro.muted') : t('pro.sfx')}</span>
+          </button>
+        </div>
+
         <div role="radiogroup" aria-label={t('film')} className="flex justify-center gap-2">
           {FILM_STOCKS.map((s) => {
             const selected = s.id === filmId
