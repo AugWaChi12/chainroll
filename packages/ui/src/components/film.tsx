@@ -5,6 +5,9 @@ import type { ComponentProps } from 'react'
 import { useState } from 'react'
 import { fmt, useUiLabels } from '../i18n'
 import { cn } from '../lib/cn'
+import { truncateHash } from '../lib/hash'
+
+export { truncateHash }
 
 /* ── FrameCounter ─────────────────────────────────────────── */
 
@@ -53,10 +56,6 @@ export type TxHashProps = {
   /** Explorer base, e.g. https://www.bkcscan.com/tx/ */
   explorerUrl?: string
   className?: string
-}
-
-export function truncateHash(hash: string, head = 6, tail = 4) {
-  return hash.length <= head + tail + 1 ? hash : `${hash.slice(0, head)}…${hash.slice(-tail)}`
 }
 
 export function TxHash({ hash, explorerUrl, className }: TxHashProps) {

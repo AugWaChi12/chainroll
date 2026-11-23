@@ -170,8 +170,13 @@ function WalletState({ children }: { children: ReactNode }) {
       await next.sdk.logout().catch(() => {})
       setNext(null)
     }
-    if (account.isConnected) await disconnectAsync()
-  }, [account.isConnected, disconnectAsync, next])
+    if (account.isConnected) {
+      await Promise.race([
+        disconnectAsync({ connector: account.connector }).catch(() => {}),
+        new Promise((r) => setTimeout(r, 1200)),
+      ])
+    }
+  }, [account.connector, account.isConnected, disconnectAsync, next])
 
   const value = useMemo<WalletContextValue>(() => {
     const contract = chainRollContract

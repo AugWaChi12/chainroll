@@ -171,6 +171,9 @@ contract ChainRollTest is Test {
 
         assertEq(cam.getRoll(id).framesUsed, 1);
         assertTrue(cam.hashUsed(_h(1)));
+        (uint256 originRoll, uint8 originFrame) = cam.shotOrigin(_h(1));
+        assertEq(originRoll, id);
+        assertEq(originFrame, 1);
     }
 
     function test_shoot_revertsWhenNotOwner() public {
@@ -253,6 +256,28 @@ contract ChainRollTest is Test {
         vm.prank(mallory);
         vm.expectRevert(abi.encodeWithSelector(ChainRoll.NotRollOwner.selector, id));
         cam.develop(id);
+    }
+
+    function test_developEarly_cutsPartialRollAndBlocksFurtherShots() public {
+        uint256 id = _claim(alice);
+        vm.startPrank(alice);
+        // Empty roll cannot be developed early
+        vm.expectRevert(abi.encodeWithSelector(ChainRoll.EmptyRoll.selector, id));
+        cam.developEarly(id);
+
+        cam.shoot(id, _h(1));
+        cam.shoot(id, _h(2));
+        cam.developEarly(id);
+
+        ChainRoll.Roll memory r = cam.getRoll(id);
+        assertEq(r.framesUsed, 2);
+        assertEq(r.frames, 2);
+        assertGt(r.developReadyAt, 0);
+
+        // Cannot shoot after cutting & sending to develop
+        vm.expectRevert(abi.encodeWithSelector(ChainRoll.AlreadyDeveloped.selector, id));
+        cam.shoot(id, _h(3));
+        vm.stopPrank();
     }
 
     // ═══ Bitkub NEXT router path ═══════════════════════════════

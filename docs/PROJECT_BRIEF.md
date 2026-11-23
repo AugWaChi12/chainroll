@@ -423,7 +423,54 @@ CI (GitHub Actions): `lint → typecheck → test → build` ทุก PR; previ
 | M1.5 | Contract + test + deploy testnet | ✅ **KUB testnet: `0x8a4e72D58CBEb5D1be4C24606b76665Dc8712ED5`** (22 พ.ย. 2026, ค่า deploy 0.053 tKUB, evm `paris` เพราะเชนยังไม่รองรับ PUSH0) · admin `0x243d…9350` (keystore `chainroll-deployer`) |
 | M2 | กล้อง + filter 3 โทน (ยังไม่ต่อเชน) | ✅ กล้อง + WebGL2 film shader 3 โทน + WebP ≤300KB + keccak hash + ม้วน 24 รูป (ทดสอบในเบราว์เซอร์ด้วยรูปจากเครื่อง) · ⏳ ทดสอบกล้องจริงบนมือถือ (`pnpm --filter @chainroll/web dev:https`) · iOS Safari เข้ารหัส WebP ไม่ได้ → ใช้ JPEG แทน |
 | M3a | ต่อ wallet + บันทึกลงเชน | ✅ WalletAdapter (MetaMask / Bitkub NEXT SDK / dev wallet), tx state machine, claim → shoot → develop บนเชน, รูปเก็บใน IndexedDB (รีโหลดไม่หาย) · ทดสอบครบวงบน anvil (hash ในแอป = event บนเชน) · ⏳ Bitkub NEXT ยังไม่ได้ทดสอบจริง (รอ Client ID) |
-| M3b | Server: upload R2 + Supabase + SIWE session + indexer | รอบัญชี Cloudflare R2 + Supabase |
-| M4 | Gallery / contact sheet + feed + report | โพสต์และเห็นใน feed |
-| M5 | Darkroom Console (8.1–8.3, 8.7 ก่อน) | moderator ทำงานได้ด้วยคีย์บอร์ด |
-| M6 | Deploy mainnet หลัง Zurich fork | 14 ธ.ค. |
+| M3b | Server & Database: Local Docker Postgres 17 + Supabase SQL/RLS + Cloudflare R2 | ✅ **Local Docker Postgres 17 (`chainroll-db` port `5435`, `pnpm db:up`)** + ไฟล์ SQL Schema & RLS (`supabase/migrations/0001_chainroll_schema.sql`) + Seed (`0002_chainroll_seed.sql`) พร้อมใช้งานทันที · ⏳ รอคีย์ Cloud จริงของ Supabase & Cloudflare R2 เมื่อจะขึ้น Production (`chainroll.art`) |
+| M4 | Gallery / contact sheet + feed + 1/1 Print NFT & Escrow Offer Market | ✅ โพสต์รูปจาก Contact sheet / Review sheet (`PostComposerModal`), ฟีดสาธารณะแบบไม่สมมาตร (`/feed` + แท็บ `1/1 Prints`), หน้ารูปเดี่ยวพร้อม **1/1 Print NFT & Escrow Offer Book (`PrintMarketPanel`)** + Dynamic OpenGraph Image (`/p/[id]/opengraph-image`), หน้าโปรไฟล์ช่างภาพ & นักสะสม (`/u/[address]` ครบ 3 แท็บ `Shot` / `Collected` / `Offers` + ตั้งชื่อ `@handle` & Bio), ประวัติธุรกรรม (`/activity`), PWA & Offline Queue, และ **ContentShield** (เรนเดอร์ลง `<canvas>`, บล็อกคลิกขวา/ลากรูป/F12) |
+| M5 | Darkroom Console (8.1–8.7) | ✅ ครบทั้ง 7 หมวด: Overview, Moderation (คีย์ลัด `J/K/A/H/B` + undo 10s), Film Stocks (`.cube` LUT + WebGL2 preview 4 ฉาก before/after + `setFilm` บนเชน), Users, Gas & Quotas, Contract (`setDevelopDelay`, `setSdkCallHelperRouter`, `grantRole`, Pause/Unpause ยืนยันชื่อ), Audit Log + Command Palette (`⌘K`) + Density switch + 403 On-chain Role Guard |
+| M6 | Deploy mainnet หลัง Zurich fork (`chainroll.art`) | 14 ธ.ค. 2026 |
+
+---
+
+## 13. Agent Handoff & Current State Summary (อัปเดตล่าสุด 23 พ.ย. 2026)
+
+> **สำหรับ AI Agent ตัวถัดไปที่เข้ามาทำงานใน Repo นี้:** อ่านสรุปด้านล่างนี้เพื่อเข้าใจสถานะโค้ดปัจจุบันทันทีโดยไม่ต้องไล่เดาใหม่
+
+### 13.1 โดเมนและสภาพแวดล้อม (Environment)
+- **Production Domain ที่เลือกแล้ว:** `https://chainroll.art` (ตั้งค่า `metadataBase` ใน `apps/web/src/app/layout.tsx` แล้ว)
+- **Local Docker Database (`pnpm db:up`):**
+  - Container: `chainroll-db` (`postgres:17-alpine`) รันอยู่ที่ `127.0.0.1:5435` (เลี่ยงพอร์ต `54322` ที่ติด Hyper-V reserved range บน Windows)
+  - Connection URL: `postgresql://chainroll:chainroll@127.0.0.1:5435/chainroll`
+  - Auto-migrations: เมานต์ `./supabase/migrations` เข้า `/docker-entrypoint-initdb.d` รัน `0001_chainroll_schema.sql` (10 ตาราง + RLS), `0002_chainroll_seed.sql`, และ `0003_pre_mint_offers.sql` (และ `server/db/index.ts` มี `ensurePreMintTable` อัตโนมัติ)
+  - **Live DB Sync:** `apps/web/src/server/db/index.ts` และ `apps/web/src/app/api/state/route.ts` (`GET`/`POST /api/state`) เชื่อมข้อมูล `posts`, `profiles`, `prints`, `preMintOffers`, `admin_log`, `rolls`, `shots` กับ PostgreSQL จริงเรียบร้อยแล้ว
+  - คำสั่งจัดการ: `pnpm db:up`, `pnpm db:down`, `pnpm db:reset`, `pnpm db:psql`
+
+### 13.2 Smart Contracts (`packages/contracts` — 34 Foundry Tests ผ่านครบ)
+1. **`src/ChainRoll.sol`** (Deployed บน KUB Testnet `25925` ที่ `0x8a4e72D58CBEb5D1be4C24606b76665Dc8712ED5`):
+   - รองรับทั้งกระเป๋าปกติ (`msg.sender`) และ Bitkub NEXT (`sdkCallHelperRouter` พร้อม trailing `address _bitkubNext`)
+   - **Security Patch:** เก็บ `_hashOrigin[photoHash] = (rollId << 8) | frame` และมี `shotOrigin(bytes32 photoHash) returns (uint256 rollId, uint8 frame)` เพื่อผูก `photoHash` เข้ากับ `(rollId, frame)` ใน 1 Storage Slot (ป้องกันการขโมย `photoHash` ข้ามม้วน)
+   - **Partial Roll Cut (`developEarly`):** มี `developEarly(uint256 rollId)` (และ overload สำหรับ Bitkub NEXT) ให้เจ้าของม้วนที่ถ่ายไปแล้วอย่างน้อย 1 รูป (`framesUsed > 0`) ตัดม้วนส่งล้างได้โดยไม่ต้องยิงรูปเปล่าให้ครบ 24 รูป
+2. **`src/ChainRollPrints.sol`** (1/1 Analog Print NFT & Escrow Offer Market — `evm_version = "paris"` compatible):
+   - มาตรฐาน **ERC-721 + ERC-2981 (5% Perpetual Photographer Royalty)** + `Protocol Fee 2.5%` (โอนเข้า `feeRecipient` ของโปรเจกต์อัตโนมัติทุกครั้งที่มีการซื้อขาย)
+   - `mintPrint`: ตรวจกับ `CHAIN_ROLL.isDeveloped(rollId)` และ `CHAIN_ROLL.shotOrigin(photoHash)` ว่าตรงกับ `(rollId, frame)` ของผู้เรียกจริง และ Mint ได้เพียง 1 ชิ้นต่อ `photoHash`
+   - `setAskPrice` & `buyPrint`: ตั้งราคาขายทันที (หรือตั้ง `0` เพื่อเปิดรับเฉพาะข้อเสนอ) และกดซื้อทันที
+   - `makeOffer` / `cancelOffer` / `acceptOffer` / `withdrawPending`: ระบบวางเงิน KUB ค้ำประกันในสัญญา (ต้องเสนอสูงกว่า Offer เดิมอย่างน้อย +5%, มี Pull-payment fallback กันบอท DoS, มี `minAmount` กัน Slippage และคืนเงิน Escrow อัตโนมัติหากโอน NFT ตรงให้ผู้ประมูล)
+   - **Pre-Mint Escrow Offer Book:** `makePreMintOffer(photoHash, expiresAt)`, `cancelPreMintOffer(photoHash)`, และ `acceptPreMintOffer(photoHash, minAmount)` (พร้อม Bitkub NEXT overload) ให้ผู้สะสมวาง KUB จีบขอซื้อรูปที่ยังไม่ได้ Mint ได้ และช่างภาพกด Mint + โอน + รับเงิน 97.5% จบใน 1 tx
+
+### 13.3 โมดูลฝั่งเว็บ (`apps/web/src/features/*` — 36 Vitest Tests ผ่านครบ)
+- **`features/wallet`:**
+  - `WalletProvider` (MetaMask, EIP-6963, WalletConnect v2 พร้อม fast-disconnect timeout 1.2s, Bitkub NEXT, Dev Wallet)
+  - `block-watcher.ts`: `waitForNextKubBlock()` จับ Block ใหม่แบบ Real-time จาก KUB Chain RPC และ `getKubBalance(address)` เช็กยอด KUB จริงบนเชนก่อนทำรายการซื้อ/เสนอราคา
+- **`features/film`:**
+  - WebGL2 Fragment Shader (`shader.ts`, `renderer.ts`), 3D `.cube` LUT Parser (`lut.ts`), **รูปถ่ายฟิล์มตัวอย่างจริง 4 ซีน** (`public/samples/{nature,portrait,night,indoor}.jpg` ที่เกรดสีสดผ่าน WebGL2 ใน `film-preview.tsx` พร้อมโหมดเทียบ `split` + `splitSide`), และหน้าแรกแบบ Interactive Kinetic (`landing-hero.tsx`: 1:1 `RAW ↔ FILM` slider, กดค้างเพื่อล้างฟิล์ม, 3D Tilt Loupe, และสายฟิล์ม 35mm พร้อมภาพตัวอย่างและปุ่มเลื่อนซ้าย-ขวา)
+- **`features/camera` & `features/roll` & `features/darkroom`:**
+  - `BlockConfirmHud` (`block-confirm-hud.tsx`): หน้าต่างยืนยันบล็อกบนหน้าเว็บสำหรับทุก action (`claim`, `shoot`, `develop`) ที่รอ Block จริงจาก KUB Chain RPC + บันทึกลง `onpage-roll-store.ts` & PostgreSQL (พร้อมตัวเลือกเซ็นผ่านกระเป๋าภายนอก)
+  - กล้องถ่ายรูป (`/camera` + ปุ่มลัดไปห้องมืดเมื่อถ่ายแล้ว ≥ 1 รูป), ห้องมืด (`/darkroom`, `/darkroom/[roll]` พร้อมปุ่มตัดม้วนส่งล้าง `developEarly` และนับถอยหลัง 15 วิในโหมดทดสอบ), `/activity`, และ Offline Queue
+- **`features/feed`:**
+  - ฟีดสาธารณะ (`/feed` พร้อมแท็บ `1/1 Prints (NFT)` และป้าย Pre-Mint Offer), หน้ารูปเดี่ยว (`/p/[id]` + Dynamic OpenGraph Image `/p/[id]/opengraph-image`), แผงตลาด 1/1 Print (`print-market.ts`, `print-market-panel.tsx`, `market-block-hud.tsx`) ที่ **ตรวจยอด KUB จริงบนเชน (`getKubBalance`)**, **รอ Block จริง (`waitForNextKubBlock`)**, และรองรับ **Pre-Mint Offer** ครบวงจร
+  - หน้าโปรไฟล์ (`/u/[address]` ครบ 3 แท็บ `Shot` / `Collected` / `Offers` + `@handle` & Bio) และเกราะกันขโมยรูป **`ContentShield`**
+- **`features/admin`:**
+  - Darkroom Console (`/admin`, `/admin/moderation` คีย์ลัด `J/K/A/H/B` + Undo 10s, `/admin/films` `.cube` LUT Lab + `setFilm` บนเชน, `/admin/users`, `/admin/gas`, `/admin/contract` + Emergency Pause, `/admin/audit` + Export CSV, Command Palette `⌘K`, Density switch, และ 403 On-chain Role Guard)
+
+### 13.4 สิ่งที่ต้องทำต่อเมื่อพร้อมขึ้น Production (Next Steps)
+1. **Redeploy สัญญาเวอร์ชันล่าสุดขึ้น KUB Testnet / Mainnet:** รัน `forge script script/Deploy.s.sol --rpc-url kub_testnet --account chainroll-deployer --broadcast` เพื่อเอา `ChainRoll` (ที่มี `shotOrigin` + `developEarly`) และ `ChainRollPrints` (ที่มี `PreMintOffer`) ขึ้นเชนพร้อมกัน แล้วรัน `pnpm --filter @chainroll/contracts build` เพื่ออัปเดต ABI/Addresses
+2. **Switch DB & R2 Storage บน Production (`chainroll.art`):** นำ `DATABASE_URL` ของ Supabase Production + `supabase/migrations/0001..0003` ไปใช้แทน Docker Local และต่อ Cloudflare R2 Presigned URL บน `prints.chainroll.art` (แทน Data URL / Local IndexedDB)
+3. **Wire Tx Execution จริงใน PrintMarketPanel (หลัง Deploy `ChainRollPrints`):** ต่อ `writeContract` ของ wagmi / Bitkub NEXT router เข้ากับปุ่มใน `print-market-panel.tsx` เพื่อส่ง ETH/KUB value จริงเข้าสัญญา `ChainRollPrints` บน Mainnet/Testnet

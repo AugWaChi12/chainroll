@@ -42,5 +42,9 @@ export function createInjectedAdapter(
       send(hooks, () =>
         writeContract(wagmiConfig, { ...base, functionName: 'develop', args: [rollId] }),
       ),
+    developEarly: (rollId, hooks) =>
+      send(hooks, () =>
+        writeContract(wagmiConfig, { ...base, functionName: 'developEarly', args: [rollId] }),
+      ),
   }
 }

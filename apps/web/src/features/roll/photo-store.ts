@@ -77,6 +77,15 @@ export const photoStore = {
       return []
     }
   },
+  /** Every photo stored on this device across all rolls, newest first. */
+  async listAll(): Promise<PhotoRecord[]> {
+    try {
+      const rows = await tx<PhotoRecord[]>('readonly', (s) => s.getAll())
+      return rows.sort((a, b) => b.takenAt - a.takenAt)
+    } catch {
+      return []
+    }
+  },
   /** Every roll key that has at least one photo on this device. */
   async rollKeys(): Promise<string[]> {
     try {

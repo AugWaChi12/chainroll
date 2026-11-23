@@ -12,3 +12,4 @@ allowBuilds:
   '@foundry-rs/forge': false
   '@foundry-rs/anvil': false
   '@foundry-rs/cast': false
+  '@reown/appkit': false

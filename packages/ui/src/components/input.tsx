@@ -27,7 +27,7 @@ export function Input({
   const describedBy = error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       {label && (
         <label htmlFor={inputId} className="text-xs font-medium text-fg">
           {label}
@@ -35,22 +35,22 @@ export function Input({
       )}
       <div
         className={cn(
-          'flex h-10 items-center gap-2 rounded-sm border bg-bg-raised px-3 text-sm',
+          'flex h-10 min-w-0 items-center gap-2 rounded-sm border bg-bg-raised px-3 text-sm',
           'transition-colors duration-[var(--dur-fast)]',
           'focus-within:border-focus focus-within:outline focus-within:outline-2 focus-within:outline-offset-[-1px] focus-within:outline-focus',
           error ? 'border-danger' : 'border-border-strong hover:border-fg-subtle',
           className,
         )}
       >
-        {leading && <span className="text-fg-subtle [&_svg]:size-4">{leading}</span>}
+        {leading && <span className="shrink-0 text-fg-subtle [&_svg]:size-4">{leading}</span>}
         <input
           id={inputId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className="h-full min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-fg-subtle"
+          className="h-full w-full min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-fg-subtle"
           {...props}
         />
-        {trailing && <span className="text-fg-subtle">{trailing}</span>}
+        {trailing && <span className="shrink-0 font-mono text-xs text-fg-subtle">{trailing}</span>}
       </div>
       {error ? (
         <p id={`${inputId}-error`} className="text-xs text-danger">

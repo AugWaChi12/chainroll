@@ -12,3 +12,8 @@ export {
   type TxState,
 } from './tx'
 export { wagmiConfig } from './config'
+export {
+  getKubBalance,
+  waitForNextKubBlock,
+  type KubBlockConfirmation,
+} from './block-watcher'

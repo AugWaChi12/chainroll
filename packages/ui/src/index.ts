@@ -1,5 +1,6 @@
 export { UiLabelsProvider, defaultUiLabels, fmt, useUiLabels, type UiLabels } from './i18n'
 export { cn } from './lib/cn'
+export { truncateHash } from './lib/hash'
 
 export { Button, buttonVariants, type ButtonProps } from './components/button'
 export { Input, type InputProps } from './components/input'
@@ -20,7 +21,6 @@ export {
   LatentFrame,
   RebateLabel,
   TxHash,
-  truncateHash,
   type FrameCounterProps,
   type LatentFrameProps,
   type TxHashProps,

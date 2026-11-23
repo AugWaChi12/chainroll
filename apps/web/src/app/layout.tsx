@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Anuphan, Bricolage_Grotesque, Geist, Geist_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
+import { ContentShield } from '@/features/feed'
 import { UiLabelsBridge } from '@/features/i18n'
 import { WalletProvider } from '@/features/wallet'
 import './globals.css'
@@ -17,8 +18,17 @@ const thai = Anuphan({ subsets: ['thai', 'latin'], variable: '--ff-thai' })
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('meta')
   return {
+    metadataBase: new URL('https://chainroll.art'),
     title: { default: t('title'), template: '%s · ChainRoll' },
     description: t('description'),
+    openGraph: {
+      siteName: 'ChainRoll',
+      type: 'website',
+      url: 'https://chainroll.art',
+    },
+    twitter: {
+      card: 'summary_large_image',
+    },
   }
 }
 
@@ -40,7 +50,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className="min-h-dvh">
         <NextIntlClientProvider>
           <UiLabelsBridge>
-            <WalletProvider>{children}</WalletProvider>
+            <WalletProvider>
+              <ContentShield />
+              {children}
+            </WalletProvider>
           </UiLabelsBridge>
         </NextIntlClientProvider>
       </body>

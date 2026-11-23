@@ -322,11 +322,14 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
       type="button"
       onClick={() => void w.disconnect()}
       title={t('disconnect')}
-      className="flex items-center gap-1.5 rounded-xs border border-border px-2 py-1 font-mono text-2xs text-fg-muted hover:text-fg"
+      className="flex shrink-0 items-center gap-1.5 rounded-xs border border-border px-2 py-1 font-mono text-2xs text-fg-muted hover:text-fg"
     >
-      <span aria-hidden className="size-1.5 rounded-full bg-success" />
-      <span className="max-w-24 truncate">{w.walletName}</span> · {w.address.slice(0, 6)}…
-      {w.address.slice(-4)}
+      <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-success" />
+      <span className="hidden max-w-24 truncate sm:inline">{w.walletName}</span>
+      <span className="hidden sm:inline">·</span>
+      <span>
+        {w.address.slice(0, 6)}…{w.address.slice(-4)}
+      </span>
     </button>
   )
 }

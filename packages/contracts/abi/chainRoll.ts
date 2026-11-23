@@ -189,6 +189,37 @@ export const chainRollAbi = [
   },
   {
     "type": "function",
+    "name": "developEarly",
+    "inputs": [
+      {
+        "name": "rollId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_bitkubNext",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "developEarly",
+    "inputs": [
+      {
+        "name": "rollId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "getFilm",
     "inputs": [
       {
@@ -585,6 +616,30 @@ export const chainRollAbi = [
   },
   {
     "type": "function",
+    "name": "shotOrigin",
+    "inputs": [
+      {
+        "name": "photoHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "rollId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "frame",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -895,6 +950,17 @@ export const chainRollAbi = [
   {
     "type": "error",
     "name": "AlreadyDeveloped",
+    "inputs": [
+      {
+        "name": "rollId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "EmptyRoll",
     "inputs": [
       {
         "name": "rollId",

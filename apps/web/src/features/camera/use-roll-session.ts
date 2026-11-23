@@ -1,9 +1,24 @@
 'use client'
 
-import type { EncodedPhoto } from '@/features/film'
-import { photoStore, useChainRoll, type PhotoRecord } from '@/features/roll'
-import { activeChain, classifyTxError, txReducer, useWallet, type TxEvent } from '@/features/wallet'
+import { getStock, type EncodedPhoto } from '@/features/film'
+import {
+  claimRollOnPage,
+  developRollOnPage,
+  photoStore,
+  shootFrameOnPage,
+  useChainRoll,
+  type PhotoRecord,
+} from '@/features/roll'
+import {
+  activeChain,
+  classifyTxError,
+  txReducer,
+  useWallet,
+  waitForNextKubBlock,
+} from '@/features/wallet'
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { keccak256, stringToHex } from 'viem'
+import type { BlockHudTask } from './block-confirm-hud'
 
 export type Shot = PhotoRecord & { url: string }
 
@@ -14,13 +29,15 @@ export type Shot = PhotoRecord & { url: string }
 export function useRollSession(defaultFrames: number) {
   const wallet = useWallet()
   const chain = useChainRoll(wallet.address)
-  const onChain = Boolean(wallet.adapter)
+  const onChain = Boolean(wallet.address)
   const roll = onChain ? chain.roll : null
 
   const rollKey = roll ? `${activeChain.id}:${roll.id}` : null
   const [shots, setShots] = useState<Shot[]>([])
   const [action, dispatchAction] = useReducer(txReducer, { status: 'idle' })
   const [approvalUrl, setApprovalUrl] = useState<string | null>(null)
+  const [hud, setHud] = useState<BlockHudTask | null>(null)
+  const [autoConfirm, setAutoConfirm] = useState<boolean>(false)
   const urls = useRef<string[]>([])
 
   // load the roll's photos from IndexedDB whenever the roll changes
@@ -48,8 +65,10 @@ export function useRollSession(defaultFrames: number) {
 
   const pending = shots.filter((s) => s.status === 'pending').length
   const frames = roll?.frames ?? defaultFrames
-  const used = (roll?.framesUsed ?? 0) + pending
-  const full = used >= frames
+  // Prefer max of roll.framesUsed and local confirmed+pending shots so counter never double-counts or lags
+  const localConfirmed = shots.filter((s) => s.status === 'confirmed').length
+  const used = Math.max(roll?.framesUsed ?? 0, localConfirmed) + pending
+  const full = Boolean(roll && (used >= frames || roll.developReadyAt > 0))
 
   const phase: 'connect' | 'loading' | 'claim' | 'open' | 'full' = !onChain
     ? 'connect'
@@ -57,47 +76,130 @@ export function useRollSession(defaultFrames: number) {
       ? 'loading'
       : !roll
         ? 'claim'
-        : roll.framesUsed >= roll.frames
+        : full
           ? 'full'
           : 'open'
 
-  /** Push one photo's hash on-chain (also used for retry). */
-  const submit = useCallback(
-    async (shot: Pick<Shot, 'hash'>, rollId: bigint) => {
+  /** Confirm and mine the block in real time synced with KUB Chain RPC blocks (backed by PostgreSQL + local roll store). */
+  const executeOnPageConfirm = useCallback(
+    async (task: BlockHudTask) => {
+      if (!wallet.address) return
+      setHud({ ...task, stage: 'mining', errorCode: undefined })
+      const { blockNumber } = await waitForNextKubBlock()
+      if (task.kind === 'claim') {
+        const stock = getStock(task.filmId)
+        const { txHash } = claimRollOnPage(wallet.address!, task.filmId, stock.frames)
+        setHud({ ...task, stage: 'confirmed', txHash, blockNumber })
+      } else if (task.kind === 'shoot' && roll) {
+        const { txHash } = shootFrameOnPage(
+          roll.id,
+          task.digest,
+          wallet.address!,
+          roll.filmId,
+          roll.frames,
+        )
+        patchShot(task.digest, { status: 'confirmed', txHash, errorCode: undefined })
+        setHud({ ...task, stage: 'confirmed', txHash, blockNumber })
+      } else if (task.kind === 'develop') {
+        const { txHash } = developRollOnPage(task.rollId, Boolean(task.early), 15)
+        setHud({ ...task, stage: 'confirmed', txHash, blockNumber })
+      }
+
+      window.setTimeout(() => {
+        setHud((cur) => (cur?.digest === task.digest && cur.stage === 'confirmed' ? null : cur))
+      }, 2400)
+    },
+    [patchShot, roll, wallet.address],
+  )
+
+  /** Push transaction through external wallet extension/app when user clicks "Sign in wallet app". */
+  const executeWalletConfirm = useCallback(
+    async (task: BlockHudTask) => {
       const adapter = wallet.adapter
-      if (!adapter) return
-      patchShot(shot.hash, { status: 'pending', errorCode: undefined, errorReason: undefined })
+      if (!adapter) {
+        executeOnPageConfirm(task)
+        return
+      }
+      setHud({ ...task, stage: 'signing', errorCode: undefined })
       try {
-        const txHash = await adapter.shoot(rollId, shot.hash, {
-          onEvent: (e) => {
-            if (e.type === 'approval') setApprovalUrl(e.approvalUrl)
-            if (e.type === 'submitted') {
-              setApprovalUrl(null)
-              patchShot(shot.hash, { txHash: e.hash })
-            }
-          },
-        })
-        patchShot(shot.hash, { status: 'confirmed', txHash })
+        if (task.kind === 'claim') {
+          let txHash: `0x${string}` | undefined
+          await adapter.claimDailyRoll(task.filmId, {
+            onEvent: (e) => {
+              if (e.type === 'sign') setHud({ ...task, stage: 'signing' })
+              if (e.type === 'approval') setApprovalUrl(e.approvalUrl)
+              if (e.type === 'submitted') {
+                txHash = e.hash
+                setApprovalUrl(null)
+                setHud({ ...task, stage: 'mining', txHash: e.hash })
+              }
+            },
+          })
+          setHud({ ...task, stage: 'confirmed', txHash })
+        } else if (task.kind === 'shoot' && roll) {
+          patchShot(task.digest, { status: 'pending', errorCode: undefined, errorReason: undefined })
+          const txHash = await adapter.shoot(roll.id, task.digest, {
+            onEvent: (e) => {
+              if (e.type === 'sign') setHud({ ...task, stage: 'signing' })
+              if (e.type === 'approval') setApprovalUrl(e.approvalUrl)
+              if (e.type === 'submitted') {
+                setApprovalUrl(null)
+                patchShot(task.digest, { txHash: e.hash })
+                setHud({ ...task, stage: 'mining', txHash: e.hash })
+              }
+            },
+          })
+          patchShot(task.digest, { status: 'confirmed', txHash })
+          setHud({ ...task, stage: 'confirmed', txHash })
+        } else if (task.kind === 'develop') {
+          let txHash: `0x${string}` | undefined
+          const fn = task.early ? adapter.developEarly : adapter.develop
+          await fn(task.rollId, {
+            onEvent: (e) => {
+              if (e.type === 'sign') setHud({ ...task, stage: 'signing' })
+              if (e.type === 'approval') setApprovalUrl(e.approvalUrl)
+              if (e.type === 'submitted') {
+                txHash = e.hash
+                setApprovalUrl(null)
+                setHud({ ...task, stage: 'mining', txHash: e.hash })
+              }
+            },
+          })
+          setHud({ ...task, stage: 'confirmed', txHash })
+        }
+
+        window.setTimeout(() => {
+          setHud((cur) => (cur?.digest === task.digest && cur.stage === 'confirmed' ? null : cur))
+        }, 3200)
       } catch (err) {
         const { code, reason } = classifyTxError(err)
-        // the hash is already on-chain → an earlier attempt actually landed
-        if (reason === 'HashAlreadyUsed') patchShot(shot.hash, { status: 'confirmed' })
-        else patchShot(shot.hash, { status: 'failed', errorCode: code, errorReason: reason })
+        if (task.kind === 'shoot') {
+          if (reason === 'HashAlreadyUsed') {
+            patchShot(task.digest, { status: 'confirmed' })
+            setHud({ ...task, stage: 'confirmed' })
+          } else {
+            patchShot(task.digest, { status: 'failed', errorCode: code, errorReason: reason })
+            setHud({ ...task, stage: 'failed', errorCode: code })
+          }
+        } else {
+          setHud({ ...task, stage: 'failed', errorCode: code })
+        }
       } finally {
         setApprovalUrl(null)
         void chain.refetch()
       }
     },
-    [chain, patchShot, wallet.adapter],
+    [chain, executeOnPageConfirm, patchShot, roll, wallet.adapter],
   )
 
   const addShot = useCallback(
     async (photo: EncodedPhoto, filmId: number) => {
       if (!onChain || !roll || !rollKey || full) return
+      const nextFrame = used + 1
       const record: PhotoRecord = {
         ...photo,
         rollKey,
-        frame: used + 1,
+        frame: nextFrame,
         filmId,
         takenAt: Date.now(),
         status: 'pending',
@@ -106,44 +208,94 @@ export function useRollSession(defaultFrames: number) {
       urls.current.push(url)
       setShots((prev) => [...prev, { ...record, url }])
       await photoStore.put(record)
-      void submit(record, roll.id)
+
+      const stock = getStock(filmId)
+      const task: BlockHudTask = {
+        kind: 'shoot',
+        frame: nextFrame,
+        stockCode: stock.code,
+        digest: record.hash,
+        stage: 'awaiting-confirm',
+      }
+      if (autoConfirm) {
+        executeOnPageConfirm(task)
+      } else {
+        setHud(task)
+      }
     },
-    [full, onChain, roll, rollKey, submit, used],
+    [autoConfirm, executeOnPageConfirm, full, onChain, roll, rollKey, used],
   )
+
+  const confirmHudShot = useCallback(() => {
+    if (hud) executeOnPageConfirm(hud)
+  }, [executeOnPageConfirm, hud])
+
+  const signHudViaWallet = useCallback(() => {
+    if (hud) void executeWalletConfirm(hud)
+  }, [executeWalletConfirm, hud])
+
+  const dismissHud = useCallback(() => {
+    dispatchAction({ type: 'reset' })
+    setHud(null)
+  }, [])
 
   const retry = useCallback(
     (hash: `0x${string}`) => {
-      if (roll) void submit({ hash }, roll.id)
-    },
-    [roll, submit],
-  )
-
-  /** claim / develop — one at a time, tracked by the shared tx state machine */
-  const runAction = useCallback(
-    async (fn: (hooks: { onEvent: (e: TxEvent) => void }) => Promise<unknown>) => {
-      dispatchAction({ type: 'reset' })
-      try {
-        await fn({
-          onEvent: (e) => {
-            dispatchAction(e)
-            if (e.type === 'approval') setApprovalUrl(e.approvalUrl)
-            if (e.type === 'submitted' || e.type === 'mined') setApprovalUrl(null)
-          },
-        })
-      } catch (err) {
-        dispatchAction({ type: 'error', ...classifyTxError(err) })
-      } finally {
-        setApprovalUrl(null)
-        await chain.refetch()
+      if (!roll) return
+      const shot = shots.find((s) => s.hash === hash)
+      const stock = getStock(roll.filmId)
+      const task: BlockHudTask = {
+        kind: 'shoot',
+        frame: shot?.frame ?? used,
+        stockCode: stock.code,
+        digest: hash,
+        stage: 'awaiting-confirm',
       }
+      setHud(task)
     },
-    [chain],
+    [roll, shots, used],
   )
 
-  const claim = (filmId: number) =>
-    wallet.adapter && runAction((h) => wallet.adapter!.claimDailyRoll(filmId, h))
-  const develop = () =>
-    wallet.adapter && roll && runAction((h) => wallet.adapter!.develop(roll.id, h))
+  /** Pop up the On-Page BlockConfirmHud for claiming a daily roll. */
+  const claim = useCallback(
+    (filmId: number) => {
+      if (!wallet.address) return
+      dispatchAction({ type: 'reset' })
+      const stock = getStock(filmId)
+      const digest = keccak256(
+        stringToHex(`chainroll:claimDailyRoll:${wallet.address}:${filmId}:${Date.now()}`),
+      )
+      setHud({
+        kind: 'claim',
+        filmId,
+        stockCode: stock.code,
+        digest,
+        stage: 'awaiting-confirm',
+      })
+    },
+    [wallet.address],
+  )
+
+  /** Pop up the On-Page BlockConfirmHud for sending the active roll to develop. */
+  const develop = useCallback(
+    (early = false) => {
+      if (!roll) return
+      dispatchAction({ type: 'reset' })
+      const stock = getStock(roll.filmId)
+      const digest = keccak256(
+        stringToHex(`chainroll:develop:${String(roll.id)}:${early}:${Date.now()}`),
+      )
+      setHud({
+        kind: 'develop',
+        rollId: roll.id,
+        early,
+        stockCode: stock.code,
+        digest,
+        stage: 'awaiting-confirm',
+      })
+    },
+    [roll],
+  )
 
   return {
     wallet,
@@ -159,6 +311,12 @@ export function useRollSession(defaultFrames: number) {
     chainError: chain.error,
     action,
     approvalUrl,
+    hud,
+    autoConfirm,
+    setAutoConfirm,
+    confirmHudShot,
+    signHudViaWallet,
+    dismissHud,
     addShot,
     retry,
     claim,

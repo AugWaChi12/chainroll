@@ -8,12 +8,57 @@
       "feed": "Feed",
       "films": "Films",
       "how": "How it works",
-      "privacy": "Privacy"
+      "privacy": "Privacy",
+      "activity": "Activity"
     }
   },
   "brand": "ChainRoll",
   "locale": {
     "label": "Language"
+  },
+  "activity": {
+    "eyebrow": "Activity",
+    "title": "On-chain transaction log",
+    "subtitle": "Every frame shot on this device and its KUB Chain transaction state — retry any failed frame without re-shooting.",
+    "refresh": "Refresh",
+    "openCamera": "Open camera",
+    "offlineBanner": "You're offline — frames stay safely in your browser and sync on-chain when your connection returns.",
+    "filterLabel": "Filter by status",
+    "kpi": {
+      "confirmed": "Confirmed on-chain",
+      "pending": "Pending / queued",
+      "failed": "Needs retry",
+      "rolls": "Rolls on device"
+    },
+    "tabs": {
+      "all": "All",
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "failed": "Failed"
+    },
+    "status": {
+      "confirmed": "Confirmed",
+      "pending": "Saving",
+      "failed": "Failed"
+    },
+    "rollLink": "Roll #{id}",
+    "hashLabel": "Photo hash",
+    "retryBtn": "Retry tx",
+    "retrying": "Sending…",
+    "empty": {
+      "title": "No transactions on this device yet",
+      "body": "Once you take photos in the camera, each frame's on-chain record and KUB Explorer link will appear here."
+    },
+    "errors": {
+      "rejected": "Cancelled in your wallet",
+      "insufficient-funds": "Not enough KUB for gas",
+      "wrong-network": "Wallet is on the wrong network — switch to KUB Chain",
+      "no-wallet": "No wallet found in this browser",
+      "quota": "Your Bitkub NEXT free transaction quota is used up",
+      "timeout": "Took too long to confirm — try again",
+      "reverted": "The chain rejected the transaction",
+      "unknown": "Something went wrong — try again"
+    }
   },
   "ui": {
     "loading": "Loading",
@@ -68,13 +113,38 @@
     "privacy": "Photos never go on-chain — only their hash does. You can always delete a post.",
     "launch": "Launching with the Zurich hard fork · 14.12",
     "nav": {
+      "feed": "Feed & 1/1 Prints",
       "films": "Films",
       "how": "How it works",
       "darkroom": "Darkroom",
       "privacy": "Privacy"
     },
     "ctaFilms": "See all films",
-    "footerTag": "24 EXP · no two rolls alike"
+    "footerTag": "24 EXP · no two rolls alike",
+    "nftBadge": "1/1 Film Print NFTs · KUB Escrow Offers",
+    "tryFilmLabel": "Switch live film stock on the contact sheet",
+    "holdToDevelop": "Press & hold to develop",
+    "holdingDevelop": "Developing in tank… {pct}%",
+    "developedReset": "100% Developed · Click to reset",
+    "explorePrints": "Explore 1/1 Prints on the feed",
+    "tankActive": "DEVELOPING IN TANK",
+    "holdSheetHint": "HOLD OR MOVE CURSOR TO INSPECT",
+    "stripLabel": "Live 35mm film strip — press and drag to scrub",
+    "stripBid": "Inspect / Bid",
+    "stripPrev": "Older frames",
+    "stripNext": "Newer frames",
+    "splitBefore": "RAW",
+    "splitAfter": "FILM",
+    "splitSlider": "Slide left/right to compare original vs film",
+    "stripCaptions": {
+      "chaophraya": "Last ferry light on the Chao Phraya",
+      "charoenkrung": "Hard noon shadows on Charoenkrung",
+      "yaowarat": "Yaowarat neon after the rain",
+      "songwat": "Corner coffee table on Song Wat",
+      "hualamphong": "Frame 24 at Hua Lamphong station",
+      "chiangdao": "Morning mist over Chiang Dao"
+    },
+    "stepsHint": "Hover or hold any step to inspect its on-chain state"
   },
   "camera": {
     "back": "Back",
@@ -84,6 +154,8 @@
     "flip": "Switch front/back camera",
     "pickImage": "Pick a photo from this device",
     "imageMode": "Photo from device",
+    "uploadRejectedNoExif": "Only original camera photos are allowed (downloaded images or screenshots are blocked)",
+    "uploadRejectedNotToday": "Only photos taken today (Bangkok time) can be loaded",
     "retry": "Try again",
     "film": "Film roll",
     "filmLocked": "Roll loaded — you can change film when it's finished",
@@ -127,6 +199,7 @@
       "hash": "Fingerprint",
       "hashNote": "This hash is what's recorded on KUB Chain — the photo itself never goes on-chain.",
       "download": "Save",
+      "postFrame": "Post to feed",
       "chain": "On-chain",
       "status": {
         "pending": "Saving",
@@ -172,7 +245,65 @@
       },
       "connectFirst": "Connect a wallet to shoot — every frame is one tx on KUB Chain",
       "connectToShoot": "Connect wallet to start",
-      "toDarkroom": "Open in darkroom"
+      "toDarkroom": "Open in darkroom",
+      "earlyDevelopLink": "Darkroom ({used} shots)"
+    },
+    "blockHud": {
+      "title": "Confirm frame on KUB Chain block",
+      "dismiss": "Dismiss",
+      "step1": "Confirm",
+      "step2": "Mining block",
+      "step3": "Confirmed",
+      "stages": {
+        "awaiting-confirm": "Awaiting confirm",
+        "signing": "Awaiting wallet",
+        "mining": "Mining block",
+        "confirmed": "Block confirmed",
+        "failed": "Failed"
+      },
+      "headlines": {
+        "awaiting-confirm": "Record frame #{frame} on a KUB Chain block",
+        "signing": "Waiting for wallet signature for frame #{frame}…",
+        "mining": "Broadcasted — waiting for block confirmation on frame #{frame}…",
+        "confirmed": "Frame #{frame} confirmed on-chain!",
+        "failed": "Couldn't confirm frame #{frame} on-chain"
+      },
+      "claimHeadlines": {
+        "awaiting-confirm": "Confirm claiming {stock} (24 EXP) film roll on-chain",
+        "signing": "Waiting for wallet signature to claim {stock}…",
+        "mining": "Loading {stock} film roll onto KUB Chain block…",
+        "confirmed": "{stock} film roll loaded into camera!",
+        "failed": "Couldn't claim {stock} film roll"
+      },
+      "developHeadlines": {
+        "awaiting-confirm": "Confirm sealing roll #{rollId} for the darkroom tank",
+        "signing": "Waiting for wallet signature to develop roll #{rollId}…",
+        "mining": "Recording development timestamp for roll #{rollId} on-chain…",
+        "confirmed": "Roll #{rollId} sent to the darkroom tank!",
+        "failed": "Couldn't send roll #{rollId} to develop"
+      },
+      "actionLabel": "Contract call",
+      "photoHash": "Payload digest (keccak256)",
+      "networkGas": "Network · Est. gas",
+      "txHash": "Transaction (Tx)",
+      "autoConfirmLabel": "Auto-confirm next frames on this roll",
+      "later": "Cancel",
+      "walletSignBtn": "Sign in wallet app",
+      "confirmBtn": "Confirm block",
+      "openApproval": "Open Bitkub NEXT approval",
+      "checkWalletHint": "Approve the transaction in your wallet",
+      "waitingBlockHint": "KUB Chain blocks finalize in ~3s",
+      "retryBtn": "Retry block confirm",
+      "errors": {
+        "rejected": "Cancelled in your wallet",
+        "insufficient-funds": "Not enough KUB for gas",
+        "wrong-network": "Wallet is on the wrong network — switch to KUB Chain",
+        "no-wallet": "No wallet found in this browser",
+        "quota": "Your Bitkub NEXT free transaction quota is used up",
+        "timeout": "Block confirmation timed out — try again",
+        "reverted": "The chain rejected the transaction",
+        "unknown": "Something went wrong — try again"
+      }
     }
   },
   "admin": {
@@ -229,6 +360,321 @@
     "soon": {
       "title": "Not developed yet",
       "body": "Planned for M5 — see PROJECT_BRIEF §8"
+    },
+    "density": {
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    },
+    "cmd": {
+      "close": "Close search",
+      "navigate": "Navigate",
+      "open": "Open",
+      "openCamera": "Go to camera",
+      "openDarkroom": "Go to darkroom"
+    },
+    "guard": {
+      "eyebrow": "Restricted access",
+      "title": "This wallet doesn't hold an Admin or Curator role on-chain",
+      "body": "Darkroom Console requires a wallet granted DEFAULT_ADMIN_ROLE or CURATOR_ROLE on the ChainRoll contract.",
+      "requiredRole": "Required on-chain role",
+      "currentWallet": "Connected wallet",
+      "notConnected": "Not connected",
+      "connectBtn": "Connect admin wallet",
+      "enterPreviewBtn": "Open Read-Only Preview",
+      "testGateBtn": "Preview 403 Role Gate",
+      "readOnlyGuest": "Read-Only Preview mode — connect a wallet with DEFAULT_ADMIN_ROLE or CURATOR_ROLE to send on-chain admin transactions.",
+      "readOnlyWallet": "Connected wallet has no on-chain admin role — UI preview is active, but on-chain writes require Admin/Curator."
+    },
+    "moderation": {
+      "eyebrow": "02 · Moderation",
+      "title": "Reports & AI flags",
+      "description": "Moderate without touching the mouse — every decision writes to the audit log with a 10-second undo.",
+      "filterLabel": "Filter by status",
+      "queueLabel": "Moderation queue",
+      "shortcuts": {
+        "move": "move",
+        "approve": "approve",
+        "hide": "hide",
+        "ban": "ban"
+      },
+      "tabs": {
+        "pending": "Pending",
+        "resolved": "Resolved",
+        "all": "All"
+      },
+      "reasons": {
+        "nsfw": "NSFW",
+        "spam": "Spam / bot",
+        "copyright": "Copyright",
+        "harassment": "Harassment"
+      },
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "hidden": "Hidden",
+        "banned": "User banned"
+      },
+      "reportCount": "{count} report(s)",
+      "aiFlagged": "AI flagged",
+      "fields": {
+        "shooter": "Shooter",
+        "reporter": "Reporter",
+        "reason": "Reason",
+        "photoHash": "Photo hash",
+        "confidence": "AI confidence"
+      },
+      "noteLabel": "Decision note (recorded in audit log)",
+      "notePlaceholder": "Add a reason or pick a preset below…",
+      "presets": {
+        "falsePositive": "Clean frame (AI false positive)",
+        "spamLink": "Spam / promotional link",
+        "nsfwViolation": "Not suitable for the public feed",
+        "repeatOffender": "Repeat offender"
+      },
+      "defaultNotes": {
+        "approved": "Reviewed and cleared",
+        "hidden": "Hidden from the public feed",
+        "banned": "Account banned for severe policy violation"
+      },
+      "actions": {
+        "approve": "Approve",
+        "hide": "Hide post",
+        "ban": "Ban user"
+      },
+      "undo": "Undo",
+      "undoBanner": {
+        "approved": "Post approved",
+        "hidden": "Post hidden",
+        "banned": "Shooter banned"
+      },
+      "empty": {
+        "title": "Queue is clear",
+        "body": "No items waiting in this view."
+      }
+    },
+    "films": {
+      "eyebrow": "03 · Film stocks",
+      "title": "Film catalogue & look lab",
+      "description": "Upload a .cube LUT, tune grain and halation across 4 reference scenes, then publish the stock on KUB Chain.",
+      "newStock": "Load stock #4",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "editorTitle": "Tune Film #{id}",
+      "resetLook": "Reset look",
+      "lutTitle": "3D LUT (.cube)",
+      "lutHint": "Upload a .cube file to derive tone parameters",
+      "uploadLut": "Upload .cube",
+      "lutError": "Couldn't read .cube file — needs at least 8 RGB lattice points",
+      "sliders": {
+        "grain": "Film grain",
+        "halation": "Highlight halation",
+        "vignette": "Vignette",
+        "contrast": "Contrast",
+        "saturation": "Saturation",
+        "exposure": "Exposure offset",
+        "fade": "Black fade",
+        "monochrome": "Monochrome (B&W)"
+      },
+      "onChainSection": "On-chain config (ChainRoll.setFilm)",
+      "fields": {
+        "name": "Film name",
+        "frames": "Frames / roll",
+        "active": "Available for daily claim"
+      },
+      "publish": "Publish on-chain (setFilm)",
+      "publishing": "Publishing on-chain…",
+      "publishedOk": "Film stock updated on-chain",
+      "connectHint": "Connect a wallet with CURATOR_ROLE to publish",
+      "previewTitle": "Live WebGL2 reference scenes",
+      "previewSubtitle": "Rendered by the exact camera shader across 4 test scenes",
+      "beforeAfter": "Before / After",
+      "rawTag": "Raw",
+      "scenes": {
+        "nature": "Nature",
+        "portrait": "Portrait",
+        "night": "Night",
+        "indoor": "Indoor"
+      },
+      "errors": {
+        "rejected": "Cancelled in your wallet",
+        "insufficient-funds": "Not enough KUB for gas",
+        "wrong-network": "Wallet is on the wrong network — switch to KUB Chain",
+        "no-wallet": "No wallet found in this browser",
+        "quota": "Free transaction quota used up",
+        "timeout": "Took too long to confirm — try again",
+        "reverted": "The chain rejected the transaction (check CURATOR_ROLE)",
+        "unknown": "Something went wrong — try again"
+      }
+    },
+    "users": {
+      "eyebrow": "04 · Users",
+      "title": "Photographers & wallets",
+      "description": "Search by address or handle, inspect frame history and reports, and manage account standing.",
+      "export": "Export CSV",
+      "inspector": "Photographer inspector",
+      "cols": {
+        "user": "User",
+        "wallet": "Wallet",
+        "rolls": "Rolls",
+        "shots": "Frames",
+        "posts": "Posts",
+        "streak": "Streak",
+        "reports": "Reports",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Active",
+        "banned": "Banned"
+      },
+      "reasonLabel": "Note (recorded in audit log)",
+      "reasonPlaceholder": "Reason for ban or bonus roll…",
+      "defaultReason": {
+        "banned": "Suspended by moderator",
+        "active": "Ban lifted by moderator"
+      },
+      "actions": {
+        "grantRoll": "Grant bonus roll (+1)",
+        "resetStreak": "Reset streak to 0",
+        "ban": "Ban this user",
+        "unban": "Unban user"
+      },
+      "feedback": {
+        "banned": "Banned {user}",
+        "active": "Unbanned {user}",
+        "streakReset": "Reset streak for {user}",
+        "rollGranted": "Granted a bonus roll to {user}"
+      }
+    },
+    "gas": {
+      "eyebrow": "05 · Gas & quotas",
+      "title": "Relayer budget & daily quotas",
+      "description": "Set per-user transaction quotas, spot high-frequency bots and apply rate limits.",
+      "relayerAlert": {
+        "title": "Relayer wallet runs out in {days} days",
+        "body": "Balance {balance} KUB · burning {burn} KUB/day on average",
+        "topUp": "Top up KUB"
+      },
+      "kpi": {
+        "balance": "Relayer balance",
+        "daysLeft": "~{days} days left",
+        "burnRate": "Daily burn rate",
+        "budgetHint": "Cap {budget} KUB/day",
+        "avgShotGas": "Avg. gas per frame",
+        "flaggedAccounts": "Flagged / limited accounts",
+        "thresholdHint": "Over {rate} tx/min"
+      },
+      "policyTitle": "Quota & gas ceiling policy",
+      "policySubtitle": "Applies to relayer-sponsored sessions and server rate-limit checks",
+      "savePolicy": "Save policy",
+      "policySaved": "Saved and logged to audit log",
+      "fields": {
+        "freeRolls": "Free rolls / user / day",
+        "gaslessQuota": "Free txs / user / day",
+        "dailyBudget": "Daily relayer cap",
+        "botThreshold": "Bot rate-limit ceiling"
+      },
+      "spendersTitle": "Top spenders today",
+      "cols": {
+        "account": "Account",
+        "wallet": "Wallet",
+        "txToday": "Txs today",
+        "txPerMin": "Peak rate",
+        "kubSpent": "Gas used",
+        "status": "Status"
+      },
+      "status": {
+        "normal": "Normal",
+        "flagged": "Bursting",
+        "limited": "Rate-limited"
+      },
+      "actions": {
+        "limit": "Rate-limit",
+        "unlimit": "Lift limit"
+      }
+    },
+    "contract": {
+      "eyebrow": "06 · Contract",
+      "title": "ChainRoll on-chain state",
+      "description": "Read and update parameters directly on the deployed ChainRoll contract on KUB Chain.",
+      "refresh": "Refresh state",
+      "connectHint": "Connect wallet to check roles",
+      "txConfirmed": "Transaction confirmed on-chain",
+      "kpi": {
+        "status": "Contract state",
+        "totalRolls": "Rolls claimed",
+        "developDelay": "Develop delay",
+        "yourRoles": "Your wallet roles"
+      },
+      "status": {
+        "live": "Live",
+        "paused": "Paused"
+      },
+      "roles": {
+        "disconnected": "Not connected",
+        "viewer": "Viewer",
+        "granted": "Granted",
+        "none": "None"
+      },
+      "deploymentTitle": "Deployment & on-chain roles",
+      "paramsTitle": "Parameters & role grants (on-chain)",
+      "fields": {
+        "address": "Contract address",
+        "network": "Network",
+        "router": "Bitkub NEXT Router",
+        "setDelay": "Set develop delay (developDelay)",
+        "setRouter": "Set sdkCallHelperRouter",
+        "curatorTarget": "Manage CURATOR_ROLE (address)"
+      },
+      "actions": {
+        "saveDelay": "Set delay",
+        "saveRouter": "Update router",
+        "grantCurator": "Grant Curator",
+        "revokeCurator": "Revoke"
+      },
+      "pauseZone": {
+        "title": "Emergency Pause / Unpause",
+        "body": "While paused, claiming rolls, shooting and developing revert on-chain until unpaused.",
+        "confirmLabel": "Type {word} to confirm",
+        "pauseBtn": "Pause contract",
+        "unpauseBtn": "Unpause contract"
+      },
+      "errors": {
+        "rejected": "Cancelled in your wallet",
+        "insufficient-funds": "Not enough KUB for gas",
+        "wrong-network": "Wallet is on the wrong network — switch to KUB Chain",
+        "no-wallet": "No wallet found in this browser",
+        "quota": "Free transaction quota used up",
+        "timeout": "Took too long to confirm — try again",
+        "reverted": "The chain rejected the transaction (requires DEFAULT_ADMIN_ROLE)",
+        "unknown": "Something went wrong — try again"
+      }
+    },
+    "audit": {
+      "eyebrow": "07 · Audit log",
+      "title": "Admin action history",
+      "description": "Every change in Darkroom Console is logged with actor, target and on-chain transaction hash.",
+      "export": "Export CSV",
+      "filterLabel": "Filter by category",
+      "justNow": "just now",
+      "categories": {
+        "all": "All",
+        "moderation": "Moderation",
+        "films": "Film stocks",
+        "users": "Users",
+        "gas": "Gas & quotas",
+        "contract": "Contract"
+      },
+      "cols": {
+        "category": "Category",
+        "action": "Action",
+        "actor": "Actor",
+        "target": "Target",
+        "detail": "Details",
+        "tx": "On-chain Tx",
+        "time": "Time"
+      }
     }
   },
   "wallet": {
@@ -296,7 +742,10 @@
     "films": "Films",
     "camera": "Camera",
     "darkroom": "Darkroom",
-    "how": "How it works"
+    "how": "How it works",
+    "activity": "Transaction activity",
+    "profile": "My profile",
+    "offline": "Offline — you can keep shooting; frames sync on-chain once you're back online"
   },
   "darkroom": {
     "eyebrow": "Darkroom",
@@ -337,6 +786,7 @@
     "panel": {
       "shooting": "{left} frames left — everything stays latent until the roll is finished and developed.",
       "keepShooting": "Keep shooting",
+      "developEarly": "Cut & develop early",
       "fullTitle": "Roll finished",
       "fullBody": "Send it to develop to see your photos — about {minutes} minutes (1 tx on KUB Chain).",
       "develop": "Send to develop",
@@ -346,7 +796,8 @@
       "inTankBody": "You can close this page — come back when the timer ends and the whole roll will fade in.",
       "doneTitle": "Developed",
       "doneBody": "Tap a frame to view it full screen or save it.",
-      "postSoon": "Post (soon)"
+      "postSoon": "Post (soon)",
+      "postToFeed": "Post a frame to feed"
     },
     "errors": {
       "rejected": "Cancelled in your wallet",
@@ -489,8 +940,237 @@
   "feed": {
     "eyebrow": "Feed",
     "title": "Frames from every roll",
+    "subtitle": "Every photo here was shot through a full roll and developed — with its fingerprint verified on KUB Chain.",
     "soonTitle": "The feed is still developing",
     "soonBody": "Soon you'll be able to post photos from your darkroom here — start by shooting your first roll.",
-    "cta": "Open camera"
+    "cta": "Open camera",
+    "filterFilm": "Filter by film",
+    "allFilms": "All films",
+    "sort": {
+      "latest": "Latest",
+      "popular": "Most liked"
+    },
+    "like": "Like",
+    "share": "Share",
+    "copied": "Link copied",
+    "onChainBadge": "Verified on-chain",
+    "dismiss": "Dismiss",
+    "emptyTitle": "No frames on this film yet",
+    "emptyBody": "See all films or be the first to post a frame shot on this stock.",
+    "report": {
+      "trigger": "Report",
+      "title": "Report this frame",
+      "subtitle": "Help keep the feed clean — reports go straight to the Darkroom Console moderation queue.",
+      "reasonLabel": "Reason",
+      "reasons": {
+        "nsfw": "NSFW content",
+        "spam": "Spam / promotion",
+        "copyright": "Copyright infringement",
+        "harassment": "Harassment"
+      },
+      "noteLabel": "Additional note (optional)",
+      "notePlaceholder": "Short explanation…",
+      "cancel": "Cancel",
+      "submit": "Submit report",
+      "thanks": "Report sent — thank you for keeping the feed clean"
+    },
+    "composer": {
+      "title": "Post a frame from this roll",
+      "subtitle": "Pick a developed frame, add a short caption and share it to the public feed.",
+      "close": "Close",
+      "pickFrame": "Pick frame",
+      "captionLabel": "Caption",
+      "captionPlaceholder": "The light, the place, or the story behind this shot…",
+      "fields": {
+        "frame": "Frame",
+        "film": "Film",
+        "hash": "On-chain fingerprint"
+      },
+      "privacyNote": "Only frames you choose to post appear on the public feed. You can delete a post at any time.",
+      "mintToggle": "Mint as 1/1 Film Print NFT (ERC-721 + 5% Royalty)",
+      "askPriceLabel": "Instant Buy price (leave empty or 0 for Offers Only)",
+      "askPriceHint": "Collectors can buy immediately or place escrowed KUB offers on the feed",
+      "publishBtn": "Post to feed",
+      "updatePost": "Update caption",
+      "publishing": "Posting…",
+      "publishedOk": "Published to the feed",
+      "viewPost": "Open share page",
+      "goToFeed": "Go to feed"
+    },
+    "detail": {
+      "backToFeed": "Back to feed",
+      "notFoundTitle": "Frame not found",
+      "notFoundBody": "This post may have been deleted by the photographer or doesn't exist.",
+      "delete": "Delete post",
+      "download": "Download image",
+      "proofTitle": "KUB Chain provenance record",
+      "fields": {
+        "shooter": "Photographer",
+        "film": "Film stock",
+        "rollFrame": "Roll / frame",
+        "photoHash": "Photo hash (keccak256)",
+        "txHash": "Transaction"
+      },
+      "proofNote": "The on-chain hash proves this exact photo was captured on that roll without alteration.",
+      "shootYoursTitle": "Shoot your own roll today",
+      "shootYoursBody": "Claim one free 24-frame roll every day — try {film} in the camera now.",
+      "shootYoursCta": "Shoot with this film"
+    },
+    "profile": {
+      "eyebrow": "Photographer & Collector",
+      "you": "You",
+      "collectorBadge": "{count} Print(s) Owned",
+      "backToFeed": "Feed",
+      "openDarkroom": "Open my darkroom",
+      "shootCta": "Open camera",
+      "tabsLabel": "Profile sections",
+      "tabs": {
+        "shot": "Shot frames",
+        "collected": "Collected 1/1 Prints",
+        "offers": "Active offers"
+      },
+      "stats": {
+        "frames": "Frames shot",
+        "collected": "1/1 Prints owned",
+        "activeOffers": "Active bids placed",
+        "offersCount": "{count} total offer(s)",
+        "rolls": "Rolls shared",
+        "likes": "Total likes",
+        "favoriteFilm": "Signature film"
+      },
+      "edit": {
+        "trigger": "Edit @handle & bio",
+        "title": "Edit photographer profile",
+        "subtitle": "Your @handle appears across your published frames, 1/1 Prints and escrow offers.",
+        "handleLabel": "Handle (@handle)",
+        "handleHint": "Lowercase letters, numbers, dots or dashes (2–24 chars)",
+        "bioLabel": "Short bio",
+        "bioPlaceholder": "Cameras, favourite film stocks or neighbourhood you shoot in…",
+        "cancel": "Cancel",
+        "save": "Save profile",
+        "saved": "Updated your @handle and bio",
+        "errors": {
+          "invalid": "Use only a-z, 0-9, dots (.) or dashes (_ -) between 2 and 24 characters",
+          "taken": "That @handle is already taken"
+        }
+      },
+      "emptyTitle": "No published frames yet",
+      "emptyBodySelf": "Once a roll finishes developing, pick your favourite frames from the contact sheet to share here.",
+      "emptyBodyOther": "This photographer hasn't posted any frames to the public feed yet.",
+      "collectedEmpty": {
+        "title": "No 1/1 Film Prints in this collection yet",
+        "body": "Explore developed frames on the feed to buy immediately or place an escrowed KUB offer.",
+        "cta": "Explore 1/1 Prints on feed"
+      },
+      "offersEmpty": {
+        "title": "No active offers right now",
+        "body": "Offers you place on 1/1 Prints—and incoming bids on prints you own—will show up here."
+      },
+      "openForOffers": "Open for offers",
+      "selfMintedPrint": "Original self-shot & minted 1/1 Print",
+      "shotByPhotographer": "Shot by {photographer}",
+      "topOfferLabel": "▸ Highest offer {amount} KUB",
+      "noOffersLabel": "No active offers",
+      "managePrintLink": "Manage / View offers",
+      "offerDirection": {
+        "incoming": "Incoming bid on your Print",
+        "outgoing": "Your outgoing bid"
+      },
+      "fromBidder": "Bidder",
+      "acceptOfferBtn": "Accept offer",
+      "cancelOfferBtn": "Cancel offer"
+    },
+    "market": {
+      "printsTab": "1/1 Prints (NFT)",
+      "modalTitle": "1/1 Film Print & Offer Book",
+      "close": "Close",
+      "topBidShort": "Top offer {amount} KUB",
+      "offerBtnShort": "Make offer",
+      "mintShort": "Mint 1/1 NFT",
+      "unmintedTitle": "1/1 Analog Print Edition",
+      "unmintedBody": "This frame's hash is verified on-chain, but it hasn't been minted as a 1/1 Print NFT yet. Once minted, collectors can make KUB offers and the photographer earns a perpetual 5% royalty.",
+      "mintPriceLabel": "Buy Now price (set 0 for Offers Only)",
+      "mintPriceHint": "ERC-721 on KUB Chain · Strictly 1-of-1 per photoHash",
+      "mintBtn": "Mint 1/1 Film Print",
+      "onlyPhotographerCanMint": "Only the photographer who shot this developed roll can mint its 1/1 Print.",
+      "owner": "Collector",
+      "royaltyTag": "{pct}% Photographer Royalty (ERC-2981)",
+      "openForOffers": "Open for offers",
+      "buyNowLabel": "Buy Now price",
+      "statusLabel": "Edition status",
+      "lastSale": "Last collected for {price} KUB",
+      "manageListing": "Manage price",
+      "buyNowBtn": "Buy Now · {price} KUB",
+      "newPriceLabel": "New Buy Now price (KUB)",
+      "savePrice": "Save price",
+      "delistBtn": "Switch to Offers Only",
+      "makeOfferTitle": "Make an Escrowed Offer (KUB)",
+      "minOfferHint": "Min. {min} KUB (+5%)",
+      "makeOfferBtn": "Make offer",
+      "breakdown": {
+        "sellerNet": "Seller receives",
+        "royalty": "Creator royalty",
+        "primary": "Primary sale (100%)",
+        "protocol": "Protocol fee"
+      },
+      "offersTitle": "Active Escrow Offers",
+      "highestOffer": "Highest {amount} KUB",
+      "noOffersYet": "No active offers yet — be the first to bid on this 1/1 frame.",
+      "acceptOfferBtn": "Accept offer",
+      "cancelOfferBtn": "Cancel",
+      "preMintTitle": "Pre-Mint Offer (Request 1/1 Print)",
+      "preMintHint": "Escrow KUB to invite the photographer to mint and sell this frame as a 1/1 Print directly to you.",
+      "preMintBtn": "Request 1/1 Print",
+      "preMintOfferShort": "Bid {amount} KUB",
+      "preMintBanner": "Collector offered {amount} KUB for this frame",
+      "preMintNetHint": "Mint 1/1 and receive {net} KUB net (2.5% protocol fee)",
+      "preMintAcceptBtn": "Mint 1/1 & Accept {amount} KUB",
+      "preMintNoticePlaced": "Pre-mint offer of {amount} KUB placed — waiting for the photographer",
+      "preMintNoticeAccepted": "Minted 1/1 Print #{tokenId} and accepted {amount} KUB offer",
+      "provenanceTitle": "On-chain Print Provenance",
+      "events": {
+        "minted": "Minted 1/1 Print",
+        "listed": "Updated listing",
+        "offer_made": "Offer placed",
+        "offer_cancelled": "Offer cancelled",
+        "offer_accepted": "Offer accepted",
+        "bought": "Collected (Buy Now)"
+      },
+      "notices": {
+        "minted": "Minted 1/1 Print #{tokenId}",
+        "priceUpdated": "Listing price updated to {price} KUB",
+        "delisted": "Switched to Offers Only mode",
+        "bought": "Collected 1/1 Print for {price} KUB",
+        "offerPlaced": "Escrowed {amount} KUB offer placed",
+        "offerAccepted": "Accepted {amount} KUB offer and transferred 1/1 Print"
+      },
+      "errors": {
+        "invalidAmount": "Enter a valid KUB amount",
+        "offerTooLow": "Minimum offer is {min} KUB (5% above current highest offer)",
+        "insufficientBalance": "Insufficient KUB balance (have {balance} KUB · need {required} KUB)"
+      },
+      "walletBalance": "On-chain balance: {balance} KUB",
+      "blockHud": {
+        "title": "Confirm 1/1 Print transaction on KUB Chain",
+        "dismiss": "Dismiss",
+        "step1": "Confirm",
+        "step2": "Mining block",
+        "step3": "Confirmed",
+        "stages": {
+          "awaiting-confirm": "Awaiting confirm",
+          "mining": "Mining block",
+          "confirmed": "Block confirmed"
+        },
+        "contractLabel": "Contract call",
+        "valueLabel": "Transaction value",
+        "digestLabel": "Payload digest (keccak256)",
+        "networkLabel": "Network · Est. gas",
+        "txHashLabel": "Transaction (Tx)",
+        "waitingBlockHint": "Waiting for KUB Chain block confirmation…",
+        "confirmedHint": "Confirmed on block and synced to database!",
+        "cancelBtn": "Cancel",
+        "confirmBtn": "Confirm block"
+      }
+    }
   }
 }

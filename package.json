@@ -15,7 +15,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "contracts:test": "pnpm --filter @chainroll/contracts test",
-    "dev:chain": "node scripts/dev-chain.mjs"
+    "dev:chain": "node scripts/dev-chain.mjs",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:psql": "docker exec -it chainroll-db psql -U chainroll -d chainroll"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

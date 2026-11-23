@@ -1,14 +1,14 @@
 'use client'
 
 import { LocaleSwitcher } from '@/features/i18n'
-import { ConnectSheet, WalletButton } from '@/features/wallet'
+import { ConnectSheet, WalletButton, useWallet } from '@/features/wallet'
 import { cn } from '@chainroll/ui'
-import { Aperture, BookOpen, Film, LayoutGrid, Warehouse } from 'lucide-react'
+import { Aperture, BookOpen, Film, History, LayoutGrid, User, Warehouse, WifiOff } from 'lucide-react'
 import type { Route } from 'next'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, type ComponentType, type ReactNode } from 'react'
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
 
 type Item = { href: Route; key: string; icon: ComponentType<{ className?: string }> }
 
@@ -28,15 +28,30 @@ const RIGHT: Item[] = [
 export function AppNav({ children }: { children: ReactNode }) {
   const t = useTranslations('nav')
   const pathname = usePathname()
+  const { address } = useWallet()
   const [connectOpen, setConnectOpen] = useState(false)
+  const [online, setOnline] = useState(true)
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read initial browser online state
+    setOnline(typeof navigator === 'undefined' ? true : navigator.onLine)
+    const onUp = () => setOnline(true)
+    const onDown = () => setOnline(false)
+    window.addEventListener('online', onUp)
+    window.addEventListener('offline', onDown)
+    return () => {
+      window.removeEventListener('online', onUp)
+      window.removeEventListener('offline', onDown)
+    }
+  }, [])
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-fg">
       {/* top bar */}
       <header className="sticky top-0 z-30 border-b border-border bg-bg/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 md:px-8">
-          <Link href="/" className="flex items-center gap-2 font-display text-xl">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-3 sm:gap-4 sm:px-4 md:gap-6 md:px-8">
+          <Link href="/" className="flex shrink-0 items-center gap-1.5 font-display text-lg sm:gap-2 sm:text-xl">
             <Aperture className="size-5 text-accent" aria-hidden />
             ChainRoll
           </Link>
@@ -66,10 +81,47 @@ export function AppNav({ children }: { children: ReactNode }) {
               <Aperture className="size-4" aria-hidden />
               {t('camera')}
             </Link>
+            <Link
+              href="/activity"
+              title={t('activity')}
+              aria-label={t('activity')}
+              className={cn(
+                'inline-flex size-8 items-center justify-center rounded-xs border transition-colors',
+                active('/activity')
+                  ? 'border-border-strong bg-bg-sunken text-fg'
+                  : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
+              )}
+            >
+              <History className="size-4" />
+            </Link>
+            {address && (
+              <Link
+                href={`/u/${address}` as Route}
+                title={t('profile')}
+                aria-label={t('profile')}
+                className={cn(
+                  'inline-flex size-8 items-center justify-center rounded-xs border transition-colors',
+                  active('/u')
+                    ? 'border-border-strong bg-bg-sunken text-fg'
+                    : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
+                )}
+              >
+                <User className="size-4" />
+              </Link>
+            )}
             <LocaleSwitcher />
             <WalletButton onOpen={() => setConnectOpen(true)} />
           </div>
         </div>
+        {!online && (
+          <div
+            role="status"
+            className="flex items-center justify-center gap-2 border-t border-warning/40 bg-bg-sunken px-4 py-1.5 text-2xs text-warning"
+          >
+            <WifiOff className="size-3.5" aria-hidden />
+            <span>{t('offline')}</span>
+          </div>
+        )}
       </header>
 
       <main className="flex-1 pb-24 md:pb-0">{children}</main>

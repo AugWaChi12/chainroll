@@ -39,7 +39,8 @@ contract ChainRoll is AccessControl, Pausable {
     mapping(uint256 rollId => Roll) private _rolls;
     /// @dev day number of the user's last free claim, +1 so that 0 means "never".
     mapping(address user => uint256) private _lastClaimDayPlusOne;
-    mapping(bytes32 photoHash => bool) public hashUsed;
+    /// @dev Packed `(rollId << 8) | frame` where `photoHash` was recorded (0 = unused).
+    mapping(bytes32 photoHash => uint256) private _hashOrigin;
     /// @notice Most recent roll claimed by a user (0 = none). Lets the app find the open roll without scanning logs.
     mapping(address user => uint256 rollId) public latestRollOf;
 
@@ -70,6 +71,7 @@ contract ChainRoll is AccessControl, Pausable {
     error NotRollOwner(uint256 rollId);
     error RollFull(uint256 rollId);
     error RollNotFull(uint256 rollId, uint8 framesUsed, uint8 frames);
+    error EmptyRoll(uint256 rollId);
     error AlreadyDeveloped(uint256 rollId);
     error HashAlreadyUsed(bytes32 photoHash);
     error ZeroHash();
@@ -121,14 +123,35 @@ contract ChainRoll is AccessControl, Pausable {
     // ═══ Develop ════════════════════════════════════════════════
 
     function develop(uint256 rollId) external {
-        _develop(msg.sender, rollId);
+        _develop(msg.sender, rollId, false);
     }
 
     function develop(uint256 rollId, address _bitkubNext) external onlySdkCallHelperRouter {
-        _develop(_bitkubNext, rollId);
+        _develop(_bitkubNext, rollId, false);
+    }
+
+    /// @notice Cut and develop a partially-shot roll early (requires at least 1 exposed frame).
+    function developEarly(uint256 rollId) external {
+        _develop(msg.sender, rollId, true);
+    }
+
+    function developEarly(uint256 rollId, address _bitkubNext) external onlySdkCallHelperRouter {
+        _develop(_bitkubNext, rollId, true);
     }
 
     // ═══ Views ══════════════════════════════════════════════════
+
+    function hashUsed(bytes32 photoHash) public view returns (bool) {
+        return _hashOrigin[photoHash] != 0;
+    }
+
+    /// @notice Exact `(rollId, frame)` where `photoHash` was shot (`(0, 0)` if unused).
+    function shotOrigin(bytes32 photoHash) external view returns (uint256 rollId, uint8 frame) {
+        uint256 packed = _hashOrigin[photoHash];
+        // low 8 bits hold `frame` (1..MAX_FRAMES <= 72)
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return (packed >> 8, uint8(packed));
+    }
 
     function getFilm(uint16 filmId) external view returns (Film memory) {
         return _films[filmId];
@@ -209,19 +232,23 @@ contract ChainRoll is AccessControl, Pausable {
         if (photoHash == bytes32(0)) revert ZeroHash();
         Roll storage roll = _rolls[rollId];
         if (roll.owner != user || user == address(0)) revert NotRollOwner(rollId);
+        if (roll.developReadyAt != 0) revert AlreadyDeveloped(rollId);
         if (roll.framesUsed >= roll.frames) revert RollFull(rollId);
-        if (hashUsed[photoHash]) revert HashAlreadyUsed(photoHash);
+        if (_hashOrigin[photoHash] != 0) revert HashAlreadyUsed(photoHash);
 
-        hashUsed[photoHash] = true;
         uint8 frame = ++roll.framesUsed;
+        _hashOrigin[photoHash] = (rollId << 8) | uint256(frame);
         emit Shot(user, rollId, frame, photoHash, roll.filmId);
     }
 
-    function _develop(address user, uint256 rollId) internal whenNotPaused {
+    function _develop(address user, uint256 rollId, bool allowPartial) internal whenNotPaused {
         Roll storage roll = _rolls[rollId];
         if (roll.owner != user || user == address(0)) revert NotRollOwner(rollId);
         if (roll.developReadyAt != 0) revert AlreadyDeveloped(rollId);
-        if (roll.framesUsed < roll.frames) {
+        if (allowPartial) {
+            if (roll.framesUsed == 0) revert EmptyRoll(rollId);
+            roll.frames = roll.framesUsed;
+        } else if (roll.framesUsed < roll.frames) {
             revert RollNotFull(rollId, roll.framesUsed, roll.frames);
         }
         uint64 readyAt = uint64(block.timestamp) + developDelay;

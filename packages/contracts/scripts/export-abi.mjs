@@ -16,6 +16,15 @@ writeFileSync(
   `${header}export const chainRollAbi = ${JSON.stringify(artifact.abi, null, 2)} as const\n`,
 )
 
+const printsPath = join(root, 'out/ChainRollPrints.sol/ChainRollPrints.json')
+if (existsSync(printsPath)) {
+  const printsArtifact = JSON.parse(readFileSync(printsPath, 'utf8'))
+  writeFileSync(
+    join(outDir, 'chainRollPrints.ts'),
+    `${header}export const chainRollPrintsAbi = ${JSON.stringify(printsArtifact.abi, null, 2)} as const\n`,
+  )
+}
+
 const deployments = {}
 const depDir = join(root, 'deployments')
 if (existsSync(depDir)) {

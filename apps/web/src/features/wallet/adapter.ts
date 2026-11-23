@@ -15,4 +15,5 @@ export interface WalletAdapter {
   claimDailyRoll(filmId: number, hooks: TxHooks): Promise<Hex>
   shoot(rollId: bigint, photoHash: Hex, hooks: TxHooks): Promise<Hex>
   develop(rollId: bigint, hooks: TxHooks): Promise<Hex>
+  developEarly(rollId: bigint, hooks: TxHooks): Promise<Hex>
 }

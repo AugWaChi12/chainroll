@@ -8,7 +8,8 @@
       "feed": "ฟีด",
       "films": "ฟิล์ม",
       "how": "วิธีใช้",
-      "privacy": "ความเป็นส่วนตัว"
+      "privacy": "ความเป็นส่วนตัว",
+      "activity": "ประวัติธุรกรรม"
     }
   },
   "brand": "ChainRoll",
@@ -39,13 +40,38 @@
     "privacy": "รูปไม่ได้ขึ้นเชน — บนเชนมีแค่ hash ของรูป ลบโพสต์ได้เสมอ",
     "launch": "เปิดตัวพร้อม Zurich Hard Fork · 14.12",
     "nav": {
+      "feed": "ฟีด & 1/1 Prints",
       "films": "ฟิล์ม",
       "how": "วิธีใช้",
       "darkroom": "ห้องมืด",
       "privacy": "ความเป็นส่วนตัว"
     },
     "ctaFilms": "ดูฟิล์มทั้งหมด",
-    "footerTag": "24 EXP · ไม่มีฟิล์มม้วนไหนเหมือนกัน"
+    "footerTag": "24 EXP · ไม่มีฟิล์มม้วนไหนเหมือนกัน",
+    "nftBadge": "1/1 Film Print NFT · เสนอราคาด้วย KUB",
+    "tryFilmLabel": "ลองสลับโทนฟิล์มสดบน Contact sheet",
+    "holdToDevelop": "กดค้างเพื่อล้างฟิล์ม",
+    "holdingDevelop": "กำลังล้างในน้ำยา… {pct}%",
+    "developedReset": "ล้างครบ 100% · กดเพื่อรีเซ็ต",
+    "explorePrints": "สำรวจ 1/1 Prints บนฟีด",
+    "tankActive": "กำลังล้างในถังน้ำยา",
+    "holdSheetHint": "คลิกค้างหรือเลื่อนเมาส์เพื่อส่องฟิล์ม",
+    "stripLabel": "สายฟิล์ม 35mm ล่าสุด — คลิกค้างแล้วลากเพื่อเลื่อนดู",
+    "stripBid": "ดู / เสนอซื้อ",
+    "stripPrev": "เลื่อนดูรูปเก่า",
+    "stripNext": "เลื่อนดูรูปใหม่",
+    "splitBefore": "ภาพดิบ",
+    "splitAfter": "เกรดฟิล์ม",
+    "splitSlider": "เลื่อนซ้าย-ขวาเทียบภาพดิบกับฟิล์ม",
+    "stripCaptions": {
+      "chaophraya": "แสงเย็นริมแม่น้ำเจ้าพระยา",
+      "charoenkrung": "เงาพาดตึกแถวเจริญกรุง",
+      "yaowarat": "ป้ายไฟเยาวราชหลังฝนหยุด",
+      "songwat": "ร้านกาแฟถนนทรงวาด",
+      "hualamphong": "เฟรมสุดท้ายที่หัวลำโพง",
+      "chiangdao": "หมอกเช้าที่เชียงดาว"
+    },
+    "stepsHint": "วางเมาส์หรือกดค้างที่แต่ละขั้นเพื่อดูสถานะบนเชน"
   },
   "camera": {
     "back": "กลับ",
@@ -55,6 +81,8 @@
     "flip": "สลับกล้องหน้า/หลัง",
     "pickImage": "เลือกรูปจากเครื่อง",
     "imageMode": "โหมดรูปจากเครื่อง",
+    "uploadRejectedNoExif": "อัปโหลดได้เฉพาะรูปถ่ายจากกล้องจริง (ไม่รองรับรูปดาวน์โหลดหรือภาพแคปหน้าจอ)",
+    "uploadRejectedNotToday": "อัปโหลดได้เฉพาะรูปที่ถ่ายวันนี้เท่านั้น (ตามเวลาไทย)",
     "retry": "ลองใหม่",
     "film": "ม้วนฟิล์ม",
     "filmLocked": "ใส่ม้วนแล้ว — เปลี่ยนฟิล์มได้เมื่อถ่ายครบม้วน",
@@ -107,6 +135,7 @@
       "hash": "ลายนิ้วมือ",
       "hashNote": "ค่า hash นี้คือสิ่งที่ถูกบันทึกลง KUB Chain — ตัวรูปไม่ขึ้นเชน",
       "download": "บันทึก",
+      "postFrame": "โพสต์ลงฟีด",
       "chain": "บนเชน",
       "status": {
         "pending": "กำลังบันทึก",
@@ -152,7 +181,65 @@
       },
       "connectFirst": "เชื่อมกระเป๋าก่อนถ่าย — ทุกแชะคือ 1 tx บน KUB Chain",
       "connectToShoot": "เชื่อมกระเป๋าเพื่อเริ่มถ่าย",
-      "toDarkroom": "ดูในห้องมืด"
+      "toDarkroom": "ดูในห้องมืด",
+      "earlyDevelopLink": "ห้องมืด ({used} รูป)"
+    },
+    "blockHud": {
+      "title": "ยืนยันการบันทึกเฟรมลงบล็อก KUB Chain",
+      "dismiss": "ปิด",
+      "step1": "ยืนยันธุรกรรม",
+      "step2": "รอขึ้นบล็อก",
+      "step3": "บันทึกสำเร็จ",
+      "stages": {
+        "awaiting-confirm": "รอยืนยันบนหน้าเว็บ",
+        "signing": "รอเซ็นในกระเป๋า",
+        "mining": "กำลังขึ้นบล็อก",
+        "confirmed": "บล็อกยืนยันแล้ว",
+        "failed": "ไม่สำเร็จ"
+      },
+      "headlines": {
+        "awaiting-confirm": "บันทึกเฟรม #{frame} ลงบล็อก KUB Chain",
+        "signing": "กำลังรอยืนยันธุรกรรมสำหรับเฟรม #{frame}…",
+        "mining": "ส่งขึ้นเชนแล้ว — กำลังรอบล็อกยืนยันเฟรม #{frame}…",
+        "confirmed": "เฟรม #{frame} บันทึกลงบล็อกสำเร็จ!",
+        "failed": "บันทึกเฟรม #{frame} ลงบล็อกไม่สำเร็จ"
+      },
+      "claimHeadlines": {
+        "awaiting-confirm": "ยืนยันรับม้วนฟิล์ม {stock} (24 รูป) บนบล็อก",
+        "signing": "กำลังรอเซ็นรับม้วนฟิล์ม {stock}…",
+        "mining": "กำลังเปิดม้วนฟิล์ม {stock} ลงบล็อก KUB Chain…",
+        "confirmed": "โหลดม้วนฟิล์ม {stock} เข้ากล้องเรียบร้อย!",
+        "failed": "รับม้วนฟิล์ม {stock} ไม่สำเร็จ"
+      },
+      "developHeadlines": {
+        "awaiting-confirm": "ยืนยันปิดม้วน #{rollId} ส่งเข้าถังน้ำยาล้างฟิล์ม",
+        "signing": "กำลังรอเซ็นส่งล้างม้วน #{rollId}…",
+        "mining": "กำลังบันทึกเวลาส่งล้างม้วน #{rollId} ลงบล็อก…",
+        "confirmed": "ส่งม้วน #{rollId} เข้าห้องมืดแล้ว!",
+        "failed": "ส่งล้างม้วน #{rollId} ไม่สำเร็จ"
+      },
+      "actionLabel": "คำสั่ง Smart Contract",
+      "photoHash": "ลายนิ้วมือข้อมูล (keccak256)",
+      "networkGas": "เครือข่าย · ค่า Gas",
+      "txHash": "แฮชธุรกรรม (Tx)",
+      "autoConfirmLabel": "ยืนยันบล็อกอัตโนมัติในแชะถัดไปของม้วนนี้",
+      "later": "ยกเลิก",
+      "walletSignBtn": "เซ็นผ่านแอปกระเป๋า",
+      "confirmBtn": "ยืนยันบันทึกขึ้นบล็อก",
+      "openApproval": "เปิดหน้ายืนยัน Bitkub NEXT",
+      "checkWalletHint": "กดยืนยันธุรกรรมในกระเป๋าของคุณ",
+      "waitingBlockHint": "บล็อก KUB Chain ยืนยันใน ~3 วินาที",
+      "retryBtn": "กดยืนยันบล็อกใหม่",
+      "errors": {
+        "rejected": "ยกเลิกการเซ็นในกระเป๋า",
+        "insufficient-funds": "KUB ในกระเป๋าไม่พอจ่ายค่า gas",
+        "wrong-network": "กระเป๋าอยู่ผิด network — สลับเป็น KUB Chain",
+        "no-wallet": "ไม่พบกระเป๋าในเบราว์เซอร์นี้",
+        "quota": "โควตาธุรกรรมฟรีของ Bitkub NEXT หมดแล้ว",
+        "timeout": "รอยืนยันบล็อกนานเกินไป ลองใหม่อีกครั้ง",
+        "reverted": "เชนปฏิเสธธุรกรรม",
+        "unknown": "มีบางอย่างผิดพลาด ลองใหม่อีกครั้ง"
+      }
     }
   },
   "admin": {
@@ -209,6 +296,321 @@
     "soon": {
       "title": "ส่วนนี้ยังไม่ได้ล้าง",
       "body": "อยู่ในแผน M5 — ดูรายละเอียดใน PROJECT_BRIEF §8"
+    },
+    "density": {
+      "comfortable": "แถวปกติ",
+      "compact": "แถวกระชับ"
+    },
+    "cmd": {
+      "close": "ปิดค้นหา",
+      "navigate": "เลื่อน",
+      "open": "เปิดหน้า",
+      "openCamera": "ไปที่กล้อง",
+      "openDarkroom": "ไปที่ห้องมืด"
+    },
+    "guard": {
+      "eyebrow": "จำกัดสิทธิ์ผู้ดูแล",
+      "title": "กระเป๋านี้ไม่มีสิทธิ์ Admin / Curator บนเชน",
+      "body": "Darkroom Console ต้องใช้กระเป๋าที่ได้รับสิทธิ์ DEFAULT_ADMIN_ROLE หรือ CURATOR_ROLE บนสัญญา ChainRoll",
+      "requiredRole": "สิทธิ์ที่ต้องการ",
+      "currentWallet": "กระเป๋าปัจจุบัน",
+      "notConnected": "ยังไม่ได้เชื่อมกระเป๋า",
+      "connectBtn": "เชื่อมกระเป๋าผู้ดูแล",
+      "enterPreviewBtn": "เปิดโหมดดูตัวอย่าง (Read-Only)",
+      "testGateBtn": "ทดสอบหน้ากั้นสิทธิ์ (403 Gate)",
+      "readOnlyGuest": "โหมดดูตัวอย่าง (Read-Only) — เชื่อมกระเป๋าที่มี DEFAULT_ADMIN_ROLE หรือ CURATOR_ROLE เมื่อต้องการยิงธุรกรรมจริง",
+      "readOnlyWallet": "กระเป๋าที่เชื่อมยังไม่มี Role บนเชน — ดูและทดสอบ UI ได้ แต่ธุรกรรมบนเชนจะต้องใช้กระเป๋า Admin/Curator"
+    },
+    "moderation": {
+      "eyebrow": "02 · ตรวจเนื้อหา",
+      "title": "คิวรายงานและ AI Flag",
+      "description": "ตรวจรูปได้โดยไม่ต้องแตะเมาส์ — ทุกการตัดสินใจบันทึกลง Audit log และยกเลิกได้ภายใน 10 วินาที",
+      "filterLabel": "กรองสถานะ",
+      "queueLabel": "รายการรอตรวจ",
+      "shortcuts": {
+        "move": "เลื่อน",
+        "approve": "อนุมัติ",
+        "hide": "ซ่อน",
+        "ban": "แบน"
+      },
+      "tabs": {
+        "pending": "รอตรวจ",
+        "resolved": "ตรวจแล้ว",
+        "all": "ทั้งหมด"
+      },
+      "reasons": {
+        "nsfw": "เนื้อหาไม่เหมาะสม",
+        "spam": "สแปม / บอท",
+        "copyright": "ละเมิดลิขสิทธิ์",
+        "harassment": "คุกคาม"
+      },
+      "status": {
+        "pending": "รอตรวจ",
+        "approved": "อนุมัติแล้ว",
+        "hidden": "ซ่อนแล้ว",
+        "banned": "แบนผู้ใช้"
+      },
+      "reportCount": "รายงาน {count} ครั้ง",
+      "aiFlagged": "AI ตรวจพบ",
+      "fields": {
+        "shooter": "ผู้ถ่าย",
+        "reporter": "ผู้แจ้ง",
+        "reason": "สาเหตุ",
+        "photoHash": "ลายนิ้วมือรูป",
+        "confidence": "ความมั่นใจของ AI"
+      },
+      "noteLabel": "เหตุผลการตัดสินใจ (บันทึกลง Audit log)",
+      "notePlaceholder": "ระบุเหตุผล หรือเลือกจากปุ่มด้านล่าง…",
+      "presets": {
+        "falsePositive": "ภาพปกติ (AI เตือนผิด)",
+        "spamLink": "ลิงก์สแปม / โฆษณา",
+        "nsfwViolation": "เนื้อหาไม่เหมาะสมกับฟีดสาธารณะ",
+        "repeatOffender": "กระทำผิดซ้ำ"
+      },
+      "defaultNotes": {
+        "approved": "ตรวจสอบแล้วไม่ผิดกติกา",
+        "hidden": "ซ่อนออกจากฟีดสาธารณะตามรายงาน",
+        "banned": "ระงับบัญชีเนื่องจากละเมิดกติการ้ายแรง"
+      },
+      "actions": {
+        "approve": "อนุมัติ",
+        "hide": "ซ่อนโพสต์",
+        "ban": "แบนผู้ใช้"
+      },
+      "undo": "เลิกทำ",
+      "undoBanner": {
+        "approved": "อนุมัติโพสต์แล้ว",
+        "hidden": "ซ่อนโพสต์แล้ว",
+        "banned": "แบนผู้ถ่ายแล้ว"
+      },
+      "empty": {
+        "title": "คิวตรวจว่างแล้ว",
+        "body": "ไม่มีรายการค้างในหมวดนี้"
+      }
+    },
+    "films": {
+      "eyebrow": "03 · ม้วนฟิล์ม",
+      "title": "คลังฟิล์มและห้องปรับโทน",
+      "description": "อัปโหลด .cube LUT ปรับเกรนและแสงฟุ้ง ดูผลสดบน 4 ฉากมาตรฐาน แล้วบันทึกม้วนฟิล์มลง KUB Chain",
+      "newStock": "เพิ่มม้วนฟิล์ม #4",
+      "status": {
+        "active": "เปิดใช้",
+        "inactive": "ปิดอยู่"
+      },
+      "editorTitle": "ปรับแต่ง Film #{id}",
+      "resetLook": "ค่าเริ่มต้น",
+      "lutTitle": "ไฟล์ 3D LUT (.cube)",
+      "lutHint": "อัปโหลดไฟล์ .cube เพื่อดึงค่าโทนสี",
+      "uploadLut": "อัปโหลด .cube",
+      "lutError": "อ่านไฟล์ .cube ไม่สำเร็จ — ต้องมีจุดสีอย่างน้อย 8 จุด",
+      "sliders": {
+        "grain": "เกรนฟิล์ม (Grain)",
+        "halation": "แสงฟุ้งขอบไฟ (Halation)",
+        "vignette": "ขอบมืด (Vignette)",
+        "contrast": "คอนทราสต์ (Contrast)",
+        "saturation": "ความอิ่มสี (Saturation)",
+        "exposure": "ชดเชยแสง (Exposure)",
+        "fade": "ดำซีด (Fade)",
+        "monochrome": "ขาวดำ (Monochrome)"
+      },
+      "onChainSection": "ข้อมูลบนเชน (ChainRoll.setFilm)",
+      "fields": {
+        "name": "ชื่อฟิล์ม",
+        "frames": "จำนวนรูป / ม้วน",
+        "active": "เปิดให้รับม้วนรายวัน"
+      },
+      "publish": "Publish ลงเชน (setFilm)",
+      "publishing": "กำลังบันทึกลงเชน…",
+      "publishedOk": "อัปเดตม้วนฟิล์มบนเชนสำเร็จ",
+      "connectHint": "เชื่อมกระเป๋าที่มีสิทธิ์ CURATOR_ROLE ก่อนกด Publish",
+      "previewTitle": "ตัวอย่างโทนสด (WebGL2)",
+      "previewSubtitle": "เรนเดอร์ด้วย shader เดียวกับในกล้องบนฉากทดสอบ 4 แบบ",
+      "beforeAfter": "เทียบ Before / After",
+      "rawTag": "ต้นฉบับ",
+      "scenes": {
+        "nature": "ธรรมชาติ",
+        "portrait": "พอร์ตเทรต",
+        "night": "กลางคืน",
+        "indoor": "ในร่ม"
+      },
+      "errors": {
+        "rejected": "ยกเลิกในกระเป๋า",
+        "insufficient-funds": "KUB ในกระเป๋าไม่พอจ่ายค่า gas",
+        "wrong-network": "กระเป๋าอยู่ผิด network — สลับเป็น KUB Chain",
+        "no-wallet": "ไม่พบกระเป๋าในเบราว์เซอร์นี้",
+        "quota": "โควตาธุรกรรมฟรีหมดแล้ว",
+        "timeout": "รอยืนยันนานเกินไป ลองใหม่อีกครั้ง",
+        "reverted": "เชนปฏิเสธธุรกรรม (ตรวจสอบสิทธิ์ CURATOR_ROLE)",
+        "unknown": "มีบางอย่างผิดพลาด ลองใหม่อีกครั้ง"
+      }
+    },
+    "users": {
+      "eyebrow": "04 · ผู้ใช้",
+      "title": "ช่างภาพและบัญชีกระเป๋า",
+      "description": "ค้นหาด้วย address หรือชื่อดูประวัติการถ่าย รายงานที่เคยได้รับ และจัดการสิทธิ์",
+      "export": "Export CSV",
+      "inspector": "ข้อมูลช่างภาพ",
+      "cols": {
+        "user": "ผู้ใช้",
+        "wallet": "กระเป๋า",
+        "rolls": "ม้วน",
+        "shots": "แชะ",
+        "posts": "โพสต์",
+        "streak": "Streak",
+        "reports": "รายงาน",
+        "status": "สถานะ"
+      },
+      "status": {
+        "active": "ปกติ",
+        "banned": "ถูกแบน"
+      },
+      "reasonLabel": "หมายเหตุ (บันทึกลง Audit log)",
+      "reasonPlaceholder": "เหตุผลในการแบน / ให้ม้วนพิเศษ…",
+      "defaultReason": {
+        "banned": "ระงับสิทธิ์การโพสต์โดยผู้ดูแล",
+        "active": "ปลดแบนบัญชี"
+      },
+      "actions": {
+        "grantRoll": "ให้ม้วนพิเศษ (+1 ม้วน)",
+        "resetStreak": "รีเซ็ต Streak เป็น 0",
+        "ban": "แบนผู้ใช้นี้",
+        "unban": "ปลดแบนผู้ใช้"
+      },
+      "feedback": {
+        "banned": "แบน {user} เรียบร้อยแล้ว",
+        "active": "ปลดแบน {user} เรียบร้อยแล้ว",
+        "streakReset": "รีเซ็ต Streak ของ {user} แล้ว",
+        "rollGranted": "เพิ่มม้วนพิเศษให้ {user} แล้ว"
+      }
+    },
+    "gas": {
+      "eyebrow": "05 · Gas และโควตา",
+      "title": "งบ Relayer และโควตารายวัน",
+      "description": "คุมโควตาธุรกรรมต่อผู้ใช้ ตรวจจับบอทที่ยิง tx ถี่ผิดปกติ และจำกัดความเร็ว",
+      "relayerAlert": {
+        "title": "กระเป๋า relayer เหลือพอใช้อีก {days} วัน",
+        "body": "ยอดคงเหลือ {balance} KUB · ใช้ไปเฉลี่ย {burn} KUB/วัน",
+        "topUp": "เติม KUB"
+      },
+      "kpi": {
+        "balance": "ยอด Relayer คงเหลือ",
+        "daysLeft": "พอใช้อีก ~{days} วัน",
+        "burnRate": "อัตราใช้ต่อวัน",
+        "budgetHint": "เพดาน {budget} KUB/วัน",
+        "avgShotGas": "Gas เฉลี่ยต่อแชะ",
+        "flaggedAccounts": "บัญชีที่ถูกจำกัด/ต้องสงสัย",
+        "thresholdHint": "เกิน {rate} tx/นาที"
+      },
+      "policyTitle": "ตั้งค่าโควตาและเพดาน Gas",
+      "policySubtitle": "มีผลกับเซสชันที่เรียกผ่าน relayer และการตรวจ rate-limit ฝั่งเซิร์ฟเวอร์",
+      "savePolicy": "บันทึกการตั้งค่า",
+      "policySaved": "บันทึกและลง Audit log แล้ว",
+      "fields": {
+        "freeRolls": "ม้วนฟรีต่อวัน / คน",
+        "gaslessQuota": "โควตา tx ฟรีต่อวัน / คน",
+        "dailyBudget": "งบ Relayer สูงสุดต่อวัน",
+        "botThreshold": "เพดานกันบอท (Rate limit)"
+      },
+      "spendersTitle": "บัญชีที่ใช้ tx สูงสุดวันนี้ (Top spenders)",
+      "cols": {
+        "account": "บัญชี",
+        "wallet": "กระเป๋า",
+        "txToday": "Tx วันนี้",
+        "txPerMin": "ความถี่สูงสุด",
+        "kubSpent": "Gas ที่ใช้",
+        "status": "สถานะ"
+      },
+      "status": {
+        "normal": "ปกติ",
+        "flagged": "ถี่ผิดปกติ",
+        "limited": "จำกัดความเร็ว"
+      },
+      "actions": {
+        "limit": "จำกัดความเร็ว",
+        "unlimit": "ปลดจำกัด"
+      }
+    },
+    "contract": {
+      "eyebrow": "06 · Contract",
+      "title": "สถานะ ChainRoll บนเชน",
+      "description": "อ่านและตั้งค่าพารามิเตอร์บน KUB Chain โดยตรงจากสัญญา ChainRoll",
+      "refresh": "อ่านค่าใหม่",
+      "connectHint": "เชื่อมกระเป๋าเพื่อเช็คสิทธิ์",
+      "txConfirmed": "ธุรกรรมยืนยันบนเชนแล้ว",
+      "kpi": {
+        "status": "สถานะสัญญา",
+        "totalRolls": "ม้วนที่ออกไปแล้ว",
+        "developDelay": "เวลาล้างฟิล์ม",
+        "yourRoles": "สิทธิ์กระเป๋าของคุณ"
+      },
+      "status": {
+        "live": "ทำงานปกติ",
+        "paused": "หยุดชั่วคราว (Paused)"
+      },
+      "roles": {
+        "disconnected": "ยังไม่เชื่อมกระเป๋า",
+        "viewer": "ผู้ชมทั่วไป",
+        "granted": "มีสิทธิ์",
+        "none": "ไม่มีสิทธิ์"
+      },
+      "deploymentTitle": "ข้อมูลสัญญาและ Role บนเชน",
+      "paramsTitle": "ตั้งค่าพารามิเตอร์และสิทธิ์ (On-chain)",
+      "fields": {
+        "address": "Contract address",
+        "network": "เครือข่าย",
+        "router": "Bitkub NEXT Router",
+        "setDelay": "ตั้งเวลาล้างฟิล์ม (developDelay)",
+        "setRouter": "ตั้งค่า sdkCallHelperRouter",
+        "curatorTarget": "จัดการสิทธิ์ CURATOR_ROLE (address)"
+      },
+      "actions": {
+        "saveDelay": "ตั้งเวลา",
+        "saveRouter": "เปลี่ยน Router",
+        "grantCurator": "ให้สิทธิ์ Curator",
+        "revokeCurator": "ถอนสิทธิ์"
+      },
+      "pauseZone": {
+        "title": "หยุดการทำงานฉุกเฉิน (Pause / Unpause)",
+        "body": "เมื่อ Pause จะไม่สามารถรับม้วน ถ่าย หรือส่งล้างบนเชนได้จนกว่าจะ Unpause",
+        "confirmLabel": "พิมพ์ {word} เพื่อยืนยัน",
+        "pauseBtn": "Pause สัญญา",
+        "unpauseBtn": "Unpause สัญญา"
+      },
+      "errors": {
+        "rejected": "ยกเลิกในกระเป๋า",
+        "insufficient-funds": "KUB ในกระเป๋าไม่พอจ่ายค่า gas",
+        "wrong-network": "กระเป๋าอยู่ผิด network — สลับเป็น KUB Chain",
+        "no-wallet": "ไม่พบกระเป๋าในเบราว์เซอร์นี้",
+        "quota": "โควตาธุรกรรมฟรีหมดแล้ว",
+        "timeout": "รอยืนยันนานเกินไป ลองใหม่อีกครั้ง",
+        "reverted": "เชนปฏิเสธธุรกรรม (ต้องมี DEFAULT_ADMIN_ROLE)",
+        "unknown": "มีบางอย่างผิดพลาด ลองใหม่อีกครั้ง"
+      }
+    },
+    "audit": {
+      "eyebrow": "07 · Audit log",
+      "title": "บันทึกการกระทำของผู้ดูแล",
+      "description": "ทุกการเปลี่ยนแปลงใน Darkroom Console ถูกบันทึกพร้อมผู้กระทำ เป้าหมาย และแฮชธุรกรรม",
+      "export": "Export CSV",
+      "filterLabel": "กรองตามหมวด",
+      "justNow": "เมื่อสักครู่",
+      "categories": {
+        "all": "ทั้งหมด",
+        "moderation": "ตรวจเนื้อหา",
+        "films": "ม้วนฟิล์ม",
+        "users": "ผู้ใช้",
+        "gas": "Gas & โควตา",
+        "contract": "Contract"
+      },
+      "cols": {
+        "category": "หมวด",
+        "action": "การกระทำ",
+        "actor": "ผู้ดูแล",
+        "target": "เป้าหมาย",
+        "detail": "รายละเอียด",
+        "tx": "Tx บนเชน",
+        "time": "เวลา"
+      }
     }
   },
   "wallet": {
@@ -276,7 +678,10 @@
     "films": "ฟิล์ม",
     "camera": "กล้อง",
     "darkroom": "ห้องมืด",
-    "how": "วิธีใช้"
+    "how": "วิธีใช้",
+    "activity": "ประวัติธุรกรรม",
+    "profile": "โปรไฟล์ของฉัน",
+    "offline": "ออฟไลน์ — ถ่ายต่อได้ในกล้อง รูปจะบันทึกขึ้นเชนเมื่อเน็ตกลับมา"
   },
   "darkroom": {
     "eyebrow": "ห้องมืด",
@@ -317,6 +722,7 @@
     "panel": {
       "shooting": "ยังเหลืออีก {left} เฟรม — รูปทั้งหมดเป็นภาพแฝงจนกว่าจะถ่ายครบและล้าง",
       "keepShooting": "ถ่ายต่อ",
+      "developEarly": "ตัดม้วนส่งล้างเลย",
       "fullTitle": "ถ่ายครบม้วนแล้ว",
       "fullBody": "ส่งล้างฟิล์มเพื่อดูรูป — ใช้เวลาประมาณ {minutes} นาที (1 tx บน KUB Chain)",
       "develop": "ส่งล้างฟิล์ม",
@@ -326,7 +732,8 @@
       "inTankBody": "ปิดหน้านี้ได้ — กลับมาเมื่อหมดเวลา รูปทั้งม้วนจะค่อย ๆ ปรากฏ",
       "doneTitle": "ล้างเสร็จแล้ว",
       "doneBody": "แตะเฟรมเพื่อดูเต็มจอหรือบันทึกลงเครื่อง",
-      "postSoon": "โพสต์ (เร็ว ๆ นี้)"
+      "postSoon": "โพสต์ (เร็ว ๆ นี้)",
+      "postToFeed": "เลือกรูปโพสต์ลงฟีด"
     },
     "errors": {
       "rejected": "ยกเลิกในกระเป๋า",
@@ -469,12 +876,285 @@
   "feed": {
     "eyebrow": "ฟีด",
     "title": "รูปจากทุกม้วน",
+    "subtitle": "ทุกรูปในฟีดผ่านการถ่ายจนครบม้วนและล้างฟิล์มแล้ว — ยืนยันลายนิ้วมือรูปได้บน KUB Chain",
     "soonTitle": "ฟีดกำลังล้างอยู่",
     "soonBody": "อีกไม่นานคุณจะโพสต์รูปจากห้องมืดมาที่นี่ได้ — ตอนนี้เริ่มจากถ่ายม้วนแรกของคุณก่อน",
-    "cta": "เปิดกล้อง"
+    "cta": "เปิดกล้อง",
+    "filterFilm": "กรองตามฟิล์ม",
+    "allFilms": "ทุกฟิล์ม",
+    "sort": {
+      "latest": "ล่าสุด",
+      "popular": "ยอดนิยม"
+    },
+    "like": "ถูกใจ",
+    "share": "แชร์",
+    "copied": "คัดลอกลิงก์แล้ว",
+    "onChainBadge": "ยืนยันบนเชน",
+    "dismiss": "ปิด",
+    "emptyTitle": "ยังไม่มีรูปในฟิล์มนี้",
+    "emptyBody": "ลองดูฟิล์มทั้งหมด หรือเป็นคนแรกที่โพสต์รูปจากม้วนนี้",
+    "report": {
+      "trigger": "รายงาน",
+      "title": "รายงานรูปนี้",
+      "subtitle": "ช่วยเราดูแลฟีดให้สะอาด — รายงานจะถูกส่งเข้าคิวตรวจใน Darkroom Console",
+      "reasonLabel": "สาเหตุ",
+      "reasons": {
+        "nsfw": "เนื้อหาไม่เหมาะสม",
+        "spam": "สแปม / โฆษณา",
+        "copyright": "ละเมิดลิขสิทธิ์",
+        "harassment": "คุกคามผู้อื่น"
+      },
+      "noteLabel": "รายละเอียดเพิ่มเติม (ไม่บังคับ)",
+      "notePlaceholder": "อธิบายสั้น ๆ…",
+      "cancel": "ยกเลิก",
+      "submit": "ส่งรายงาน",
+      "thanks": "ส่งรายงานแล้ว ขอบคุณที่ช่วยดูแลฟีด"
+    },
+    "composer": {
+      "title": "โพสต์รูปจากม้วนนี้",
+      "subtitle": "เลือกรูปที่ล้างเสร็จแล้ว เขียนข้อความสั้น ๆ แล้วแชร์ขึ้นฟีดสาธารณะ",
+      "close": "ปิด",
+      "pickFrame": "เลือกเฟรม",
+      "captionLabel": "คำบรรยายภาพ",
+      "captionPlaceholder": "แสง สถานที่ หรือเรื่องราวของแชะนี้…",
+      "fields": {
+        "frame": "เฟรม",
+        "film": "ฟิล์ม",
+        "hash": "ลายนิ้วมือบนเชน"
+      },
+      "privacyNote": "เฉพาะรูปที่คุณกดโพสต์เท่านั้นที่จะแสดงบนฟีด คุณลบโพสต์ออกได้ทุกเมื่อ",
+      "mintToggle": "อัดเป็น 1/1 Film Print NFT (ERC-721 + Royalty 5%)",
+      "askPriceLabel": "ตั้งราคาขายทันที (เว้นว่างหรือใส่ 0 เพื่อเปิดรับเฉพาะข้อเสนอ)",
+      "askPriceHint": "ผู้สะสมสามารถกดซื้อทันที หรือยื่นข้อเสนอเป็น KUB ได้บนหน้าฟีด",
+      "publishBtn": "โพสต์ลงฟีด",
+      "updatePost": "อัปเดตคำบรรยาย",
+      "publishing": "กำลังโพสต์…",
+      "publishedOk": "โพสต์ขึ้นฟีดเรียบร้อย",
+      "viewPost": "ดูหน้าแชร์รูป",
+      "goToFeed": "ไปที่ฟีด"
+    },
+    "detail": {
+      "backToFeed": "กลับไปที่ฟีด",
+      "notFoundTitle": "ไม่พบรูปนี้",
+      "notFoundBody": "โพสต์นี้อาจถูกลบโดยผู้ถ่าย หรือไม่มีอยู่ในระบบ",
+      "delete": "ลบโพสต์",
+      "download": "ดาวน์โหลดรูป",
+      "proofTitle": "บันทึกการถ่ายบน KUB Chain",
+      "fields": {
+        "shooter": "ผู้ถ่าย",
+        "film": "ม้วนฟิล์ม",
+        "rollFrame": "ม้วน / เฟรม",
+        "photoHash": "ลายนิ้วมือรูป (keccak256)",
+        "txHash": "ธุรกรรม"
+      },
+      "proofNote": "ค่า hash บนเชนใช้ยืนยันว่ารูปนี้ถูกกดชัตเตอร์จริงในม้วนนั้นโดยไม่เคยถูกแก้ไข",
+      "shootYoursTitle": "ถ่ายม้วนของคุณวันนี้",
+      "shootYoursBody": "รับม้วนฟรีวันละ 1 ม้วน (24 รูป) — ลองโทน {film} ในกล้องได้เลย",
+      "shootYoursCta": "เปิดกล้องด้วยฟิล์มนี้"
+    },
+    "profile": {
+      "eyebrow": "ช่างภาพ & นักสะสม",
+      "you": "คุณ",
+      "collectorBadge": "ถือครอง {count} Print",
+      "backToFeed": "ฟีด",
+      "openDarkroom": "เปิดห้องมืดของฉัน",
+      "shootCta": "เปิดกล้อง",
+      "tabsLabel": "หมวดโปรไฟล์",
+      "tabs": {
+        "shot": "รูปที่ถ่าย",
+        "collected": "1/1 Prints ที่สะสม",
+        "offers": "ข้อเสนอซื้อขาย"
+      },
+      "stats": {
+        "frames": "รูปที่ถ่าย",
+        "collected": "1/1 Prints ที่ถือครอง",
+        "activeOffers": "ข้อเสนอที่ยื่นไว้",
+        "offersCount": "รวม {count} รายการ",
+        "rolls": "ม้วนที่โพสต์",
+        "likes": "ถูกใจทั้งหมด",
+        "favoriteFilm": "ฟิล์มที่ใช้บ่อย"
+      },
+      "edit": {
+        "trigger": "ตั้งชื่อ @handle & Bio",
+        "title": "แก้ไขโปรไฟล์ช่างภาพ",
+        "subtitle": "ชื่อ @handle จะแสดงบนทุกโพสต์ 1/1 Print และรายการเสนอซื้อของคุณ",
+        "handleLabel": "ชื่อช่างภาพ (@handle)",
+        "handleHint": "ภาษาอังกฤษพิมพ์เล็ก ตัวเลข จุด หรือขีด (2–24 ตัวอักษร)",
+        "bioLabel": "คำแนะนำตัว (Bio)",
+        "bioPlaceholder": "กล้องที่ใช้ ฟิล์มที่ชอบ หรือย่านที่เดินถ่ายบ่อย…",
+        "cancel": "ยกเลิก",
+        "save": "บันทึกโปรไฟล์",
+        "saved": "อัปเดตชื่อ @handle และ Bio เรียบร้อยแล้ว",
+        "errors": {
+          "invalid": "ใช้ได้เฉพาะ a-z, 0-9, จุด (.) หรือขีด (_ -) ความยาว 2–24 ตัวอักษร",
+          "taken": "ชื่อ @handle นี้มีคนใช้แล้ว"
+        }
+      },
+      "emptyTitle": "ยังไม่มีรูปที่โพสต์",
+      "emptyBodySelf": "เมื่อล้างฟิล์มเสร็จแล้ว เลือกรูปจาก Contact sheet ในห้องมืดมาโพสต์ได้ที่นี่",
+      "emptyBodyOther": "ช่างภาพคนนี้ยังไม่ได้เลือกรูปขึ้นฟีดสาธารณะ",
+      "collectedEmpty": {
+        "title": "ยังไม่มี 1/1 Film Print ในคอลเลกชัน",
+        "body": "สำรวจภาพถ่ายฟิล์มบนฟีดเพื่อซื้อทันที หรือยื่นข้อเสนอสะสมเป็น KUB",
+        "cta": "สำรวจ 1/1 Prints บนฟีด"
+      },
+      "offersEmpty": {
+        "title": "ยังไม่มีรายการเสนอซื้อที่ค้างอยู่",
+        "body": "เมื่อคุณยื่นข้อเสนอซื้อ 1/1 Print หรือมีคนยื่นข้อเสนอซื้อภาพของคุณ รายการจะปรากฏที่นี่"
+      },
+      "openForOffers": "เปิดรับข้อเสนอ",
+      "selfMintedPrint": "ผลงานต้นฉบับที่ถ่ายและอัดเอง",
+      "shotByPhotographer": "ถ่ายโดย {photographer}",
+      "topOfferLabel": "▸ ข้อเสนอสูงสุด {amount} KUB",
+      "noOffersLabel": "ยังไม่มีข้อเสนอ",
+      "managePrintLink": "จัดการ / ดูข้อเสนอ",
+      "offerDirection": {
+        "incoming": "มีคนเสนอซื้อภาพคุณ",
+        "outgoing": "คุณยื่นข้อเสนอไว้"
+      },
+      "fromBidder": "ผู้เสนอ",
+      "acceptOfferBtn": "รับข้อเสนอ",
+      "cancelOfferBtn": "ถอนข้อเสนอ"
+    },
+    "market": {
+      "printsTab": "1/1 Prints (NFT)",
+      "modalTitle": "1/1 Film Print & ข้อเสนอซื้อ",
+      "close": "ปิด",
+      "topBidShort": "เสนอสูงสุด {amount} KUB",
+      "offerBtnShort": "เสนอราคา",
+      "mintShort": "Mint 1/1 NFT",
+      "unmintedTitle": "1/1 Analog Print Edition",
+      "unmintedBody": "รูปนี้มีลายนิ้วมือบนเชนแล้ว แต่ยังไม่ได้อัดเป็น 1/1 Print NFT — เมื่อ Mint แล้วผู้สะสมจะสามารถเสนอราคาซื้อด้วย KUB และช่างภาพรับ Royalty 5% ทุกครั้งที่เปลี่ยนมือ",
+      "mintPriceLabel": "ราคาขายทันที (Buy Now) — ใส่ 0 หากต้องการเปิดรับข้อเสนออย่างเดียว",
+      "mintPriceHint": "ERC-721 บน KUB Chain · 1 รูป Mint ได้เพียง 1 ชิ้นเท่านั้น",
+      "mintBtn": "Mint 1/1 Film Print",
+      "onlyPhotographerCanMint": "เฉพาะช่างภาพเจ้าของม้วนเท่านั้นที่สั่งอัด 1/1 Print ชิ้นนี้ได้",
+      "owner": "ผู้ถือครอง",
+      "royaltyTag": "Royalty ช่างภาพ {pct}% (ERC-2981)",
+      "openForOffers": "เปิดรับข้อเสนอ",
+      "buyNowLabel": "ราคาซื้อทันที",
+      "statusLabel": "สถานะสิ่งพิมพ์",
+      "lastSale": "ซื้อขายล่าสุด {price} KUB",
+      "manageListing": "ตั้งราคาขาย",
+      "buyNowBtn": "ซื้อทันที {price} KUB",
+      "newPriceLabel": "ราคาขายใหม่ (KUB)",
+      "savePrice": "บันทึกราคา",
+      "delistBtn": "ปิดราคาขายทันที (รับเฉพาะ Offer)",
+      "makeOfferTitle": "ยื่นข้อเสนอซื้อ (Escrow KUB)",
+      "minOfferHint": "ขั้นต่ำ {min} KUB (+5%)",
+      "makeOfferBtn": "เสนอซื้อ",
+      "breakdown": {
+        "sellerNet": "ผู้ขายได้รับสุทธิ",
+        "royalty": "Royalty ช่างภาพ",
+        "primary": "ขายครั้งแรก (100%)",
+        "protocol": "ค่าธรรมเนียมระบบ"
+      },
+      "offersTitle": "รายการเสนอซื้อ (Offer Book)",
+      "highestOffer": "สูงสุด {amount} KUB",
+      "noOffersYet": "ยังไม่มีข้อเสนอ — เป็นคนแรกที่เสนอสะสมเฟรมนี้",
+      "acceptOfferBtn": "รับข้อเสนอ",
+      "cancelOfferBtn": "ถอนข้อเสนอ",
+      "preMintTitle": "เสนอซื้อ 1/1 ล่วงหน้า (Pre-Mint Offer)",
+      "preMintHint": "วาง KUB Escrow เพื่อขอให้ช่างภาพอัดรูปนี้เป็น 1/1 Print ขายให้คุณทันที",
+      "preMintBtn": "วางข้อเสนอขอซื้อ",
+      "preMintOfferShort": "คำขอซื้อ {amount} KUB",
+      "preMintBanner": "มีคนเสนอขอซื้อรูปนี้ในราคา {amount} KUB",
+      "preMintNetHint": "อัด 1/1 และรับสุทธิ {net} KUB (หักค่าธรรมเนียมระบบ 2.5%)",
+      "preMintAcceptBtn": "อัด 1/1 & ขายรับ {amount} KUB",
+      "preMintNoticePlaced": "ส่งคำขอซื้อล่วงหน้า {amount} KUB แล้ว — รอช่างภาพกดอัด 1/1",
+      "preMintNoticeAccepted": "อัด 1/1 Print #{tokenId} และขายให้ข้อเสนอ {amount} KUB แล้ว",
+      "provenanceTitle": "ประวัติสิ่งพิมพ์บนเชน (Provenance)",
+      "events": {
+        "minted": "อัดเป็น 1/1 Print",
+        "listed": "ปรับราคาขาย",
+        "offer_made": "ยื่นข้อเสนอซื้อ",
+        "offer_cancelled": "ถอนข้อเสนอ",
+        "offer_accepted": "ตอบรับข้อเสนอ",
+        "bought": "ซื้อทันที"
+      },
+      "notices": {
+        "minted": "Mint 1/1 Print #{tokenId} สำเร็จแล้ว",
+        "priceUpdated": "ตั้งราคาขาย {price} KUB แล้ว",
+        "delisted": "เปลี่ยนเป็นโหมดเปิดรับข้อเสนออย่างเดียวแล้ว",
+        "bought": "สะสม 1/1 Print สำเร็จที่ราคา {price} KUB",
+        "offerPlaced": "วางข้อเสนอ {amount} KUB ในสัญญา Escrow แล้ว",
+        "offerAccepted": "ตอบรับข้อเสนอ {amount} KUB และโอน 1/1 Print แล้ว"
+      },
+      "errors": {
+        "invalidAmount": "ระบุจำนวน KUB ที่ถูกต้อง",
+        "offerTooLow": "ต้องเสนออย่างน้อย {min} KUB (สูงกว่าข้อเสนอเดิม 5%)",
+        "insufficientBalance": "KUB ในกระเป๋าไม่พอ (มี {balance} KUB · ต้องการ {required} KUB)"
+      },
+      "walletBalance": "ยอดเงินบนเชน: {balance} KUB",
+      "blockHud": {
+        "title": "ยืนยันธุรกรรม 1/1 Print บน KUB Chain",
+        "dismiss": "ปิด",
+        "step1": "ยืนยันธุรกรรม",
+        "step2": "รอขึ้นบล็อก",
+        "step3": "บันทึกสำเร็จ",
+        "stages": {
+          "awaiting-confirm": "รอยืนยันบนหน้าเว็บ",
+          "mining": "กำลังขึ้นบล็อก",
+          "confirmed": "บล็อกยืนยันแล้ว"
+        },
+        "contractLabel": "คำสั่ง Smart Contract",
+        "valueLabel": "มูลค่าธุรกรรม",
+        "digestLabel": "ลายนิ้วมือข้อมูล (keccak256)",
+        "networkLabel": "เครือข่าย · ค่า Gas",
+        "txHashLabel": "แฮชธุรกรรม (Tx)",
+        "waitingBlockHint": "กำลังรอการยืนยันจากบล็อก KUB Chain…",
+        "confirmedHint": "บันทึกลงบล็อกและฐานข้อมูลเรียบร้อย!",
+        "cancelBtn": "ยกเลิก",
+        "confirmBtn": "ยืนยันบันทึกขึ้นบล็อก"
+      }
+    }
   },
   "locale": {
     "label": "ภาษา"
+  },
+  "activity": {
+    "eyebrow": "ธุรกรรม",
+    "title": "ประวัติการบันทึกบนเชน",
+    "subtitle": "ทุกแชะที่ถ่ายจากเครื่องนี้และสถานะธุรกรรมบน KUB Chain — กดลองใหม่ได้ทันทีหากรายการใดไม่สำเร็จ",
+    "refresh": "รีเฟรช",
+    "openCamera": "เปิดกล้อง",
+    "offlineBanner": "คุณกำลังออฟไลน์ — แชะที่ถ่ายไว้จะถูกเก็บในเครื่องและส่งขึ้นเชนเมื่อกลับมาออนไลน์",
+    "filterLabel": "กรองตามสถานะ",
+    "kpi": {
+      "confirmed": "บันทึกบนเชนแล้ว",
+      "pending": "กำลังบันทึก / รอคิว",
+      "failed": "ต้องลองใหม่",
+      "rolls": "ม้วนในเครื่องนี้"
+    },
+    "tabs": {
+      "all": "ทั้งหมด",
+      "confirmed": "ยืนยันแล้ว",
+      "pending": "รอเชน",
+      "failed": "ไม่สำเร็จ"
+    },
+    "status": {
+      "confirmed": "บันทึกแล้ว",
+      "pending": "กำลังบันทึก",
+      "failed": "ไม่สำเร็จ"
+    },
+    "rollLink": "ม้วน #{id}",
+    "hashLabel": "ลายนิ้วมือรูป",
+    "retryBtn": "ลองบันทึกใหม่",
+    "retrying": "กำลังส่ง…",
+    "empty": {
+      "title": "ยังไม่มีรายการธุรกรรมในเครื่องนี้",
+      "body": "เมื่อคุณถ่ายรูปในกล้อง รายการบันทึกแต่ละเฟรมจะปรากฏที่นี่พร้อมลิงก์ไป KUB Explorer"
+    },
+    "errors": {
+      "rejected": "ยกเลิกในกระเป๋า",
+      "insufficient-funds": "KUB ในกระเป๋าไม่พอจ่ายค่า gas",
+      "wrong-network": "กระเป๋าอยู่ผิด network — สลับเป็น KUB Chain",
+      "no-wallet": "ไม่พบกระเป๋าในเบราว์เซอร์นี้",
+      "quota": "โควตาธุรกรรมฟรีของ Bitkub NEXT หมดแล้ว",
+      "timeout": "รอยืนยันนานเกินไป ลองใหม่อีกครั้ง",
+      "reverted": "เชนปฏิเสธธุรกรรม",
+      "unknown": "มีบางอย่างผิดพลาด ลองใหม่อีกครั้ง"
+    }
   },
   "ui": {
     "loading": "กำลังโหลด",

@@ -3,7 +3,7 @@
 import { getStock } from '@/features/film'
 import { Button, LatentFrame, RebateLabel, TxHash, cn } from '@chainroll/ui'
 import { explorerTxUrl } from '@/features/wallet'
-import { Download, RefreshCcw, X } from 'lucide-react'
+import { Download, RefreshCcw, Send, X } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useEffect, useRef } from 'react'
 import type { Shot } from './use-roll-session'
@@ -14,12 +14,21 @@ type Props = {
   onIndex: (i: number) => void
   onClose: () => void
   onRetry?: (hash: `0x${string}`) => void
+  onPostFrame?: (frame: number) => void
   /** false → latent images: frames stay dark until the roll is developed */
   developed: boolean
 }
 
 /** Full-screen review of a roll: the photo (once developed), its on-chain fingerprint, and a contact strip. */
-export function ReviewSheet({ shots, index, onIndex, onClose, onRetry, developed }: Props) {
+export function ReviewSheet({
+  shots,
+  index,
+  onIndex,
+  onClose,
+  onRetry,
+  onPostFrame,
+  developed,
+}: Props) {
   const t = useTranslations('camera.reviewSheet')
   const format = useFormatter()
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -158,12 +167,27 @@ export function ReviewSheet({ shots, index, onIndex, onClose, onRetry, developed
           ))}
         </div>
         {developed && (
-          <Button size="sm" asChild>
-            <a href={shot.url} download={`chainroll-${String(shot.frame).padStart(2, '0')}.${ext}`}>
-              <Download />
-              {t('download')}
-            </a>
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {onPostFrame && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => onPostFrame(shot.frame)}
+              >
+                <Send />
+                {t('postFrame')}
+              </Button>
+            )}
+            <Button size="sm" asChild>
+              <a
+                href={shot.url}
+                download={`chainroll-${String(shot.frame).padStart(2, '0')}.${ext}`}
+              >
+                <Download />
+                {t('download')}
+              </a>
+            </Button>
+          </div>
         )}
       </div>
     </div>

@@ -18,6 +18,8 @@ import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ReviewSheet } from './review-sheet'
+import { BlockConfirmHud } from './block-confirm-hud'
+import { verifyPhotoTakenToday } from './exif-guard'
 import { haptic, playShutter } from './shutter-fx'
 import { useCamera, type CameraStatus } from './use-camera'
 import { useRollSession } from './use-roll-session'
@@ -48,6 +50,7 @@ export function CameraView() {
   const [flash, setFlash] = useState(false)
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const session = useRollSession(getStock(pickedFilm).frames)
@@ -145,6 +148,16 @@ export function CameraView() {
 
   const onPickFile = async (file: File | undefined) => {
     if (!file) return
+    setUploadError(null)
+    const check = await verifyPhotoTakenToday(file)
+    if (!check.ok) {
+      setUploadError(
+        check.reason === 'not-today'
+          ? t('uploadRejectedNotToday')
+          : t('uploadRejectedNoExif'),
+      )
+      return
+    }
     const bmp = await createImageBitmap(file)
     image?.close()
     setImage(bmp)
@@ -208,7 +221,17 @@ export function CameraView() {
             </a>
           )}
         </span>
-        <WalletButton onOpen={() => setConnectOpen(true)} />
+        <div className="flex items-center gap-2">
+          {roll && used > 0 && (
+            <Link
+              href={`/darkroom/${roll.id}`}
+              className="rounded-xs border border-frame/40 bg-frame/10 px-2 py-1 font-mono text-2xs text-frame hover:bg-frame/20"
+            >
+              {t('chain.earlyDevelopLink', { used })}
+            </Link>
+          )}
+          <WalletButton onOpen={() => setConnectOpen(true)} />
+        </div>
       </div>
 
       {/* viewfinder */}
@@ -232,6 +255,15 @@ export function CameraView() {
             <span className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/60 px-2 py-0.5 font-mono text-2xs text-frame">
               {t('imageMode')}
             </span>
+          )}
+          {uploadError && (
+            <div
+              role="alert"
+              onClick={() => setUploadError(null)}
+              className="absolute inset-x-3 top-3 z-20 cursor-pointer border border-danger/60 bg-black/90 px-3 py-2 text-center text-xs text-danger backdrop-blur-xs"
+            >
+              {uploadError}
+            </div>
           )}
 
           {!live && !blocked && !glError && (
@@ -390,19 +422,33 @@ export function CameraView() {
                 {actionBusy ? t('chain.developing') : t('chain.develop')}
               </Button>
             ) : developed && roll ? (
-              <Button variant="primary" asChild>
-                <Link href={`/darkroom/${roll.id}`}>{t('chain.toDarkroom')}</Link>
-              </Button>
-            ) : (
-              <span className="text-center font-mono text-2xs text-fg-muted">
-                {t('chain.developed', {
-                  time: format.dateTime(new Date((roll?.developReadyAt ?? 0) * 1000), {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }),
-                })}
-              </span>
-            )
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button variant="primary" asChild>
+                  <Link href={`/darkroom/${roll.id}`}>{t('chain.toDarkroom')}</Link>
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={actionBusy}
+                  onClick={() => session.claim(pickedFilm)}
+                >
+                  {t('chain.claim')}
+                </Button>
+              </div>
+            ) : roll ? (
+              <div className="flex flex-col items-center gap-1.5">
+                <Button variant="primary" size="sm" asChild>
+                  <Link href={`/darkroom/${roll.id}`}>{t('chain.toDarkroom')}</Link>
+                </Button>
+                <span className="text-center font-mono text-2xs text-fg-muted">
+                  {t('chain.developed', {
+                    time: format.dateTime(new Date((roll?.developReadyAt ?? 0) * 1000), {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                  })}
+                </span>
+              </div>
+            ) : null
           ) : (
             <button
               type="button"
@@ -455,6 +501,23 @@ export function CameraView() {
           e.target.value = ''
         }}
       />
+
+      {session.hud && (
+        <BlockConfirmHud
+          task={session.hud}
+          approvalUrl={session.approvalUrl}
+          autoConfirm={session.autoConfirm}
+          onToggleAutoConfirm={session.setAutoConfirm}
+          onConfirm={session.confirmHudShot}
+          onSignWallet={session.wallet.adapter ? session.signHudViaWallet : undefined}
+          onRetry={
+            session.hud.kind === 'shoot'
+              ? () => session.retry(session.hud!.digest)
+              : session.signHudViaWallet
+          }
+          onDismiss={session.dismissHud}
+        />
+      )}
 
       {reviewIndex !== null && (
         <ReviewSheet

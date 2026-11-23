@@ -35,6 +35,7 @@ export const NEXT_SIGNATURES = {
   claimDailyRoll: 'claimDailyRoll(uint16 filmId, address _bitkubNext)',
   shoot: 'shoot(uint256 rollId, bytes32 photoHash, address _bitkubNext)',
   develop: 'develop(uint256 rollId, address _bitkubNext)',
+  developEarly: 'developEarly(uint256 rollId, address _bitkubNext)',
 } as const
 
 const POLL_MS = 2000
@@ -78,5 +79,7 @@ export function createBitkubNextAdapter(
     shoot: (rollId, photoHash, hooks) =>
       send(hooks, NEXT_SIGNATURES.shoot, [rollId.toString(), photoHash]),
     develop: (rollId, hooks) => send(hooks, NEXT_SIGNATURES.develop, [rollId.toString()]),
+    developEarly: (rollId, hooks) =>
+      send(hooks, NEXT_SIGNATURES.developEarly, [rollId.toString()]),
   }
 }

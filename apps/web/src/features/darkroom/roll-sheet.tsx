@@ -1,8 +1,9 @@
 'use client'
 
-import { ReviewSheet, type Shot } from '@/features/camera'
+import { BlockConfirmHud, ReviewSheet, type BlockHudTask, type Shot } from '@/features/camera'
+import { PostComposerModal, useFeedStore, type PublishableFrame } from '@/features/feed'
 import { getStock, useStockName } from '@/features/film'
-import { countdown, photoStore, rollStage, useNowSec, useRoll } from '@/features/roll'
+import { countdown, developRollOnPage, photoStore, rollStage, useNowSec, useRoll } from '@/features/roll'
 import {
   activeChain,
   chainRollContract,
@@ -10,13 +11,15 @@ import {
   isBusy,
   txReducer,
   useWallet,
+  waitForNextKubBlock,
 } from '@/features/wallet'
 import { chainRollAbi } from '@chainroll/contracts'
 import { Badge, Button, EmptyState, FilmStrip, LatentFrame, cn } from '@chainroll/ui'
-import { ArrowLeft, Aperture, Beaker } from 'lucide-react'
+import { Aperture, ArrowLeft, Beaker, Check, Send } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { keccak256, stringToHex } from 'viem'
 import { useReadContract } from 'wagmi'
 
 const STAGE_TONE = {
@@ -34,8 +37,29 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
   const stockName = useStockName()
   const { roll, loading, refetch } = useRoll(rollId)
   const shots = useRollShots(rollId)
+  const { posts } = useFeedStore()
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
+  const [composerFrame, setComposerFrame] = useState<number | null>(null)
   const [tx, dispatch] = useReducer(txReducer, { status: 'idle' })
+  const [hudTask, setHudTask] = useState<BlockHudTask | null>(null)
+
+  const publishableFrames = useMemo<PublishableFrame[]>(() => {
+    if (!roll) return []
+    const local = shots.filter(Boolean) as Shot[]
+    if (local.length > 0) {
+      return local.map((s) => ({
+        frame: s.frame,
+        hash: s.hash,
+        txHash: s.txHash,
+        url: s.url,
+        blob: s.blob,
+      }))
+    }
+    return Array.from({ length: roll.framesUsed }, (_, i) => ({
+      frame: i + 1,
+      hash: keccak256(stringToHex(`chainroll:${activeChain.id}:${String(roll.id)}:${i + 1}`)),
+    }))
+  }, [roll, shots])
   const delay = useReadContract({
     address: chainRollContract!,
     abi: chainRollAbi,
@@ -76,17 +100,63 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
   const isOwner = Boolean(w.address && w.address.toLowerCase() === roll.owner.toLowerCase())
   const developed = stage === 'developed'
   const delaySec = Number(delay.data ?? 3600n)
+  const remainingSec = Math.max(0, roll.developReadyAt - now)
+  const effectiveWindow = remainingSec <= 15 ? 15 : delaySec
   const progress =
-    stage === 'developing' ? 1 - Math.max(0, roll.developReadyAt - now) / delaySec : 0
+    stage === 'developing' ? 1 - Math.min(1, remainingSec / effectiveWindow) : 0
   const viewable = shots.filter(Boolean) as Shot[]
 
-  const develop = async () => {
-    if (!w.adapter) return
+  const develop = (early = false) => {
     dispatch({ type: 'reset' })
+    const digest = keccak256(
+      stringToHex(`chainroll:develop:${String(roll.id)}:${early}:${roll.framesUsed}`),
+    )
+    setHudTask({
+      kind: 'develop',
+      rollId: roll.id,
+      early,
+      stockCode: stock.code,
+      digest,
+      stage: 'awaiting-confirm',
+    })
+  }
+
+  const confirmDevelopOnPage = async () => {
+    if (!hudTask || hudTask.kind !== 'develop') return
+    setHudTask({ ...hudTask, stage: 'mining', errorCode: undefined })
+    const { blockNumber } = await waitForNextKubBlock()
+    const { txHash } = developRollOnPage(hudTask.rollId, Boolean(hudTask.early), 15)
+    setHudTask({ ...hudTask, stage: 'confirmed', txHash, blockNumber })
+    window.setTimeout(() => {
+      setHudTask((cur) => (cur?.stage === 'confirmed' ? null : cur))
+    }, 2200)
+  }
+
+  const signDevelopViaWallet = async () => {
+    if (!hudTask || hudTask.kind !== 'develop' || !w.adapter) {
+      confirmDevelopOnPage()
+      return
+    }
+    setHudTask({ ...hudTask, stage: 'signing', errorCode: undefined })
     try {
-      await w.adapter.develop(roll.id, { onEvent: dispatch })
+      let txHash: `0x${string}` | undefined
+      const fn = hudTask.early ? w.adapter.developEarly : w.adapter.develop
+      await fn(roll.id, {
+        onEvent: (e) => {
+          dispatch(e)
+          if (e.type === 'submitted') {
+            txHash = e.hash
+            setHudTask({ ...hudTask, stage: 'mining', txHash: e.hash })
+          }
+        },
+      })
+      setHudTask({ ...hudTask, stage: 'confirmed', txHash })
+      window.setTimeout(() => {
+        setHudTask((cur) => (cur?.stage === 'confirmed' ? null : cur))
+      }, 2400)
     } catch (e) {
-      dispatch({ type: 'error', ...classifyTxError(e) })
+      const { code } = classifyTxError(e)
+      setHudTask({ ...hudTask, stage: 'failed', errorCode: code })
     } finally {
       await refetch()
     }
@@ -124,16 +194,34 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
         <section className="mb-6 border border-border bg-bg-raised p-5">
           {stage === 'shooting' && (
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="text-sm text-fg-muted">
-                {t('panel.shooting', { left: roll.frames - roll.framesUsed })}
-              </p>
+              <div className="flex flex-col gap-1">
+                <p className="text-sm text-fg-muted">
+                  {t('panel.shooting', { left: roll.frames - roll.framesUsed })}
+                </p>
+                {tx.status === 'failed' && (
+                  <p className="text-sm text-danger">{t(`errors.${tx.code}`)}</p>
+                )}
+              </div>
               {isOwner && (
-                <Button variant="primary" asChild>
-                  <Link href="/camera">
-                    <Aperture />
-                    {t('panel.keepShooting')}
-                  </Link>
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {roll.framesUsed > 0 && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={isBusy(tx)}
+                      onClick={() => void develop(true)}
+                    >
+                      <Beaker />
+                      {isBusy(tx) ? t('panel.developing') : t('panel.developEarly')}
+                    </Button>
+                  )}
+                  <Button variant="primary" size="sm" asChild>
+                    <Link href="/camera">
+                      <Aperture />
+                      {t('panel.keepShooting')}
+                    </Link>
+                  </Button>
+                </div>
               )}
             </div>
           )}
@@ -159,7 +247,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                 )}
               </div>
               {isOwner && (
-                <Button variant="inverse" disabled={isBusy(tx)} onClick={develop}>
+                <Button variant="inverse" disabled={isBusy(tx)} onClick={() => void develop(false)}>
                   <Beaker />
                   {isBusy(tx) ? t('panel.developing') : t('panel.develop')}
                 </Button>
@@ -199,7 +287,15 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                 <p className="font-medium text-success">{t('panel.doneTitle')}</p>
                 <p className="text-sm text-fg-muted">{t('panel.doneBody')}</p>
               </div>
-              <Button disabled>{t('panel.postSoon')}</Button>
+              {isOwner && publishableFrames.length > 0 && (
+                <Button
+                  variant="primary"
+                  onClick={() => setComposerFrame(publishableFrames[0]!.frame)}
+                >
+                  <Send />
+                  {t('panel.postToFeed')}
+                </Button>
+              )}
             </div>
           )}
         </section>
@@ -218,6 +314,10 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                   if (frame > roll.frames) return <div key={k} />
                   const shot = shots[frame - 1]
                   const exposed = frame <= roll.framesUsed || Boolean(shot)
+                  const isPosted = Boolean(
+                    shot &&
+                      posts.some((p) => p.photoHash.toLowerCase() === shot.hash.toLowerCase()),
+                  )
                   return (
                     <div key={k} className="flex flex-col gap-0.5">
                       <button
@@ -245,6 +345,11 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                           />
                         ) : (
                           <div className="size-full border border-dashed border-white/10" />
+                        )}
+                        {developed && isPosted && (
+                          <span className="absolute top-1 right-1 inline-flex size-4 items-center justify-center rounded-full bg-success text-white">
+                            <Check className="size-2.5" />
+                          </span>
                         )}
                       </button>
                       <span className="font-mono text-[9px] tracking-[0.15em] text-frame/70">
@@ -274,6 +379,35 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
           onIndex={setReviewIndex}
           onClose={() => setReviewIndex(null)}
           developed={developed}
+          onPostFrame={
+            developed && isOwner
+              ? (frame) => {
+                  setReviewIndex(null)
+                  setComposerFrame(frame)
+                }
+              : undefined
+          }
+        />
+      )}
+
+      {composerFrame !== null && (
+        <PostComposerModal
+          rollId={Number(roll.id)}
+          filmId={roll.filmId}
+          shooter={roll.owner}
+          frames={publishableFrames}
+          initialFrame={composerFrame}
+          onClose={() => setComposerFrame(null)}
+        />
+      )}
+
+      {hudTask && (
+        <BlockConfirmHud
+          task={hudTask}
+          onConfirm={confirmDevelopOnPage}
+          onSignWallet={w.adapter ? () => void signDevelopViaWallet() : undefined}
+          onRetry={() => void signDevelopViaWallet()}
+          onDismiss={() => setHudTask(null)}
         />
       )}
     </div>

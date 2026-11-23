@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { FRAME_ASPECT, captureSize, coverCrop } from './geometry'
 import { MAX_PHOTO_BYTES, fitQuality } from './encode'
+import { parseCubeLut } from './lut'
 import { FILM_STOCKS, getStock } from './stocks'
 
 describe('coverCrop', () => {
@@ -67,5 +68,46 @@ describe('film stocks', () => {
 
   it('getStock falls back to the first stock', () => {
     expect(getStock(999).id).toBe(1)
+  })
+})
+
+describe('parseCubeLut', () => {
+  it('parses a 2x2x2 Adobe .cube file and extracts title, size and look parameters', () => {
+    const cube = [
+      '# Created by ChainRoll Lab',
+      'TITLE "Warm Dusk 160"',
+      'LUT_3D_SIZE 2',
+      '0.04 0.03 0.02',
+      '0.85 0.15 0.10',
+      '0.10 0.85 0.12',
+      '0.92 0.88 0.20',
+      '0.10 0.12 0.82',
+      '0.90 0.20 0.85',
+      '0.15 0.88 0.88',
+      '0.98 0.94 0.88',
+    ].join('\n')
+    const info = parseCubeLut(cube)
+    expect(info.title).toBe('Warm Dusk 160')
+    expect(info.size).toBe(2)
+    expect(info.points).toBe(8)
+    expect(info.look.monochrome).toBe(false)
+    expect(info.look.fade).toBeGreaterThan(0)
+  })
+
+  it('detects monochrome .cube LUTs and rejects malformed files', () => {
+    const mono = [
+      'TITLE "Silver B&W"',
+      'LUT_3D_SIZE 2',
+      '0.02 0.02 0.02',
+      '0.30 0.30 0.30',
+      '0.45 0.45 0.45',
+      '0.55 0.55 0.55',
+      '0.60 0.60 0.60',
+      '0.75 0.75 0.75',
+      '0.85 0.85 0.85',
+      '0.98 0.98 0.98',
+    ].join('\n')
+    expect(parseCubeLut(mono).look.monochrome).toBe(true)
+    expect(() => parseCubeLut('TITLE "Empty"\n0 0 0')).toThrow()
   })
 })

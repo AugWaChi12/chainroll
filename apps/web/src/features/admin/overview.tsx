@@ -15,6 +15,7 @@ import { kubTestnet } from '@chainroll/shared'
 import { Download, Fuel, RefreshCw, TriangleAlert } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { useMemo } from 'react'
+import { downloadCsv, useAdminStore } from './audit-store'
 import { kpis, recentShots, type ShotRow } from './mock-data'
 
 const STATUS_TONE = { confirmed: 'success', pending: 'warning', failed: 'danger' } as const
@@ -22,6 +23,8 @@ const STATUS_TONE = { confirmed: 'success', pending: 'warning', failed: 'danger'
 export function AdminOverview() {
   const t = useTranslations('admin.overview')
   const format = useFormatter()
+  const { moderation } = useAdminStore()
+  const openReports = moderation.filter((m) => m.status === 'pending').length
   const n = (v: number) => format.number(v)
   const daysLeft = Math.floor(kpis.relayer.balance / kpis.relayer.burnPerDay)
 
@@ -109,7 +112,26 @@ export function AdminOverview() {
               <RefreshCw />
               {t('refresh')}
             </Button>
-            <Button size="sm">
+            <Button
+              size="sm"
+              onClick={() =>
+                downloadCsv(
+                  'chainroll-recent-shots.csv',
+                  ['id', 'frame', 'shooter', 'handle', 'film', 'wallet', 'txHash', 'status', 'minutesAgo'],
+                  recentShots.map((r) => [
+                    r.id,
+                    r.frame,
+                    r.shooter,
+                    r.handle,
+                    r.film,
+                    r.wallet,
+                    r.txHash,
+                    r.status,
+                    r.minutesAgo,
+                  ]),
+                )
+              }
+            >
               <Download />
               {t('export')}
             </Button>
@@ -166,9 +188,9 @@ export function AdminOverview() {
           />
           <KPIStat
             label={t('kpi.openReports')}
-            value={n(kpis.openReports.value)}
+            value={n(openReports)}
             hint={t('kpi.needsReview')}
-            tone="danger"
+            tone={openReports > 0 ? 'danger' : 'default'}
           />
         </KPIGrid>
 
