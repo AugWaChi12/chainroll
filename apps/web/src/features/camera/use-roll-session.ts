@@ -40,6 +40,7 @@ export function useRollSession(defaultFrames: number) {
   const [hud, setHud] = useState<BlockHudTask | null>(null)
   const [autoConfirm, setAutoConfirm] = useState<boolean>(false)
   const urls = useRef<string[]>([])
+  const txInFlightRef = useRef(false)
 
   // load the roll's photos from IndexedDB whenever the roll changes
   useEffect(() => {
@@ -116,11 +117,13 @@ export function useRollSession(defaultFrames: number) {
   /** Push transaction through external wallet extension/app when user clicks "Sign in wallet app". */
   const executeWalletConfirm = useCallback(
     async (task: BlockHudTask) => {
+      if (txInFlightRef.current) return
       const adapter = wallet.adapter
       if (!adapter) {
         executeOnPageConfirm(task)
         return
       }
+      txInFlightRef.current = true
       setHud({ ...task, stage: 'signing', errorCode: undefined })
       try {
         // Pre-flight real KUB gas check (getKubBalance returns KUB as a number)
@@ -163,6 +166,39 @@ export function useRollSession(defaultFrames: number) {
           })
           patchShot(task.digest, { status: 'confirmed', txHash })
           setHud({ ...task, stage: 'confirmed', txHash })
+          // Background sync real on-chain shot to Postgres so /verify and /admin stay in sync
+          if (wallet.address && typeof window !== 'undefined') {
+            const rollIdNum = Number(roll.id)
+            void window
+              .fetch('/api/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'roll.claim',
+                  roll: {
+                    id: rollIdNum,
+                    owner: wallet.address,
+                    filmId: roll.filmId,
+                    frames: roll.frames,
+                    txHash,
+                  },
+                }),
+              })
+              .then(() =>
+                window.fetch('/api/state', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    type: 'roll.shoot',
+                    rollId: rollIdNum,
+                    frame: task.frame,
+                    photoHash: task.digest,
+                    txHash,
+                  }),
+                }),
+              )
+              .catch(() => {})
+          }
         } else if (task.kind === 'develop') {
           let txHash: `0x${string}` | undefined
           const fn = task.early ? adapter.developEarly : adapter.develop
@@ -178,6 +214,20 @@ export function useRollSession(defaultFrames: number) {
             },
           })
           setHud({ ...task, stage: 'confirmed', txHash })
+          if (typeof window !== 'undefined') {
+            void window
+              .fetch('/api/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'roll.develop',
+                  rollId: Number(task.rollId),
+                  frames: roll?.framesUsed ?? frames,
+                  readyAtSec: Math.floor(Date.now() / 1000) + 15,
+                }),
+              })
+              .catch(() => {})
+          }
         }
 
         window.setTimeout(() => {
@@ -198,11 +248,12 @@ export function useRollSession(defaultFrames: number) {
           setHud({ ...task, stage: 'failed', errorCode: code })
         }
       } finally {
+        txInFlightRef.current = false
         setApprovalUrl(null)
         void chain.refetch()
       }
     },
-    [chain, executeOnPageConfirm, patchShot, roll, wallet.adapter, wallet.address, wallet.kind],
+    [chain, executeOnPageConfirm, frames, patchShot, roll, wallet.adapter, wallet.address, wallet.kind],
   )
 
   const addShot = useCallback(

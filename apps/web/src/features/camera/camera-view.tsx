@@ -161,8 +161,17 @@ export function CameraView() {
       ro.disconnect()
       rendererRef.current?.dispose()
       rendererRef.current = null
+      captureRef.current?.dispose()
+      captureRef.current = null
     }
   }, [])
+
+  // Release uploaded ImageBitmap on replace or unmount to prevent GPU memory leaks on iOS
+  useEffect(() => {
+    return () => {
+      image?.close()
+    }
+  }, [image])
 
   // ── render loop ──────────────────────────────────────────
   useEffect(() => {

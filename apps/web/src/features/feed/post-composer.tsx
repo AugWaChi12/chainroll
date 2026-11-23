@@ -1,15 +1,15 @@
 'use client'
 
 import { FilmPreview, SAMPLE_SCENES, getStock } from '@/features/film'
+import { useWallet } from '@/features/wallet'
 import { Button, Input, RebateLabel, TxHash, cn } from '@chainroll/ui'
-import { Check, ExternalLink, Send, Sparkles, X } from 'lucide-react'
+import { Check, ExternalLink, Send, X } from 'lucide-react'
 import type { Route } from 'next'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
 import { blobToDataUrl, createPost, useFeedStore, type FeedPost } from './post-store'
 import { frameMark } from './post-visual'
-import { getPrintForPost, mintPrintEdition, usePrintMarketStore } from './print-market'
 
 export type PublishableFrame = {
   frame: number
@@ -35,8 +35,8 @@ export function PostComposerModal({
   onClose: () => void
 }) {
   const t = useTranslations('feed.composer')
+  const wallet = useWallet()
   const { posts } = useFeedStore()
-  const { prints } = usePrintMarketStore()
   const stock = getStock(filmId)
 
   const [selectedFrame, setSelectedFrame] = useState<number>(
@@ -47,14 +47,10 @@ export function PostComposerModal({
   const existingPost = active
     ? posts.find((p) => p.photoHash.toLowerCase() === active.hash.toLowerCase())
     : undefined
-  const existingPrint = active
-    ? getPrintForPost(prints, existingPost?.id ?? '', active.hash)
-    : undefined
 
   const [caption, setCaption] = useState<string>(existingPost?.caption ?? '')
-  const [mintAsNft, setMintAsNft] = useState<boolean>(true)
-  const [askPriceInput, setAskPriceInput] = useState<string>('4.5')
   const [saving, setSaving] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
   const [published, setPublished] = useState<FeedPost | null>(null)
 
   if (!active) return null
@@ -63,15 +59,26 @@ export function PostComposerModal({
     setSelectedFrame(f.frame)
     const found = posts.find((p) => p.photoHash.toLowerCase() === f.hash.toLowerCase())
     setCaption(found?.caption ?? '')
+    setPublishError(null)
     setPublished(null)
   }
 
   const handlePublish = async () => {
     setSaving(true)
+    setPublishError(null)
     try {
+      // 1. Ensure verified SIWE session so R2 presigned upload & Postgres write never 401 silently
+      if (!wallet.authenticated) {
+        const ok = await wallet.signIn()
+        if (!ok) {
+          setPublishError('กรุณากดเซ็นยืนยันกระเป๋า (SIWE) ก่อนโพสต์ลงฟีด')
+          return
+        }
+      }
+
       let imageDataUrl: string | undefined
       if (active.blob) {
-        // Try direct browser -> Cloudflare R2 presigned upload (public CDN + private 1/1 master)
+        // 2. Direct browser -> Cloudflare R2 presigned upload (public CDN + private 1/1 master)
         const contentType =
           active.blob.type === 'image/jpeg' ? 'image/jpeg' : ('image/webp' as const)
         try {
@@ -116,6 +123,7 @@ export function PostComposerModal({
           imageDataUrl = await blobToDataUrl(active.blob)
         }
       }
+
       const fallbackScene = SAMPLE_SCENES[(active.frame - 1) % SAMPLE_SCENES.length]
       const post = createPost({
         shooter,
@@ -128,20 +136,22 @@ export function PostComposerModal({
         imageDataUrl,
         scene: fallbackScene,
       })
-      if (mintAsNft && !existingPrint) {
-        const parsed = Number(askPriceInput)
-        const ask = Number.isFinite(parsed) && parsed > 0 ? parsed : null
-        mintPrintEdition({
-          postId: post.id,
-          photoHash: active.hash,
-          rollId,
-          frame: active.frame,
-          filmId,
-          photographer: shooter,
-          askPriceKub: ask,
-        })
+
+      // 3. Verify server persistence explicitly so failures never fail silently
+      const persistRes = await window.fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'post.create', post }),
+      })
+      if (!persistRes.ok) {
+        const errData = (await persistRes.json().catch(() => null)) as { error?: string } | null
+        setPublishError(errData?.error ?? `บันทึกโพสต์ไม่สำเร็จ (HTTP ${persistRes.status})`)
+        return
       }
+
       setPublished(post)
+    } catch {
+      setPublishError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง')
     } finally {
       setSaving(false)
     }
@@ -265,33 +275,12 @@ export function PostComposerModal({
 
               <p className="text-2xs text-fg-subtle">{t('privacyNote')}</p>
 
-              {/* 1/1 Print NFT toggle */}
-              {!existingPrint && (
-                <div className="flex flex-col gap-2.5 border border-frame/45 bg-bg p-3">
-                  <label className="flex cursor-pointer items-center justify-between gap-2 text-xs">
-                    <span className="inline-flex items-center gap-1.5 font-medium text-fg">
-                      <Sparkles className="size-3.5 text-frame" />
-                      {t('mintToggle')}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={mintAsNft}
-                      onChange={(e) => setMintAsNft(e.target.checked)}
-                      className="size-4 accent-[var(--accent)]"
-                    />
-                  </label>
-                  {mintAsNft && (
-                    <Input
-                      label={t('askPriceLabel')}
-                      hint={t('askPriceHint')}
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      value={askPriceInput}
-                      onChange={(e) => setAskPriceInput(e.target.value)}
-                      trailing="KUB"
-                    />
-                  )}
+              {publishError && (
+                <div
+                  role="alert"
+                  className="border border-danger/50 bg-danger/10 px-3 py-2 text-xs text-danger"
+                >
+                  {publishError}
                 </div>
               )}
             </div>

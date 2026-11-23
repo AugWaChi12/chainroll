@@ -69,22 +69,7 @@ export async function POST(req: Request) {
     )
   }
 
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ ok: false, error: 'Invalid JSON body' }, { status: 400 })
-  }
-
-  const parsed = adminActionSchema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json(
-      { ok: false, error: 'Invalid admin action', issues: parsed.error.issues.slice(0, 3) },
-      { status: 400 },
-    )
-  }
-
-  // Require verified SIWE session + on-chain DEFAULT_ADMIN_ROLE / CURATOR_ROLE
+  // Require verified SIWE session + on-chain DEFAULT_ADMIN_ROLE / CURATOR_ROLE BEFORE parsing payload
   const session = await getServerSession()
   if (!session) {
     return NextResponse.json(
@@ -98,6 +83,21 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { ok: false, code: 'FORBIDDEN_ROLE', error: 'On-chain admin or curator role required' },
       { status: 403 },
+    )
+  }
+
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ ok: false, error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const parsed = adminActionSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, error: 'Invalid admin action', issues: parsed.error.issues.slice(0, 3) },
+      { status: 400 },
     )
   }
 
