@@ -266,7 +266,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               marginTop: '12px',
             }}
           >
-            <span>▸ {mark} · CHAINROLL</span>
+            <span>{`${mark} · CHAINROLL`}</span>
             <span>{stock}</span>
           </div>
         </div>
@@ -288,18 +288,27 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                gap: '10px',
                 color: '#E8A33D',
                 fontSize: '17px',
                 letterSpacing: '0.14em',
               }}
             >
-              <span>▸ {statusLine}</span>
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: '#E8A33D',
+                }}
+              />
+              <span>{statusLine}</span>
             </div>
 
             <div
               style={{
+                display: 'flex',
                 fontSize: '48px',
-                fontWeight: 700,
+                fontWeight: 600,
                 color: '#F2EDE4',
                 marginTop: '16px',
                 lineHeight: 1.1,
@@ -310,13 +319,14 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 
             <div
               style={{
+                display: 'flex',
                 fontSize: '26px',
                 color: '#C5BCB1',
                 marginTop: '22px',
                 lineHeight: 1.45,
               }}
             >
-              “{caption}”
+              {`"${caption}"`}
             </div>
           </div>
 
@@ -336,7 +346,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               }}
             >
               <span>{rollMeta}</span>
-              <span style={{ color: '#E8A33D' }}>HASH {hashLabel}</span>
+              <span style={{ color: '#E8A33D' }}>{`HASH ${hashLabel}`}</span>
             </div>
 
             <div
