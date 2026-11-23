@@ -228,7 +228,7 @@
       "confirmBtn": "ยืนยันบันทึกขึ้นบล็อก",
       "openApproval": "เปิดหน้ายืนยัน Bitkub NEXT",
       "checkWalletHint": "กดยืนยันธุรกรรมในกระเป๋าของคุณ",
-      "waitingBlockHint": "บล็อก KUB Chain ยืนยันใน ~3 วินาที",
+      "waitingBlockHint": "บล็อก KUB Chain ยืนยันใน ~1 วินาที",
       "retryBtn": "กดยืนยันบล็อกใหม่",
       "errors": {
         "rejected": "ยกเลิกการเซ็นในกระเป๋า",

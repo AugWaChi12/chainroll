@@ -30,17 +30,17 @@ export async function getKubBalance(address: Address): Promise<number | null> {
 }
 
 /**
- * Waits in real time for the next actual block on KUB Chain (via `activeChain` RPC).
+ * Waits in real time for the next actual block on KUB Chain (1s block time via `activeChain` RPC).
  * Falls back gracefully after `timeoutMs` if the RPC is unreachable/offline.
  */
-export async function waitForNextKubBlock(timeoutMs = 6500): Promise<KubBlockConfirmation> {
+export async function waitForNextKubBlock(timeoutMs = 3500): Promise<KubBlockConfirmation> {
   const client = getKubPublicClient()
 
   let startBlock: bigint | null = null
   try {
     startBlock = await client.getBlockNumber()
   } catch {
-    await new Promise((r) => setTimeout(r, 3000))
+    await new Promise((r) => setTimeout(r, 1000))
     return { blockNumber: null, live: false }
   }
 
@@ -63,7 +63,7 @@ export async function waitForNextKubBlock(timeoutMs = 6500): Promise<KubBlockCon
     try {
       unwatch = client.watchBlockNumber({
         poll: true,
-        pollingInterval: 800,
+        pollingInterval: 250,
         onBlockNumber: (blockNumber) => {
           if (startBlock === null || blockNumber > startBlock) {
             finish({ blockNumber, live: true })

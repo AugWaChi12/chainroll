@@ -292,7 +292,7 @@
       "confirmBtn": "Confirm block",
       "openApproval": "Open Bitkub NEXT approval",
       "checkWalletHint": "Approve the transaction in your wallet",
-      "waitingBlockHint": "KUB Chain blocks finalize in ~3s",
+      "waitingBlockHint": "KUB Chain blocks finalize in ~1s",
       "retryBtn": "Retry block confirm",
       "errors": {
         "rejected": "Cancelled in your wallet",
