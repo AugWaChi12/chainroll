@@ -525,6 +525,84 @@ export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<
   return { items, nextCursor, totalCount }
 }
 
+export type PostOgSummary = {
+  id: string
+  shooter: string
+  handle: string | null
+  rollId: number
+  frame: number
+  filmId: number
+  photoHash: string
+  caption: string
+  imageUrl: string | null
+  scene: 'nature' | 'portrait' | 'night' | 'indoor'
+  createdAt: number
+  print: {
+    tokenId: number
+    askPriceKub: number | null
+    topOfferKub: number | null
+  } | null
+  topPreMintOfferKub: number | null
+}
+
+export async function fetchPostByIdFromDb(id: string): Promise<PostOgSummary | null> {
+  const sql = getSql()
+  await ensurePreMintTable(sql)
+
+  const rows = await sql`
+    SELECT p.id, p.shooter, u.handle, p.roll_id, p.frame, p.film_id, p.photo_hash,
+           p.r2_public_url, p.scene, p.caption, p.created_at,
+           pr.token_id, pr.ask_price_kub,
+           (
+             SELECT MAX(o.amount_kub)
+             FROM public.print_offers o
+             WHERE o.token_id = pr.token_id AND o.status = 'active'
+           ) AS top_offer_kub,
+           (
+             SELECT MAX(pm.amount_kub)
+             FROM public.pre_mint_offers pm
+             WHERE lower(pm.photo_hash) = lower(p.photo_hash) AND pm.expires_at > now()
+           ) AS top_pre_mint_kub
+    FROM public.posts p
+    LEFT JOIN public.users u ON u.address = p.shooter
+    LEFT JOIN public.prints pr
+      ON pr.post_id = p.id OR lower(pr.photo_hash) = lower(p.photo_hash)
+    WHERE p.id = ${id} AND p.hidden_at IS NULL
+    LIMIT 1
+  `
+
+  const r = rows[0]
+  if (!r) return null
+
+  const sceneVal = String(r.scene ?? 'nature')
+  const validScene = (
+    ['nature', 'portrait', 'night', 'indoor'].includes(sceneVal) ? sceneVal : 'nature'
+  ) as PostOgSummary['scene']
+
+  return {
+    id: String(r.id),
+    shooter: String(r.shooter).toLowerCase(),
+    handle: r.handle ? String(r.handle) : null,
+    rollId: Number(r.roll_id),
+    frame: Number(r.frame),
+    filmId: Number(r.film_id),
+    photoHash: String(r.photo_hash),
+    caption: String(r.caption ?? ''),
+    imageUrl: r.r2_public_url ? String(r.r2_public_url) : null,
+    scene: validScene,
+    createdAt: new Date(String(r.created_at)).getTime(),
+    print:
+      r.token_id !== null && r.token_id !== undefined
+        ? {
+            tokenId: Number(r.token_id),
+            askPriceKub: r.ask_price_kub !== null ? Number(r.ask_price_kub) : null,
+            topOfferKub: r.top_offer_kub !== null ? Number(r.top_offer_kub) : null,
+          }
+        : null,
+    topPreMintOfferKub: r.top_pre_mint_kub !== null ? Number(r.top_pre_mint_kub) : null,
+  }
+}
+
 export type DbMutationPayload =
   | {
       type: 'post.create'

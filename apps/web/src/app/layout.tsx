@@ -17,14 +17,15 @@ const thai = Anuphan({ subsets: ['thai', 'latin'], variable: '--ff-thai' })
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('meta')
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://chainroll.nan-tai.com'
   return {
-    metadataBase: new URL('https://chainroll.art'),
+    metadataBase: new URL(siteUrl),
     title: { default: t('title'), template: '%s · ChainRoll' },
     description: t('description'),
     openGraph: {
       siteName: 'ChainRoll',
       type: 'website',
-      url: 'https://chainroll.art',
+      url: siteUrl,
     },
     twitter: {
       card: 'summary_large_image',
