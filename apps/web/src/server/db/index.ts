@@ -225,6 +225,31 @@ export async function reindexUntaggedPostsFromDb(opts?: {
   return { geminiConfigured, processed: rows.length, tagged, skipped }
 }
 
+export async function fetchVisualIndexStatsFromDb(): Promise<{
+  geminiConfigured: boolean
+  totalPosts: number
+  aiTaggedPosts: number
+  untaggedPosts: number
+}> {
+  const sql = getSql()
+  await ensureVisualSearchColumns(sql)
+  const rows = await sql`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(ai_tagged_at)::int AS tagged
+    FROM public.posts
+    WHERE hidden_at IS NULL
+  `
+  const totalPosts = Number(rows[0]?.total ?? 0)
+  const aiTaggedPosts = Number(rows[0]?.tagged ?? 0)
+  return {
+    geminiConfigured: Boolean(process.env.GEMINI_API_KEY?.trim()),
+    totalPosts,
+    aiTaggedPosts,
+    untaggedPosts: Math.max(0, totalPosts - aiTaggedPosts),
+  }
+}
+
 let shotSyncColsPromise: Promise<void> | null = null
 
 async function ensureShotSyncColumns(sql: Sql): Promise<void> {

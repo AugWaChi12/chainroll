@@ -77,10 +77,28 @@ export function PostComposerModal({
       }
 
       let imageDataUrl: string | undefined
-      if (active.blob) {
+      let uploadBlob: Blob | undefined =
+        active.blob && active.blob.size > 0 ? active.blob : undefined
+
+      // Cross-device publish: if frame came from Private R2 sync, fetch its real WebP bytes first
+      if (!uploadBlob && active.url && active.url.startsWith('/api/rolls/')) {
+        try {
+          const frameRes = await window.fetch(active.url, { cache: 'no-store' })
+          if (frameRes.ok) {
+            const fetched = await frameRes.blob()
+            if (fetched.size > 0) uploadBlob = fetched
+          }
+        } catch {
+          // ignore fetch error; fallback handled below
+        }
+      } else if (!uploadBlob && active.url && active.url.startsWith('https://')) {
+        imageDataUrl = active.url
+      }
+
+      if (uploadBlob) {
         // 2. Direct browser -> Cloudflare R2 presigned upload (public CDN + private 1/1 master)
         const contentType =
-          active.blob.type === 'image/jpeg' ? 'image/jpeg' : ('image/webp' as const)
+          uploadBlob.type === 'image/jpeg' ? 'image/jpeg' : ('image/webp' as const)
         try {
           const signRes = await window.fetch('/api/upload-url', {
             method: 'POST',
@@ -88,7 +106,7 @@ export function PostComposerModal({
             body: JSON.stringify({
               photoHash: active.hash,
               contentType,
-              bytes: active.blob.size,
+              bytes: uploadBlob.size,
             }),
           })
           if (signRes.ok) {
@@ -103,12 +121,12 @@ export function PostComposerModal({
                 window.fetch(signed.publicPutUrl, {
                   method: 'PUT',
                   headers: { 'Content-Type': contentType },
-                  body: active.blob,
+                  body: uploadBlob,
                 }),
                 window.fetch(signed.privatePutUrl, {
                   method: 'PUT',
                   headers: { 'Content-Type': contentType },
-                  body: active.blob,
+                  body: uploadBlob,
                 }),
               ])
               if (pubUp.ok && privUp.ok) {
@@ -120,7 +138,7 @@ export function PostComposerModal({
           // fallback to compressed data URL when R2 is not configured
         }
         if (!imageDataUrl) {
-          imageDataUrl = await blobToDataUrl(active.blob)
+          imageDataUrl = await blobToDataUrl(uploadBlob)
         }
       }
 

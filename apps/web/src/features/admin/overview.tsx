@@ -14,9 +14,9 @@ import {
   type ColumnDef,
 } from '@chainroll/ui'
 import { kubTestnet } from '@chainroll/shared'
-import { Download, Fuel, RefreshCw, TriangleAlert } from 'lucide-react'
+import { Download, Fuel, Loader2, RefreshCw, Sparkles, TriangleAlert } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { bulkHidePosts, downloadCsv, refreshAdminDashboard, useAdminStore } from './audit-store'
 import { kpis as seedKpis, type ShotRow } from './mock-data'
 
@@ -31,6 +31,81 @@ export function AdminOverview() {
   const openReports = moderation.filter((m) => m.status === 'pending').length
   const n = (v: number) => format.number(v)
   const daysLeft = Math.floor(seedKpis.relayer.balance / seedKpis.relayer.burnPerDay)
+
+  const [visualStats, setVisualStats] = useState<{
+    geminiConfigured: boolean
+    totalPosts: number
+    aiTaggedPosts: number
+    untaggedPosts: number
+  } | null>(null)
+  const [reindexing, setReindexing] = useState(false)
+  const [reindexNote, setReindexNote] = useState<string | null>(null)
+
+  const parseVisualStats = (data: {
+    ok?: boolean
+    geminiConfigured?: boolean
+    totalPosts?: number
+    aiTaggedPosts?: number
+    untaggedPosts?: number
+  }) => {
+    if (!data.ok) return null
+    return {
+      geminiConfigured: Boolean(data.geminiConfigured),
+      totalPosts: Number(data.totalPosts ?? 0),
+      aiTaggedPosts: Number(data.aiTaggedPosts ?? 0),
+      untaggedPosts: Number(data.untaggedPosts ?? 0),
+    }
+  }
+
+  useEffect(() => {
+    let alive = true
+    void window
+      .fetch('/api/admin/reindex-visual', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!alive || !data) return
+        const next = parseVisualStats(data)
+        if (next) setVisualStats(next)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const handleReindexVisual = async () => {
+    setReindexing(true)
+    setReindexNote(null)
+    try {
+      const res = await window.fetch('/api/admin/reindex-visual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 25 }),
+      })
+      const data = (await res.json().catch(() => null)) as {
+        ok?: boolean
+        geminiConfigured?: boolean
+        processed?: number
+        tagged?: number
+        skipped?: number
+        error?: string
+      } | null
+      if (!res.ok || !data?.ok) {
+        setReindexNote(data?.error ?? `HTTP ${res.status}`)
+      } else if (!data.geminiConfigured) {
+        setReindexNote('GEMINI_API_KEY not configured in .env (using zero-token baseline tags)')
+      } else {
+        setReindexNote(`Tagged ${data.tagged ?? 0} / ${data.processed ?? 0} posts with Gemini Vision`)
+      }
+      const statsRes = await window.fetch('/api/admin/reindex-visual', { cache: 'no-store' })
+      if (statsRes.ok) {
+        const next = parseVisualStats(await statsRes.json())
+        if (next) setVisualStats(next)
+      }
+    } finally {
+      setReindexing(false)
+    }
+  }
 
   const columns = useMemo<ColumnDef<ShotRow, unknown>[]>(
     () => [
@@ -199,6 +274,36 @@ export function AdminOverview() {
             tone={openReports > 0 ? 'danger' : 'default'}
           />
         </KPIGrid>
+
+        {/* AI Visual Search Index Panel */}
+        <section className="flex flex-wrap items-center justify-between gap-4 border border-border bg-bg-raised px-4 py-3.5">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-frame" aria-hidden />
+              <span className="text-sm font-medium">AI Visual Search (Gemini Vision)</span>
+              {visualStats && (
+                <Badge tone={visualStats.geminiConfigured ? 'success' : 'warning'} dot>
+                  {visualStats.geminiConfigured ? 'Gemini Active' : 'Baseline Only'}
+                </Badge>
+              )}
+            </div>
+            <p className="font-mono text-xs text-fg-muted">
+              {visualStats
+                ? `AI tagged: ${visualStats.aiTaggedPosts} / ${visualStats.totalPosts} posts · Pending: ${visualStats.untaggedPosts}`
+                : 'Loading AI visual index status…'}
+            </p>
+            {reindexNote && <p className="font-mono text-2xs text-frame">{reindexNote}</p>}
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={reindexing}
+            onClick={() => void handleReindexVisual()}
+          >
+            {reindexing ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            {reindexing ? 'Indexing…' : 'Re-index AI Visual Tags'}
+          </Button>
+        </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="text-md font-medium">{t('recent')}</h2>

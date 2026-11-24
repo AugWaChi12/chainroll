@@ -40,10 +40,22 @@ export function useMyRolls(address: Address | null) {
     }
   }, [address])
 
-  const ids = [...new Set([...(latest.data ? [latest.data] : []), ...localIds].map(String))]
-    .map(BigInt)
-    .filter((id) => id > 0n)
-    .sort((a, b) => (b > a ? 1 : -1))
+  const ids = useMemo(() => {
+    const latestId = latest.data ?? 0n
+    const onChainScan: bigint[] = []
+    if (latestId > 0n) {
+      // Scan up to the 60 most recent roll IDs on-chain in a single multicall so Phone & PC
+      // always see every roll owned by this wallet (not just latestRollOf).
+      const start = latestId > 60n ? latestId - 59n : 1n
+      for (let id = latestId; id >= start; id--) {
+        onChainScan.push(id)
+      }
+    }
+    return [...new Set([...onChainScan, ...localIds].map(String))]
+      .map(BigInt)
+      .filter((id) => id > 0n)
+      .sort((a, b) => (b > a ? 1 : -1))
+  }, [latest.data, localIds])
 
   const rolls = useReadContracts({
     allowFailure: true,
@@ -77,7 +89,9 @@ export function useMyRolls(address: Address | null) {
     })
   })
 
-  if (address) {
+  // Only fall back to off-chain onPageRolls when no live ChainRoll contract is configured.
+  // When a live contract is configured, KUB Chain is the single source of truth across all devices.
+  if (!chainRollContract && address) {
     for (const r of onPageRolls) {
       if (r.owner.toLowerCase() !== address.toLowerCase()) continue
       byId.set(String(r.id), {

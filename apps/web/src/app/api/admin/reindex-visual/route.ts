@@ -1,10 +1,40 @@
 import { getServerSession, isOnChainAdminOrCurator } from '@/server/auth/session'
-import { reindexUntaggedPostsFromDb } from '@/server/db'
+import { fetchVisualIndexStatsFromDb, reindexUntaggedPostsFromDb } from '@/server/db'
 import { checkRateLimit, clientIpFromRequest } from '@/server/security/rate-limit'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
+
+export async function GET(req: Request) {
+  const ip = clientIpFromRequest(req)
+  const rl = checkRateLimit(`admin:reindex-visual:get:${ip}`, 60, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: 'Rate limit exceeded' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    )
+  }
+
+  const session = await getServerSession()
+  if (!session) {
+    return NextResponse.json({ ok: false, code: 'AUTH_REQUIRED' }, { status: 401 })
+  }
+  const allowed = await isOnChainAdminOrCurator(session.address)
+  if (!allowed) {
+    return NextResponse.json({ ok: false, code: 'FORBIDDEN_ROLE' }, { status: 403 })
+  }
+
+  try {
+    const stats = await fetchVisualIndexStatsFromDb()
+    return NextResponse.json({ ok: true, ...stats })
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: err instanceof Error ? err.message : 'stats failed' },
+      { status: 500 },
+    )
+  }
+}
 
 const bodySchema = z
   .object({

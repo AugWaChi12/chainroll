@@ -122,21 +122,19 @@ async function loadImageAsBase64(imageSource: string): Promise<{ mimeType: strin
     return { mimeType: match[1], data: match[2] }
   }
 
-  // 2. Local sample file under public/
+  // 2. Local sample file under public/samples/ (explicit allowlist prevents Turbopack dynamic-fs tracing warning)
   if (imageSource.startsWith('/samples/')) {
-    const safeRel = imageSource.replace(/^\/+/, '')
-    if (safeRel.includes('..')) return null
+    const fileName = imageSource.slice('/samples/'.length)
+    const ALLOWED_SAMPLES = new Set(['nature.jpg', 'night.jpg', 'portrait.jpg', 'indoor.jpg'])
+    if (!ALLOWED_SAMPLES.has(fileName)) return null
     const candidates = [
-      path.join(process.cwd(), 'public', safeRel),
-      path.join(process.cwd(), 'apps', 'web', 'public', safeRel),
+      path.join(process.cwd(), 'public', 'samples', fileName),
+      path.join(process.cwd(), 'apps', 'web', 'public', 'samples', fileName),
     ]
     for (const filePath of candidates) {
       try {
-        const buf = await readFile(filePath)
-        const ext = path.extname(filePath).toLowerCase()
-        const mimeType =
-          ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg'
-        return { mimeType, data: buf.toString('base64') }
+        const buf = await readFile(/*turbopackIgnore: true*/ filePath)
+        return { mimeType: 'image/jpeg', data: buf.toString('base64') }
       } catch {
         // try next candidate
       }

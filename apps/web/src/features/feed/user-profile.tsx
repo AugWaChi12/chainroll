@@ -51,7 +51,7 @@ export function UserProfileView({ profileAddress }: { profileAddress: string }) 
   const t = useTranslations('feed.profile')
   const format = useFormatter()
   const stockName = useStockName()
-  const { address: connectedAddress } = useWallet()
+  const { address: connectedAddress, authenticated, signIn } = useWallet()
   const { posts } = useFeedStore()
   const { prints } = usePrintMarketStore()
 
@@ -137,7 +137,11 @@ export function UserProfileView({ profileAddress }: { profileAddress: string }) 
     setEditing(true)
   }
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    if (!authenticated) {
+      const ok = await signIn()
+      if (!ok) return
+    }
     const res = saveProfileMeta({
       address: profileAddress,
       handle: handleInput,
@@ -248,7 +252,7 @@ export function UserProfileView({ profileAddress }: { profileAddress: string }) 
             <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
               {t('edit.cancel')}
             </Button>
-            <Button variant="primary" size="sm" onClick={handleSaveProfile}>
+            <Button variant="primary" size="sm" onClick={() => void handleSaveProfile()}>
               <Check />
               {t('edit.save')}
             </Button>
@@ -270,7 +274,11 @@ export function UserProfileView({ profileAddress }: { profileAddress: string }) 
       </div>
 
       {/* Profile Tabs: Shot | Collected 1/1 Prints | Offers */}
-      <div className="mb-8 flex flex-wrap gap-1.5" role="tablist" aria-label={t('tabsLabel')}>
+      <div
+        className="-mx-4 mb-8 flex flex-nowrap gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden"
+        role="tablist"
+        aria-label={t('tabsLabel')}
+      >
         {(
           [
             ['shot', `${t('tabs.shot')} (${userPosts.length})`],
@@ -285,7 +293,7 @@ export function UserProfileView({ profileAddress }: { profileAddress: string }) 
             aria-selected={tab === key}
             onClick={() => setTab(key)}
             className={cn(
-              'inline-flex h-8 items-center gap-1.5 rounded-xs border px-3 font-mono text-xs transition-colors duration-[var(--dur-fast)]',
+              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-xs border px-3 font-mono text-xs whitespace-nowrap transition-colors duration-[var(--dur-fast)]',
               tab === key
                 ? 'border-border-strong bg-bg-sunken text-fg'
                 : 'border-border bg-bg-raised text-fg-muted hover:text-fg',
