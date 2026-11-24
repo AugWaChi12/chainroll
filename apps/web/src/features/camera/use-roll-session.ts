@@ -198,19 +198,39 @@ export function useRollSession(defaultFrames: number) {
           setHud({ ...task, stage: 'confirmed', txHash })
           syncedInBranch = true
           void chain.refetch({ minFramesUsed: Math.max(roll.framesUsed + 1, task.frame) })
-          // Background-sync private frame image to R2 so Phone & PC see the same Darkroom frames
-          const localShot = rollShots.find((s) => s.hash === task.digest)
-          if (localShot?.blob) {
-            void uploadFrameToPrivateCloud({
+          // Background-sync private frame image to R2 so Phone & PC always see every frame
+          // (read from IndexedDB fallback so auto-confirm never misses a shot in a stale closure)
+          const capturedRollKey = `${activeChain.id}:${roll.id}`
+          const inMemoryBlob = rollShots.find((s) => s.hash === task.digest)?.blob
+          void (async () => {
+            let blob = inMemoryBlob
+            if (!blob || blob.size === 0) {
+              const stored = await photoStore.listRoll(capturedRollKey)
+              blob = stored.find((s) => s.hash === task.digest)?.blob
+            }
+            if (!blob || blob.size === 0) return
+            const ok = await uploadFrameToPrivateCloud({
               rollId: roll.id,
               frame: task.frame,
               photoHash: task.digest,
               filmId: roll.filmId,
               frames: roll.frames,
-              blob: localShot.blob,
+              blob,
               txHash,
             })
-          }
+            if (!ok) {
+              await new Promise((r) => setTimeout(r, 1500))
+              await uploadFrameToPrivateCloud({
+                rollId: roll.id,
+                frame: task.frame,
+                photoHash: task.digest,
+                filmId: roll.filmId,
+                frames: roll.frames,
+                blob,
+                txHash,
+              })
+            }
+          })()
           // Background sync real on-chain shot to Postgres so /verify and /admin stay in sync
           if (wallet.address && typeof window !== 'undefined') {
             const rollIdNum = Number(roll.id)
