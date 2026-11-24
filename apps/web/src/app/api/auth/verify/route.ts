@@ -51,11 +51,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Expired or invalid nonce' }, { status: 401 })
   }
 
+  const expectedHost = req.headers.get('x-forwarded-host') ?? req.headers.get('host')
   const valid = await verifySiweSignature({
     address,
     message,
     signature: signature as `0x${string}`,
     expectedNonce: nonce,
+    expectedHost,
+    expectedChainId: chainId,
   })
   if (!valid) {
     return NextResponse.json({ ok: false, error: 'Invalid wallet signature' }, { status: 401 })

@@ -298,7 +298,18 @@
         "pending": "รอเชน",
         "failed": "ไม่สำเร็จ"
       },
-      "bulkHide": "ซ่อนที่เลือก"
+      "bulkHide": "ซ่อนที่เลือก",
+      "aiIndex": {
+        "title": "AI Visual Search (Gemini Vision)",
+        "active": "Gemini เปิดใช้งาน",
+        "baseline": "แท็กพื้นฐาน",
+        "stats": "แท็กด้วย AI แล้ว: {tagged} / {total} รูป · รอสแกน: {pending}",
+        "loading": "กำลังอ่านสถานะดัชนีภาพ AI…",
+        "action": "สแกนเติม AI Visual Tags",
+        "indexing": "กำลังสแกน…",
+        "noKeyNote": "ยังไม่ได้ตั้งค่า GEMINI_API_KEY ใน .env (ใช้แท็กพื้นฐาน 0 token)",
+        "doneNote": "สแกนแท็กภาพด้วย Gemini Vision สำเร็จ {tagged} / {processed} รูป"
+      }
     },
     "soon": {
       "title": "ส่วนนี้ยังไม่ได้ล้าง",
@@ -1060,7 +1071,9 @@
       "publishing": "กำลังโพสต์…",
       "publishedOk": "โพสต์ขึ้นฟีดเรียบร้อย",
       "viewPost": "ดูหน้าแชร์รูป",
-      "goToFeed": "ไปที่ฟีด"
+      "goToFeed": "ไปที่ฟีด",
+      "siweRequired": "กรุณากดเซ็นยืนยันกระเป๋า (SIWE) ก่อนโพสต์ลงฟีด",
+      "serverError": "ไม่สามารถบันทึกโพสต์ขึ้นเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง"
     },
     "detail": {
       "backToFeed": "กลับไปที่ฟีด",

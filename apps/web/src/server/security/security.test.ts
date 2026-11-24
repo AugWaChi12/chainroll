@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { claimedActorOf, dbMutationSchema } from './validate'
+import { claimedActorOf, dbMutationSchema, isAllowedRemoteImageUrl } from './validate'
 
 describe('Enterprise API Security — Zod Mutation Validation', () => {
   const validAddr = '0x7B61E12C720FcD4aa01B572bff203af760c7DDd4'
@@ -83,5 +83,15 @@ describe('Enterprise API Security — Zod Mutation Validation', () => {
       actorAddress: 'not-an-address',
     })
     expect(res.success).toBe(false)
+  })
+
+  it('blocks SSRF external/internal imageDataUrl hosts and allows official R2 bucket URLs', () => {
+    expect(isAllowedRemoteImageUrl('http://169.254.169.254/latest/meta-data')).toBe(false)
+    expect(isAllowedRemoteImageUrl('https://evil.example.com/photo.jpg')).toBe(false)
+    expect(
+      isAllowedRemoteImageUrl(
+        'https://pub-19aa462bba4944f4b2ac29a9df514213.r2.dev/feed/0x123.webp',
+      ),
+    ).toBe(true)
   })
 })

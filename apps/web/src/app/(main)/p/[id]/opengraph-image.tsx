@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { fetchPostByIdFromDb, type PostOgSummary } from '@/server/db'
+import { isAllowedRemoteImageUrl } from '@/server/security/validate'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { ImageResponse } from 'next/og'
@@ -97,9 +98,12 @@ async function resolvePhotoDataUrl(
     if (imageUrl.startsWith('data:image/jpeg;base64,') || imageUrl.startsWith('data:image/png;base64,')) {
       return imageUrl
     }
-    if (imageUrl.startsWith('https://') || imageUrl.startsWith('http://')) {
+    if (imageUrl.startsWith('https://') && isAllowedRemoteImageUrl(imageUrl)) {
       try {
-        const res = await fetch(imageUrl, { signal: AbortSignal.timeout(4000) })
+        const res = await fetch(imageUrl, {
+          signal: AbortSignal.timeout(4000),
+          redirect: 'error',
+        })
         if (res.ok) {
           const ct = (res.headers.get('content-type') || '').toLowerCase()
           if (ct.includes('image/jpeg') || ct.includes('image/png')) {

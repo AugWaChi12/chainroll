@@ -128,6 +128,10 @@ async function ensureVisualSearchColumns(sql: Sql): Promise<void> {
         ALTER TABLE public.posts
         ADD COLUMN IF NOT EXISTS ai_tagged_at TIMESTAMPTZ
       `
+      await sql`
+        ALTER TABLE public.posts
+        ADD COLUMN IF NOT EXISTS watermark_hash TEXT
+      `
     })().catch((err) => {
       visualColsPromise = null
       throw err
@@ -602,18 +606,121 @@ export async function fetchSyncedShotKey(
   return rows[0]?.r2_private_key ? String(rows[0].r2_private_key) : null
 }
 
-async function ensurePreMintTable(sql: Sql) {
-  await sql`
-    CREATE TABLE IF NOT EXISTS public.pre_mint_offers (
-      id TEXT PRIMARY KEY,
-      photo_hash TEXT NOT NULL,
-      bidder TEXT NOT NULL REFERENCES public.users(address) ON DELETE CASCADE,
-      amount_kub NUMERIC(18, 6) NOT NULL,
-      expires_at TIMESTAMPTZ NOT NULL,
-      tx_hash TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
+/**
+ * Verifies that `photoHash` is an authentic recorded shot in Postgres (`public.shots` / `public.posts`)
+ * or live on-chain (`ChainRoll.shotOrigin(photoHash)`), and optionally matches `expectedOwner`,
+ * `expectedRollId`, and `expectedFrame`.
+ */
+export async function verifyPhotoHashOrigin(input: {
+  photoHash: string
+  expectedOwner?: string
+  expectedRollId?: number
+  expectedFrame?: number
+}): Promise<{ ok: boolean; rollId?: number; frame?: number; owner?: string }> {
+  const normHash = input.photoHash.toLowerCase()
+  const normOwner = input.expectedOwner?.toLowerCase()
+  const sql = getSql()
+
+  // 1. Check Postgres public.shots joined with public.rolls
+  const shotRows = await sql`
+    SELECT s.roll_id, s.frame, r.owner
+    FROM public.shots s
+    JOIN public.rolls r ON r.id = s.roll_id
+    WHERE lower(s.photo_hash) = ${normHash}
+    LIMIT 1
   `
+  if (shotRows[0]) {
+    const rId = Number(shotRows[0].roll_id)
+    const fr = Number(shotRows[0].frame)
+    const own = String(shotRows[0].owner).toLowerCase()
+    const ok =
+      (!normOwner || own === normOwner) &&
+      (input.expectedRollId === undefined || rId === input.expectedRollId) &&
+      (input.expectedFrame === undefined || fr === input.expectedFrame)
+    return { ok, rollId: rId, frame: fr, owner: own }
+  }
+
+  // 2. Check Postgres public.posts
+  const postRows = await sql`
+    SELECT roll_id, frame, shooter
+    FROM public.posts
+    WHERE lower(photo_hash) = ${normHash}
+    LIMIT 1
+  `
+  if (postRows[0]) {
+    const rId = Number(postRows[0].roll_id)
+    const fr = Number(postRows[0].frame)
+    const own = String(postRows[0].shooter).toLowerCase()
+    const ok =
+      (!normOwner || own === normOwner) &&
+      (input.expectedRollId === undefined || rId === input.expectedRollId) &&
+      (input.expectedFrame === undefined || fr === input.expectedFrame)
+    return { ok, rollId: rId, frame: fr, owner: own }
+  }
+
+  // 3. Fallback to live on-chain ChainRoll.shotOrigin(photoHash) + getRoll(rollId)
+  // (retries once after 500ms if RPC node lags 1 block behind a freshly mined shoot tx)
+  const { rpcUrl, contract } = getServerChainConfig()
+  if (!contract) return { ok: false }
+
+  const client = createPublicClient({ transport: http(rpcUrl) })
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const [originRollId, originFrame] = await client.readContract({
+        address: contract,
+        abi: chainRollAbi,
+        functionName: 'shotOrigin',
+        args: [normHash as `0x${string}`],
+      })
+      if (originRollId > 0n) {
+        const onChainRoll = await client.readContract({
+          address: contract,
+          abi: chainRollAbi,
+          functionName: 'getRoll',
+          args: [originRollId],
+        })
+        const rId = Number(originRollId)
+        const fr = Number(originFrame)
+        const own = onChainRoll.owner.toLowerCase()
+        const ok =
+          (!normOwner || own === normOwner) &&
+          (input.expectedRollId === undefined || rId === input.expectedRollId) &&
+          (input.expectedFrame === undefined || fr === input.expectedFrame)
+        return { ok, rollId: rId, frame: fr, owner: own }
+      }
+    } catch {
+      // RPC error
+    }
+    if (attempt === 0) {
+      await new Promise((r) => setTimeout(r, 500))
+    }
+  }
+
+  return { ok: false }
+}
+
+let preMintTablePromise: Promise<void> | null = null
+
+async function ensurePreMintTable(sql: Sql) {
+  if (!preMintTablePromise) {
+    preMintTablePromise = (async () => {
+      await sql`
+        CREATE TABLE IF NOT EXISTS public.pre_mint_offers (
+          id TEXT PRIMARY KEY,
+          photo_hash TEXT NOT NULL,
+          bidder TEXT NOT NULL REFERENCES public.users(address) ON DELETE CASCADE,
+          amount_kub NUMERIC(18, 6) NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          tx_hash TEXT NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+      `
+    })().catch((err) => {
+      preMintTablePromise = null
+      throw err
+    })
+  }
+  await preMintTablePromise
 }
 
 export async function fetchAppStateFromDb(): Promise<{
@@ -735,7 +842,8 @@ export async function fetchAppStateFromDb(): Promise<{
       scene: validScene,
       featured: Boolean(p.featured),
       aiTags: Array.isArray(p.ai_tags) ? p.ai_tags.map(String) : undefined,
-      reports: reportsByPost.get(pid) ?? [],
+      // P1-3: Omit private moderation report details from unauthenticated public /api/state
+      reports: [],
     }
   })
 
@@ -1028,7 +1136,8 @@ export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<
       scene: validScene,
       featured: Boolean(p.featured),
       aiTags: Array.isArray(p.ai_tags) ? p.ai_tags.map(String) : undefined,
-      reports: reportsByPost.get(pid) ?? [],
+      // P1-3: Omit private moderation report details from unauthenticated public /api/state
+      reports: [],
     }
   })
 
@@ -1478,9 +1587,10 @@ export async function fetchVerificationByHashFromDb(
   photoHash: string,
 ): Promise<PhotoVerificationDto | null> {
   const sql = getSql()
+  await ensureVisualSearchColumns(sql)
   const norm = photoHash.toLowerCase()
 
-  // 1. Check public posts (joined with users, films, and 1/1 prints)
+  // 1. Check public posts (matches either the 1/1 clean master `photo_hash` OR the public `watermark_hash`)
   const postRows = await sql`
     SELECT p.id, p.roll_id, p.frame, p.film_id, f.name AS film_name, p.photo_hash,
            p.tx_hash, p.shooter, u.handle AS shooter_handle, p.caption, p.r2_public_url,
@@ -1492,7 +1602,7 @@ export async function fetchVerificationByHashFromDb(
     LEFT JOIN public.prints pr
       ON pr.post_id = p.id OR lower(pr.photo_hash) = lower(p.photo_hash)
     LEFT JOIN public.users pu ON pu.address = pr.owner
-    WHERE lower(p.photo_hash) = ${norm}
+    WHERE lower(p.photo_hash) = ${norm} OR lower(p.watermark_hash) = ${norm}
     LIMIT 1
   `
 
@@ -1539,7 +1649,30 @@ export async function fetchVerificationByHashFromDb(
   `
 
   const s = shotRows[0]
-  if (!s) return null
+  if (!s) {
+    // 3. Fallback directly to live KUB Chain (`ChainRoll.shotOrigin`) for shots not yet indexed in Postgres
+    const onChain = await verifyPhotoHashOrigin({ photoHash: norm })
+    if (!onChain.ok || !onChain.rollId || !onChain.frame || !onChain.owner) return null
+    const meta = await getRollMetaFromDbOrChain(onChain.rollId)
+    const filmId = meta?.filmId ?? 1
+    return {
+      verified: true,
+      source: 'shot',
+      photoHash: norm,
+      postId: null,
+      rollId: onChain.rollId,
+      frame: onChain.frame,
+      filmId,
+      filmName: FILM_NAME_FALLBACK[filmId] ?? `Film #${filmId}`,
+      shooter: onChain.owner,
+      shooterHandle: null,
+      txHash: null,
+      caption: null,
+      imageUrl: null,
+      createdAt: Date.now(),
+      print: null,
+    }
+  }
 
   const filmId = Number(s.film_id)
   return {
@@ -1754,6 +1887,7 @@ export type DbMutationPayload =
         frame: number
         filmId: number
         photoHash: string
+        watermarkHash?: string
         txHash?: string
         caption: string
         imageDataUrl?: string
@@ -1841,15 +1975,16 @@ export async function applyDbMutation(payload: DbMutationPayload): Promise<void>
       await ensureUser(sql, shooter)
       await sql`
         INSERT INTO public.posts (
-          id, shooter, roll_id, frame, film_id, photo_hash, tx_hash,
+          id, shooter, roll_id, frame, film_id, photo_hash, watermark_hash, tx_hash,
           r2_public_url, scene, featured, caption, ai_tags
         ) VALUES (
           ${p.id}, ${shooter}, ${p.rollId}, ${p.frame}, ${p.filmId},
-          ${p.photoHash}, ${p.txHash ?? null}, ${p.imageDataUrl ?? null},
+          ${p.photoHash}, ${p.watermarkHash ?? null}, ${p.txHash ?? null}, ${p.imageDataUrl ?? null},
           ${scene}, true, ${p.caption}, ${baselineTags}
         )
         ON CONFLICT (photo_hash) DO UPDATE
         SET caption = EXCLUDED.caption,
+            watermark_hash = COALESCE(EXCLUDED.watermark_hash, public.posts.watermark_hash),
             r2_public_url = COALESCE(EXCLUDED.r2_public_url, public.posts.r2_public_url)
       `
       // Fire-and-forget ultra-low-token Gemini Vision tagging (~180 tokens/photo)

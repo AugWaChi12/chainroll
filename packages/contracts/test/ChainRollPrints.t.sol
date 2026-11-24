@@ -87,6 +87,12 @@ contract ChainRollPrintsTest is Test {
             abi.encodeWithSelector(ChainRollPrints.PrintAlreadyMinted.selector, PHOTO_1, 1)
         );
         prints.mintPrint(rollId, 1, PHOTO_1, 5 ether);
+
+        // baseTokenURI configurable by admin
+        assertEq(prints.tokenURI(1), "");
+        vm.prank(admin);
+        prints.setBaseURI("https://chainroll.nan-tai.com/api/prints/metadata/");
+        assertEq(prints.tokenURI(1), "https://chainroll.nan-tai.com/api/prints/metadata/1");
     }
 
     function test_buyPrint_primaryAndSecondaryRoyaltySplit() public {

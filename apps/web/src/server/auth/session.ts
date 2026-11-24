@@ -115,10 +115,26 @@ export async function verifySiweSignature(input: {
   message: string
   signature: `0x${string}`
   expectedNonce: string
+  expectedHost?: string | null
+  expectedChainId?: number
 }): Promise<boolean> {
-  // Basic SIWE structural checks: address & nonce must appear in the signed message
-  if (!input.message.includes(input.expectedNonce)) return false
+  // Strict SIWE structural checks: domain/host, chainId, address & nonce must match the signed message
+  if (!input.message.includes(`Nonce: ${input.expectedNonce}`)) return false
   if (!input.message.toLowerCase().includes(input.address.toLowerCase())) return false
+
+  if (input.expectedHost) {
+    const cleanHost = input.expectedHost.split(',')[0]!.trim().toLowerCase()
+    const firstLine = (input.message.split('\n')[0] ?? '').trim().toLowerCase()
+    if (cleanHost && !firstLine.startsWith(`${cleanHost} wants you to sign in`)) {
+      return false
+    }
+  }
+
+  if (input.expectedChainId !== undefined) {
+    if (!input.message.includes(`Chain ID: ${input.expectedChainId}`)) {
+      return false
+    }
+  }
 
   try {
     return await verifyMessage({

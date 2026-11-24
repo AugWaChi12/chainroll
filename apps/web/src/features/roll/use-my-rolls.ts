@@ -51,11 +51,19 @@ export function useMyRolls(address: Address | null) {
         onChainScan.push(id)
       }
     }
-    return [...new Set([...onChainScan, ...localIds].map(String))]
+    // P1-4: Also include any historical roll IDs recorded for this owner in Postgres so older rolls
+    // are never missed even after >60 global rolls are claimed by other users.
+    const dbOwnerIds = address
+      ? onPageRolls
+          .filter((r) => r.owner.toLowerCase() === address.toLowerCase())
+          .map((r) => BigInt(r.id))
+      : []
+
+    return [...new Set([...onChainScan, ...localIds, ...dbOwnerIds].map(String))]
       .map(BigInt)
       .filter((id) => id > 0n)
       .sort((a, b) => (b > a ? 1 : -1))
-  }, [latest.data, localIds])
+  }, [address, latest.data, localIds, onPageRolls])
 
   const rolls = useReadContracts({
     allowFailure: true,

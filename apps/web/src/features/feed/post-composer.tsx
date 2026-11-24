@@ -8,6 +8,7 @@ import type { Route } from 'next'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
+import { keccak256 } from 'viem'
 import {
   blobToDataUrl,
   createPost,
@@ -78,12 +79,13 @@ export function PostComposerModal({
       if (!wallet.authenticated) {
         const ok = await wallet.signIn()
         if (!ok) {
-          setPublishError('กรุณากดเซ็นยืนยันกระเป๋า (SIWE) ก่อนโพสต์ลงฟีด')
+          setPublishError(t('siweRequired'))
           return
         }
       }
 
       let imageDataUrl: string | undefined
+      let watermarkHash: string | undefined
       let uploadBlob: Blob | undefined =
         active.blob && active.blob.size > 0 ? active.blob : undefined
 
@@ -112,10 +114,13 @@ export function PostComposerModal({
           photographerLabel,
           photoHash: active.hash,
         })
+        watermarkHash = keccak256(new Uint8Array(await publicBlob.arrayBuffer())).toLowerCase()
 
         // 3. Direct browser -> Cloudflare R2 presigned upload (watermarked public CDN + clean private 1/1 master)
         const contentType =
           uploadBlob.type === 'image/jpeg' ? 'image/jpeg' : ('image/webp' as const)
+        const publicContentType =
+          publicBlob.type === 'image/jpeg' ? 'image/jpeg' : ('image/webp' as const)
         try {
           const signRes = await window.fetch('/api/upload-url', {
             method: 'POST',
@@ -123,6 +128,7 @@ export function PostComposerModal({
             body: JSON.stringify({
               photoHash: active.hash,
               contentType,
+              publicContentType,
               bytes: Math.max(uploadBlob.size, publicBlob.size),
             }),
           })
@@ -137,7 +143,7 @@ export function PostComposerModal({
               const [pubUp, privUp] = await Promise.all([
                 window.fetch(signed.publicPutUrl, {
                   method: 'PUT',
-                  headers: { 'Content-Type': contentType },
+                  headers: { 'Content-Type': publicContentType },
                   body: publicBlob,
                 }),
                 window.fetch(signed.privatePutUrl, {
@@ -166,6 +172,7 @@ export function PostComposerModal({
         frame: active.frame,
         filmId,
         photoHash: active.hash,
+        watermarkHash,
         txHash: active.txHash,
         caption,
         imageDataUrl,
@@ -180,13 +187,13 @@ export function PostComposerModal({
       })
       if (!persistRes.ok) {
         const errData = (await persistRes.json().catch(() => null)) as { error?: string } | null
-        setPublishError(errData?.error ?? `บันทึกโพสต์ไม่สำเร็จ (HTTP ${persistRes.status})`)
+        setPublishError(errData?.error ?? `${t('serverError')} (HTTP ${persistRes.status})`)
         return
       }
 
       setPublished(post)
     } catch {
-      setPublishError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง')
+      setPublishError(t('serverError'))
     } finally {
       setSaving(false)
     }

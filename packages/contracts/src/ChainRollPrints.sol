@@ -57,6 +57,7 @@ contract ChainRollPrints is
     ChainRoll public immutable CHAIN_ROLL;
     address public feeRecipient;
     uint96 public protocolFeeBps = 250; // 2.50%
+    string public baseTokenURI;
 
     uint256 public nextTokenId = 1;
     mapping(uint256 tokenId => Print) private _prints;
@@ -121,6 +122,7 @@ contract ChainRollPrints is
     event WithdrawalCredited(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
     event ProtocolFeeUpdated(address indexed recipient, uint96 feeBps);
+    event BaseURIUpdated(string baseURI);
 
     // ─── Errors ───────────────────────────────────────────────
     error ZeroAddress();
@@ -178,7 +180,8 @@ contract ChainRollPrints is
 
     function tokenURI(uint256 tokenId) external view returns (string memory) {
         if (_owners[tokenId] == address(0)) revert NonexistentToken(tokenId);
-        return "";
+        if (bytes(baseTokenURI).length == 0) return "";
+        return string.concat(baseTokenURI, _toString(tokenId));
     }
 
     function balanceOf(address owner) external view returns (uint256) {
@@ -543,6 +546,11 @@ contract ChainRollPrints is
         emit ProtocolFeeUpdated(recipient, feeBps);
     }
 
+    function setBaseURI(string calldata newBaseURI) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        baseTokenURI = newBaseURI;
+        emit BaseURIUpdated(newBaseURI);
+    }
+
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
@@ -611,6 +619,24 @@ contract ChainRollPrints is
         if (amount == 0) return;
         (bool ok,) = to.call{value: amount}("");
         if (!ok) revert TransferFailed();
+    }
+
+    function _toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) return "0";
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            // forge-lint: disable-next-line(unsafe-typecast)
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 
     function supportsInterface(bytes4 interfaceId)

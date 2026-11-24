@@ -1,3 +1,4 @@
+import { isAllowedRemoteImageUrl } from '@/server/security/validate'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
@@ -157,12 +158,16 @@ async function loadImageAsBase64(imageSource: string): Promise<{ mimeType: strin
     return null
   }
 
-  // 3. Remote HTTPS URL (e.g. Cloudflare R2 public bucket)
-  if (imageSource.startsWith('https://') || imageSource.startsWith('http://')) {
+  // 3. Remote HTTPS URL (strictly restricted to our Cloudflare R2 public bucket to prevent SSRF)
+  if (imageSource.startsWith('https://')) {
+    if (!isAllowedRemoteImageUrl(imageSource)) return null
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 8_000)
     try {
-      const res = await fetch(imageSource, { signal: controller.signal })
+      const res = await fetch(imageSource, {
+        signal: controller.signal,
+        redirect: 'error',
+      })
       if (!res.ok) return null
       const len = Number(res.headers.get('content-length') ?? 0)
       if (Number.isFinite(len) && len > 4_500_000) return null

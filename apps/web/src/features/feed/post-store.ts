@@ -20,6 +20,7 @@ export type FeedPost = {
   frame: number
   filmId: number
   photoHash: string
+  watermarkHash?: string
   txHash?: string
   caption: string
   createdAt: number
@@ -375,6 +376,7 @@ export function createPost(input: {
   frame: number
   filmId: number
   photoHash: string
+  watermarkHash?: string
   txHash?: string
   caption: string
   imageDataUrl?: string
@@ -388,6 +390,7 @@ export function createPost(input: {
     const updated: FeedPost = {
       ...existing,
       caption: input.caption.trim(),
+      watermarkHash: input.watermarkHash ?? existing.watermarkHash,
       imageDataUrl: input.imageDataUrl ?? existing.imageDataUrl,
     }
     state = {
@@ -409,6 +412,7 @@ export function createPost(input: {
     frame: input.frame,
     filmId: input.filmId,
     photoHash: input.photoHash,
+    watermarkHash: input.watermarkHash,
     txHash: input.txHash,
     caption: input.caption.trim(),
     createdAt: Date.now(),

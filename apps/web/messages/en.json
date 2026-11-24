@@ -362,7 +362,18 @@
         "pending": "Pending",
         "failed": "Failed"
       },
-      "bulkHide": "Hide selected"
+      "bulkHide": "Hide selected",
+      "aiIndex": {
+        "title": "AI Visual Search (Gemini Vision)",
+        "active": "Gemini Active",
+        "baseline": "Baseline Only",
+        "stats": "AI tagged: {tagged} / {total} posts · Pending: {pending}",
+        "loading": "Loading AI visual index status…",
+        "action": "Re-index AI Visual Tags",
+        "indexing": "Indexing…",
+        "noKeyNote": "GEMINI_API_KEY not configured in .env (using zero-token baseline tags)",
+        "doneNote": "Tagged {tagged} / {processed} posts with Gemini Vision"
+      }
     },
     "soon": {
       "title": "Not developed yet",
@@ -1124,7 +1135,9 @@
       "publishing": "Posting…",
       "publishedOk": "Published to the feed",
       "viewPost": "Open share page",
-      "goToFeed": "Go to feed"
+      "goToFeed": "Go to feed",
+      "siweRequired": "Please sign in with your wallet (SIWE) before posting to the feed",
+      "serverError": "Couldn't save post to the server — please try again"
     },
     "detail": {
       "backToFeed": "Back to feed",

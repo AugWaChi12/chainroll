@@ -68,9 +68,10 @@ export async function burnFeedWatermark(
       ctx.fillText(`▸ CHAINROLL · ${cleanAuthor} · ${shortHash}`, padX, h - padY)
       ctx.restore()
 
-      const mime = source.type === 'image/jpeg' ? 'image/jpeg' : 'image/webp'
+      // Encode public feed preview as high-quality JPEG (0.90) so Next.js Satori OG Share Cards
+      // (/p/[id]/opengraph-image) can natively embed and render 100% of real camera photos.
       const encoded = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((b) => resolve(b), mime, 0.88),
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9),
       )
       return encoded && encoded.size > 0 ? encoded : source
     } finally {

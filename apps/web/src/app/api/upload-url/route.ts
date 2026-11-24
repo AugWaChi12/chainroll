@@ -1,4 +1,5 @@
 import { getServerSession } from '@/server/auth/session'
+import { verifyPhotoHashOrigin } from '@/server/db'
 import { checkRateLimit, clientIpFromRequest } from '@/server/security/rate-limit'
 import {
   getR2Config,
@@ -18,7 +19,8 @@ const uploadRequestSchema = z.object({
     .regex(/^0x[0-9a-fA-F]{64}$/)
     .transform((s) => s.toLowerCase()),
   contentType: z.enum(['image/webp', 'image/jpeg']),
-  bytes: z.number().int().positive().max(400_000),
+  publicContentType: z.enum(['image/webp', 'image/jpeg']).optional(),
+  bytes: z.number().int().positive().max(650_000),
 })
 
 /**
@@ -58,14 +60,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Invalid upload request' }, { status: 400 })
   }
 
-  const { photoHash, contentType } = parsed.data
+  const { photoHash, contentType, publicContentType } = parsed.data
+
+  // P0-1: Verify that `session.address` is the rightful shooter/owner of `photoHash`
+  // before issuing presigned PUT URLs so no user can overwrite another user's R2 objects.
+  const originCheck = await verifyPhotoHashOrigin({
+    photoHash,
+    expectedOwner: session.address,
+  })
+  if (!originCheck.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'You do not own this photoHash on-chain' },
+      { status: 403 },
+    )
+  }
+
+  const pubMime = publicContentType ?? contentType
   const publicPutUrl = signR2PresignedUrl({
     config: r2,
     method: 'PUT',
     bucket: r2.publicBucket,
     key: publicFeedKey(photoHash),
     expiresInSec: 120,
-    contentType,
+    contentType: pubMime,
   })
   const privatePutUrl = signR2PresignedUrl({
     config: r2,

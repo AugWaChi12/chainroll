@@ -12,6 +12,28 @@ const hexHash = z
 
 const optionalHexHash = hexHash.optional()
 
+/**
+ * Prevents SSRF by only allowing remote HTTPS image URLs that belong to our configured
+ * Cloudflare R2 public bucket (or *.r2.dev public bucket host).
+ */
+export function isAllowedRemoteImageUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl)
+    if (parsed.protocol !== 'https:') return false
+    const configuredBase = process.env.R2_PUBLIC_BASE_URL?.trim()?.replace(/\/+$/, '')
+    if (configuredBase && rawUrl.startsWith(`${configuredBase}/`)) {
+      return true
+    }
+    // Allow official Cloudflare R2 public bucket domains (pub-<hash>.r2.dev)
+    if (/^pub-[a-f0-9]{32}\.r2\.dev$/i.test(parsed.hostname)) {
+      return true
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
 const safeImageDataUrl = z
   .string()
   .max(600_000, 'Image payload exceeds 600KB limit')
@@ -20,8 +42,8 @@ const safeImageDataUrl = z
       s.startsWith('data:image/webp;base64,') ||
       s.startsWith('data:image/jpeg;base64,') ||
       s.startsWith('data:image/png;base64,') ||
-      s.startsWith('https://'),
-    'Only WebP/JPEG/PNG data URLs or HTTPS URLs are allowed',
+      isAllowedRemoteImageUrl(s),
+    'Only WebP/JPEG/PNG data URLs or ChainRoll R2 HTTPS URLs are allowed',
   )
   .optional()
 
@@ -82,6 +104,7 @@ export const dbMutationSchema = z.discriminatedUnion('type', [
       frame: z.number().int().min(1).max(72),
       filmId: z.number().int().min(1).max(100),
       photoHash: hexHash,
+      watermarkHash: optionalHexHash,
       txHash: optionalHexHash,
       caption: z.string().max(500),
       imageDataUrl: safeImageDataUrl,

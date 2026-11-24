@@ -93,9 +93,14 @@ export function AdminOverview() {
       if (!res.ok || !data?.ok) {
         setReindexNote(data?.error ?? `HTTP ${res.status}`)
       } else if (!data.geminiConfigured) {
-        setReindexNote('GEMINI_API_KEY not configured in .env (using zero-token baseline tags)')
+        setReindexNote(t('aiIndex.noKeyNote'))
       } else {
-        setReindexNote(`Tagged ${data.tagged ?? 0} / ${data.processed ?? 0} posts with Gemini Vision`)
+        setReindexNote(
+          t('aiIndex.doneNote', {
+            tagged: data.tagged ?? 0,
+            processed: data.processed ?? 0,
+          }),
+        )
       }
       const statsRes = await window.fetch('/api/admin/reindex-visual', { cache: 'no-store' })
       if (statsRes.ok) {
@@ -280,17 +285,21 @@ export function AdminOverview() {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-frame" aria-hidden />
-              <span className="text-sm font-medium">AI Visual Search (Gemini Vision)</span>
+              <span className="text-sm font-medium">{t('aiIndex.title')}</span>
               {visualStats && (
                 <Badge tone={visualStats.geminiConfigured ? 'success' : 'warning'} dot>
-                  {visualStats.geminiConfigured ? 'Gemini Active' : 'Baseline Only'}
+                  {visualStats.geminiConfigured ? t('aiIndex.active') : t('aiIndex.baseline')}
                 </Badge>
               )}
             </div>
             <p className="font-mono text-xs text-fg-muted">
               {visualStats
-                ? `AI tagged: ${visualStats.aiTaggedPosts} / ${visualStats.totalPosts} posts · Pending: ${visualStats.untaggedPosts}`
-                : 'Loading AI visual index status…'}
+                ? t('aiIndex.stats', {
+                    tagged: visualStats.aiTaggedPosts,
+                    total: visualStats.totalPosts,
+                    pending: visualStats.untaggedPosts,
+                  })
+                : t('aiIndex.loading')}
             </p>
             {reindexNote && <p className="font-mono text-2xs text-frame">{reindexNote}</p>}
           </div>
@@ -301,7 +310,7 @@ export function AdminOverview() {
             onClick={() => void handleReindexVisual()}
           >
             {reindexing ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {reindexing ? 'Indexing…' : 'Re-index AI Visual Tags'}
+            {reindexing ? t('aiIndex.indexing') : t('aiIndex.action')}
           </Button>
         </section>
 

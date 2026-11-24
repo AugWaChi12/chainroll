@@ -3,6 +3,7 @@ import {
   fetchSyncedShotsForRoll,
   getRollMetaFromDbOrChain,
   saveSyncedShotKey,
+  verifyPhotoHashOrigin,
   verifyRollOwner,
 } from '@/server/db'
 import { checkRateLimit, clientIpFromRequest } from '@/server/security/rate-limit'
@@ -147,12 +148,25 @@ export async function POST(
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer())
-  // Cryptographic integrity check: uploaded bytes MUST hash to photoHash
+  // 1) Cryptographic integrity check: uploaded bytes MUST hash to photoHash
   const computedHash = keccak256(bytes).toLowerCase()
   if (computedHash !== photoHash) {
     return NextResponse.json(
       { ok: false, error: 'Image digest does not match photoHash' },
       { status: 400 },
+    )
+  }
+
+  // 2) P0-1 On-chain origin check: photoHash MUST be recorded for (rollId, frameNum) on ChainRoll.sol (or in DB shots)
+  const originCheck = await verifyPhotoHashOrigin({
+    photoHash,
+    expectedRollId: rollId,
+    expectedFrame: frameNum,
+  })
+  if (!originCheck.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'photoHash is not recorded for this roll/frame on-chain' },
+      { status: 403 },
     )
   }
 
