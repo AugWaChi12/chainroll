@@ -37,8 +37,8 @@ contract ChainRoll is AccessControl, Pausable {
     // ─── Storage ──────────────────────────────────────────────
     mapping(uint16 filmId => Film) private _films;
     mapping(uint256 rollId => Roll) private _rolls;
-    /// @dev day number of the user's last free claim, +1 so that 0 means "never".
-    mapping(address user => uint256) private _lastClaimDayPlusOne;
+    /// @dev Number of free rolls claimed by `user` on each Bangkok calendar day.
+    mapping(address user => mapping(uint256 day => uint8)) private _claimsOnDay;
     /// @dev Packed `(rollId << 8) | frame` where `photoHash` was recorded (0 = unused).
     mapping(bytes32 photoHash => uint256) private _hashOrigin;
     /// @notice Most recent roll claimed by a user (0 = none). Lets the app find the open roll without scanning logs.
@@ -47,6 +47,7 @@ contract ChainRoll is AccessControl, Pausable {
     uint256 public nextRollId = 1;
     address public sdkCallHelperRouter;
     uint64 public developDelay = 1 hours;
+    uint8 public dailyRollLimit = 2;
 
     // ─── Events ───────────────────────────────────────────────
     event FilmSet(uint16 indexed filmId, string name, uint8 frames, bool active);
@@ -63,9 +64,11 @@ contract ChainRoll is AccessControl, Pausable {
     event Developed(address indexed owner, uint256 indexed rollId, uint64 readyAt);
     event RouterSet(address indexed router);
     event DevelopDelaySet(uint64 delay);
+    event DailyRollLimitSet(uint8 limit);
 
     // ─── Errors ───────────────────────────────────────────────
     error AlreadyClaimedToday(uint256 nextClaimAt);
+    error InvalidDailyLimit(uint8 limit);
     error FilmNotActive(uint16 filmId);
     error InvalidFrames(uint8 frames);
     error NotRollOwner(uint256 rollId);
@@ -165,8 +168,12 @@ contract ChainRoll is AccessControl, Pausable {
         return (block.timestamp + DAY_OFFSET) / 1 days;
     }
 
+    function claimsToday(address user) public view returns (uint8) {
+        return _claimsOnDay[user][currentDay()];
+    }
+
     function canClaim(address user) public view returns (bool) {
-        return _lastClaimDayPlusOne[user] != currentDay() + 1;
+        return _claimsOnDay[user][currentDay()] < dailyRollLimit;
     }
 
     /// @notice Unix time when `user` can claim again (0 = now).
@@ -203,6 +210,12 @@ contract ChainRoll is AccessControl, Pausable {
         emit DevelopDelaySet(delay);
     }
 
+    function setDailyRollLimit(uint8 limit) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (limit == 0) revert InvalidDailyLimit(limit);
+        dailyRollLimit = limit;
+        emit DailyRollLimitSet(limit);
+    }
+
     function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
@@ -219,7 +232,7 @@ contract ChainRoll is AccessControl, Pausable {
         Film storage film = _films[filmId];
         if (!film.active) revert FilmNotActive(filmId);
 
-        _lastClaimDayPlusOne[user] = currentDay() + 1;
+        _claimsOnDay[user][currentDay()] += 1;
         rollId = nextRollId++;
         latestRollOf[user] = rollId;
         _rolls[rollId] = Roll({

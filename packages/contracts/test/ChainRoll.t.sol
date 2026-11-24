@@ -112,7 +112,8 @@ contract ChainRollTest is Test {
         assertEq(r.filmId, FILM);
         assertEq(r.frames, FRAMES);
         assertEq(r.framesUsed, 0);
-        assertFalse(cam.canClaim(alice));
+        assertEq(cam.claimsToday(alice), 1);
+        assertTrue(cam.canClaim(alice)); // default dailyRollLimit = 2
     }
 
     function test_claim_tracksLatestRoll() public {
@@ -122,13 +123,20 @@ contract ChainRollTest is Test {
         vm.prank(router);
         uint256 bobs = cam.claimDailyRoll(FILM, bob);
         assertEq(cam.latestRollOf(bob), bobs);
-        vm.warp(cam.nextClaimAt(alice));
         uint256 second = _claim(alice);
         assertEq(cam.latestRollOf(alice), second);
+        vm.warp(cam.nextClaimAt(alice));
+        uint256 third = _claim(alice);
+        assertEq(cam.latestRollOf(alice), third);
     }
 
-    function test_claim_onlyOncePerBangkokDay() public {
-        _claim(alice);
+    function test_claim_respectsDailyLimitPerBangkokDay() public {
+        // Default limit = 2 rolls per Bangkok day
+        assertEq(_claim(alice), 1);
+        assertTrue(cam.canClaim(alice));
+        assertEq(_claim(alice), 2);
+        assertFalse(cam.canClaim(alice));
+
         uint256 nextAt = cam.nextClaimAt(alice);
         // next claim = next 00:00 Bangkok = 17:00 UTC
         assertEq((nextAt + 7 hours) % 1 days, 0);
@@ -142,7 +150,24 @@ contract ChainRollTest is Test {
         assertFalse(cam.canClaim(alice));
         vm.warp(nextAt);
         assertTrue(cam.canClaim(alice));
-        assertEq(_claim(alice), 2);
+        assertEq(_claim(alice), 3);
+    }
+
+    function test_setDailyRollLimit_adminOnlyAndEnforced() public {
+        vm.prank(mallory);
+        vm.expectRevert();
+        cam.setDailyRollLimit(5);
+
+        vm.startPrank(admin);
+        vm.expectRevert(abi.encodeWithSelector(ChainRoll.InvalidDailyLimit.selector, 0));
+        cam.setDailyRollLimit(0);
+
+        cam.setDailyRollLimit(1);
+        vm.stopPrank();
+
+        assertEq(cam.dailyRollLimit(), 1);
+        _claim(alice);
+        assertFalse(cam.canClaim(alice));
     }
 
     function test_claim_revertsOnInactiveFilm() public {
@@ -297,7 +322,7 @@ contract ChainRollTest is Test {
         vm.stopPrank();
 
         assertGt(cam.getRoll(id).developReadyAt, 0);
-        assertFalse(cam.canClaim(bob));
+        assertEq(cam.claimsToday(bob), 1);
     }
 
     function test_next_onlyRouterCanUseForwardedEntryPoints() public {
@@ -336,9 +361,11 @@ contract ChainRollTest is Test {
     }
 
     function test_walletsShareOneDailyQuota() public {
-        // same address via router and directly → still one roll per day
+        // same address via router and directly share the same daily quota (default 2/day)
         vm.prank(router);
         cam.claimDailyRoll(FILM, alice);
+        vm.prank(alice);
+        cam.claimDailyRoll(FILM);
         vm.prank(alice);
         vm.expectRevert();
         cam.claimDailyRoll(FILM);

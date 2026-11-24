@@ -132,6 +132,25 @@ export const chainRollAbi = [
   },
   {
     "type": "function",
+    "name": "claimsToday",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "currentDay",
     "inputs": [],
     "outputs": [
@@ -139,6 +158,19 @@ export const chainRollAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "dailyRollLimit",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
       }
     ],
     "stateMutability": "view"
@@ -521,6 +553,19 @@ export const chainRollAbi = [
   },
   {
     "type": "function",
+    "name": "setDailyRollLimit",
+    "inputs": [
+      {
+        "name": "limit",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setDevelopDelay",
     "inputs": [
       {
@@ -663,6 +708,19 @@ export const chainRollAbi = [
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "DailyRollLimitSet",
+    "inputs": [
+      {
+        "name": "limit",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -998,6 +1056,17 @@ export const chainRollAbi = [
         "name": "photoHash",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidDailyLimit",
+    "inputs": [
+      {
+        "name": "limit",
+        "type": "uint8",
+        "internalType": "uint8"
       }
     ]
   },
