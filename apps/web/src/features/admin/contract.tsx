@@ -116,21 +116,25 @@ export function AdminContract() {
     }
   }
 
-  const updateDelay = () => {
+  const setDelaySecondsOnChain = (sec: number) => {
     const contract = chainRollContract
     const account = address
     if (!contract || !account) return
-    const sec = Math.max(0, Math.round(Number(delayMinutes) * 60))
-    void runContractWrite('contract.set_delay', `developDelay=${sec}s`, () =>
+    const clamped = Math.max(0, Math.round(sec))
+    void runContractWrite('contract.set_delay', `developDelay=${clamped}s`, () =>
       writeContract(wagmiConfig, {
         address: contract,
         abi: chainRollAbi,
         chainId: activeChain.id,
         account,
         functionName: 'setDevelopDelay',
-        args: [BigInt(sec)],
+        args: [BigInt(clamped)],
       }),
     )
+  }
+
+  const updateDelay = () => {
+    setDelaySecondsOnChain(Math.round(Number(delayMinutes) * 60))
   }
 
   const updateRouter = () => {
@@ -316,26 +320,58 @@ export function AdminContract() {
               {t('paramsTitle')}
             </h2>
 
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Input
-                  label={t('fields.setDelay')}
-                  type="number"
-                  min={0}
-                  max={1440}
-                  value={delayMinutes}
-                  onChange={(e) => setDelayMinutes(e.target.value)}
-                  trailing="min"
-                />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Input
+                    label={t('fields.setDelay')}
+                    type="number"
+                    min={0}
+                    max={1440}
+                    step={0.25}
+                    value={delayMinutes}
+                    onChange={(e) => setDelayMinutes(e.target.value)}
+                    trailing="min"
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  disabled={!address || !chainRollContract || isBusy(tx)}
+                  onClick={updateDelay}
+                >
+                  <Check />
+                  {t('actions.saveDelay')}
+                </Button>
               </div>
-              <Button
-                variant="secondary"
-                disabled={!address || !chainRollContract || isBusy(tx)}
-                onClick={updateDelay}
-              >
-                <Check />
-                {t('actions.saveDelay')}
-              </Button>
+              <div className="flex flex-wrap items-center gap-1.5 font-mono text-2xs">
+                <span className="text-fg-subtle">Quick presets:</span>
+                {(
+                  [
+                    [15, '15s (Test)'],
+                    [60, '1 min'],
+                    [300, '5 min'],
+                    [900, '15 min'],
+                    [3600, '60 min'],
+                  ] as const
+                ).map(([sec, label]) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    disabled={!address || !chainRollContract || isBusy(tx)}
+                    onClick={() => {
+                      setDelayMinutes(String(Number((sec / 60).toFixed(2))))
+                      setDelaySecondsOnChain(sec)
+                    }}
+                    className={
+                      developDelaySec === sec
+                        ? 'rounded-xs border border-frame bg-frame/15 px-2 py-1 text-frame'
+                        : 'rounded-xs border border-border bg-bg px-2 py-1 text-fg-muted hover:border-frame hover:text-fg disabled:opacity-40'
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-end gap-2">

@@ -1040,6 +1040,189 @@ export async function fetchVerificationByHashFromDb(
   }
 }
 
+export type LiveActivityItemDto = {
+  id: string
+  kind: 'post' | 'roll' | 'print' | 'offer'
+  actor: string
+  actorHandle: string | null
+  title: string
+  detail: string
+  postId?: string | null
+  rollId?: number | null
+  filmId?: number | null
+  imageUrl?: string | null
+  amountKub?: number | null
+  txHash?: string | null
+  timestamp: number
+}
+
+export async function fetchLiveActivityFromDb(limit = 40): Promise<LiveActivityItemDto[]> {
+  const sql = getSql()
+  await ensurePreMintTable(sql)
+  const cap = Math.max(5, Math.min(80, Math.floor(limit)))
+
+  const [postRows, rollRows, printRows, offerRows, preMintRows] = await Promise.all([
+    sql`
+      SELECT p.id, p.shooter, u.handle, p.roll_id, p.frame, p.film_id, f.name AS film_name,
+             p.caption, p.r2_public_url, p.tx_hash, p.created_at
+      FROM public.posts p
+      LEFT JOIN public.users u ON u.address = p.shooter
+      LEFT JOIN public.films f ON f.id = p.film_id
+      WHERE p.hidden_at IS NULL
+      ORDER BY p.created_at DESC
+      LIMIT ${cap}
+    `,
+    sql`
+      SELECT r.id, r.owner, u.handle, r.film_id, f.name AS film_name,
+             r.frames, r.frames_used, r.developed_at, r.claim_tx_hash, r.created_at
+      FROM public.rolls r
+      LEFT JOIN public.users u ON u.address = r.owner
+      LEFT JOIN public.films f ON f.id = r.film_id
+      ORDER BY COALESCE(r.developed_at, r.created_at) DESC
+      LIMIT ${cap}
+    `,
+    sql`
+      SELECT pr.token_id, pr.post_id, pr.roll_id, pr.frame, pr.film_id, f.name AS film_name,
+             pr.owner, u.handle, pr.ask_price_kub, pr.last_sale_kub, pr.mint_tx_hash, pr.minted_at,
+             p.r2_public_url
+      FROM public.prints pr
+      LEFT JOIN public.users u ON u.address = pr.owner
+      LEFT JOIN public.films f ON f.id = pr.film_id
+      LEFT JOIN public.posts p ON p.id = pr.post_id
+      ORDER BY pr.minted_at DESC
+      LIMIT ${cap}
+    `,
+    sql`
+      SELECT o.id, o.token_id, o.bidder, u.handle, o.amount_kub, o.tx_hash, o.created_at,
+             pr.post_id, pr.film_id, p.r2_public_url
+      FROM public.print_offers o
+      LEFT JOIN public.users u ON u.address = o.bidder
+      LEFT JOIN public.prints pr ON pr.token_id = o.token_id
+      LEFT JOIN public.posts p ON p.id = pr.post_id
+      WHERE o.status = 'active'
+      ORDER BY o.created_at DESC
+      LIMIT ${cap}
+    `,
+    sql`
+      SELECT pm.id, pm.photo_hash, pm.bidder, u.handle, pm.amount_kub, pm.tx_hash, pm.created_at,
+             p.id AS post_id, p.film_id, p.r2_public_url
+      FROM public.pre_mint_offers pm
+      LEFT JOIN public.users u ON u.address = pm.bidder
+      LEFT JOIN public.posts p ON lower(p.photo_hash) = lower(pm.photo_hash)
+      WHERE pm.expires_at > now()
+      ORDER BY pm.created_at DESC
+      LIMIT ${cap}
+    `,
+  ])
+
+  const events: LiveActivityItemDto[] = []
+
+  for (const p of postRows) {
+    const filmId = Number(p.film_id)
+    const filmName = p.film_name ? String(p.film_name) : (FILM_NAME_FALLBACK[filmId] ?? `Film #${filmId}`)
+    const frameStr = formatFrameCode(Number(p.frame))
+    events.push({
+      id: `post-${String(p.id)}`,
+      kind: 'post',
+      actor: String(p.shooter).toLowerCase(),
+      actorHandle: p.handle ? String(p.handle) : null,
+      title: `Published frame ${frameStr} · ${filmName}`,
+      detail: String(p.caption ?? '').trim() || `Roll #${Number(p.roll_id)}`,
+      postId: String(p.id),
+      rollId: Number(p.roll_id),
+      filmId,
+      imageUrl: p.r2_public_url ? String(p.r2_public_url) : null,
+      txHash: p.tx_hash ? String(p.tx_hash) : null,
+      timestamp: new Date(String(p.created_at)).getTime(),
+    })
+  }
+
+  for (const r of rollRows) {
+    const filmId = Number(r.film_id)
+    const filmName = r.film_name ? String(r.film_name) : (FILM_NAME_FALLBACK[filmId] ?? `Film #${filmId}`)
+    const ts = r.developed_at ? new Date(String(r.developed_at)).getTime() : new Date(String(r.created_at)).getTime()
+    events.push({
+      id: `roll-${Number(r.id)}`,
+      kind: 'roll',
+      actor: String(r.owner).toLowerCase(),
+      actorHandle: r.handle ? String(r.handle) : null,
+      title: r.developed_at
+        ? `Developed Roll #${Number(r.id)} · ${filmName}`
+        : `Claimed Roll #${Number(r.id)} · ${filmName}`,
+      detail: `${Number(r.frames_used)}/${Number(r.frames)} EXP`,
+      rollId: Number(r.id),
+      filmId,
+      txHash: r.claim_tx_hash ? String(r.claim_tx_hash) : null,
+      timestamp: ts,
+    })
+  }
+
+  for (const pr of printRows) {
+    const filmId = Number(pr.film_id)
+    const filmName = pr.film_name ? String(pr.film_name) : (FILM_NAME_FALLBACK[filmId] ?? `Film #${filmId}`)
+    const ask = pr.ask_price_kub !== null ? Number(pr.ask_price_kub) : null
+    const lastSale = pr.last_sale_kub !== null ? Number(pr.last_sale_kub) : null
+    events.push({
+      id: `print-${Number(pr.token_id)}`,
+      kind: 'print',
+      actor: String(pr.owner).toLowerCase(),
+      actorHandle: pr.handle ? String(pr.handle) : null,
+      title: `1/1 Print #${String(Number(pr.token_id)).padStart(2, '0')} · ${filmName}`,
+      detail: lastSale
+        ? `Sold for ${lastSale.toFixed(2)} KUB`
+        : ask
+          ? `Listed at ${ask.toFixed(2)} KUB`
+          : `Minted on KUB Chain`,
+      postId: String(pr.post_id),
+      rollId: Number(pr.roll_id),
+      filmId,
+      imageUrl: pr.r2_public_url ? String(pr.r2_public_url) : null,
+      amountKub: lastSale ?? ask,
+      txHash: pr.mint_tx_hash ? String(pr.mint_tx_hash) : null,
+      timestamp: new Date(String(pr.minted_at)).getTime(),
+    })
+  }
+
+  for (const o of offerRows) {
+    const amt = Number(o.amount_kub)
+    events.push({
+      id: `offer-${String(o.id)}`,
+      kind: 'offer',
+      actor: String(o.bidder).toLowerCase(),
+      actorHandle: o.handle ? String(o.handle) : null,
+      title: `Offered ${amt.toFixed(2)} KUB on Print #${String(Number(o.token_id)).padStart(2, '0')}`,
+      detail: 'Escrow offer on ChainRollPrints',
+      postId: o.post_id ? String(o.post_id) : null,
+      filmId: o.film_id ? Number(o.film_id) : null,
+      imageUrl: o.r2_public_url ? String(o.r2_public_url) : null,
+      amountKub: amt,
+      txHash: o.tx_hash ? String(o.tx_hash) : null,
+      timestamp: new Date(String(o.created_at)).getTime(),
+    })
+  }
+
+  for (const pm of preMintRows) {
+    const amt = Number(pm.amount_kub)
+    events.push({
+      id: `pre-${String(pm.id)}`,
+      kind: 'offer',
+      actor: String(pm.bidder).toLowerCase(),
+      actorHandle: pm.handle ? String(pm.handle) : null,
+      title: `Pre-Mint Offer ${amt.toFixed(2)} KUB`,
+      detail: 'Escrow bid awaiting photographer accept',
+      postId: pm.post_id ? String(pm.post_id) : null,
+      filmId: pm.film_id ? Number(pm.film_id) : null,
+      imageUrl: pm.r2_public_url ? String(pm.r2_public_url) : null,
+      amountKub: amt,
+      txHash: pm.tx_hash ? String(pm.tx_hash) : null,
+      timestamp: new Date(String(pm.created_at)).getTime(),
+    })
+  }
+
+  events.sort((a, b) => b.timestamp - a.timestamp)
+  return events.slice(0, cap)
+}
+
 export type DbMutationPayload =
   | {
       type: 'post.create'
