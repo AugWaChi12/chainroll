@@ -3,7 +3,9 @@ import {
   expandVisualQuery,
   tagPhotoWithGemini,
 } from '@/server/ai/visual-tagger'
+import { chainRollAbi, chainRollAddress } from '@chainroll/contracts'
 import postgres, { type Sql } from 'postgres'
+import { createPublicClient, http, type Address } from 'viem'
 
 const DEFAULT_DB_URL = 'postgresql://chainroll:chainroll@127.0.0.1:5435/chainroll'
 
@@ -221,6 +223,150 @@ export async function reindexUntaggedPostsFromDb(opts?: {
   }
 
   return { geminiConfigured, processed: rows.length, tagged, skipped }
+}
+
+let shotSyncColsPromise: Promise<void> | null = null
+
+async function ensureShotSyncColumns(sql: Sql): Promise<void> {
+  if (!shotSyncColsPromise) {
+    shotSyncColsPromise = (async () => {
+      await sql`
+        ALTER TABLE public.shots
+        ADD COLUMN IF NOT EXISTS r2_private_key TEXT
+      `
+    })().catch((err) => {
+      shotSyncColsPromise = null
+      throw err
+    })
+  }
+  await shotSyncColsPromise
+}
+
+function getServerChainConfig(): { rpcUrl: string; contract: Address | null } {
+  const isMainnet = process.env.NEXT_PUBLIC_CHAIN === 'mainnet'
+  const rpcUrl = isMainnet
+    ? 'https://rpc.bitkubchain.io'
+    : 'https://rpc-testnet.bitkubchain.io'
+  const envAddr = process.env.NEXT_PUBLIC_CHAINROLL_ADDRESS?.trim()
+  const fallback = isMainnet ? chainRollAddress[96] : chainRollAddress[25925]
+  const addr = (envAddr && /^0x[a-fA-F0-9]{40}$/.test(envAddr) ? envAddr : fallback) as
+    | Address
+    | undefined
+  return { rpcUrl, contract: addr ?? null }
+}
+
+/**
+ * Verifies that `walletAddress` owns `rollId` either in Postgres (`public.rolls`)
+ * or on-chain (`ChainRoll.getRoll(rollId)`).
+ */
+export async function verifyRollOwner(
+  rollId: number,
+  walletAddress: string,
+): Promise<{ ok: boolean; filmId?: number; frames?: number }> {
+  const norm = walletAddress.toLowerCase()
+  const sql = getSql()
+  const rows = await sql`
+    SELECT owner, film_id, frames FROM public.rolls WHERE id = ${rollId} LIMIT 1
+  `
+  if (rows[0]?.owner) {
+    const owner = String(rows[0].owner).toLowerCase()
+    if (owner === norm) {
+      return { ok: true, filmId: Number(rows[0].film_id ?? 1), frames: Number(rows[0].frames ?? 24) }
+    }
+    return { ok: false }
+  }
+
+  // Fallback to live on-chain ChainRoll.getRoll(rollId) for freshly claimed rolls
+  const { rpcUrl, contract } = getServerChainConfig()
+  if (!contract) return { ok: false }
+  try {
+    const client = createPublicClient({ transport: http(rpcUrl) })
+    const onChain = await client.readContract({
+      address: contract,
+      abi: chainRollAbi,
+      functionName: 'getRoll',
+      args: [BigInt(rollId)],
+    })
+    if (onChain.owner.toLowerCase() === norm && onChain.frames > 0) {
+      return { ok: true, filmId: Number(onChain.filmId), frames: Number(onChain.frames) }
+    }
+  } catch {
+    // RPC read failed
+  }
+  return { ok: false }
+}
+
+export async function saveSyncedShotKey(input: {
+  rollId: number
+  owner: string
+  filmId: number
+  frames: number
+  frame: number
+  photoHash: string
+  txHash?: string | null
+  r2PrivateKey: string
+}): Promise<void> {
+  const sql = getSql()
+  await ensureShotSyncColumns(sql)
+  const owner = input.owner.toLowerCase()
+  const photoHash = input.photoHash.toLowerCase()
+
+  await ensureUser(sql, owner)
+  await sql`
+    INSERT INTO public.rolls (id, owner, film_id, frames, frames_used)
+    VALUES (${input.rollId}, ${owner}, ${input.filmId}, ${input.frames}, ${input.frame})
+    ON CONFLICT (id) DO UPDATE
+    SET frames_used = GREATEST(public.rolls.frames_used, ${input.frame})
+  `
+  await sql`
+    INSERT INTO public.shots (roll_id, frame, photo_hash, tx_hash, status, r2_private_key)
+    VALUES (${input.rollId}, ${input.frame}, ${photoHash}, ${input.txHash ?? null}, 'confirmed', ${input.r2PrivateKey})
+    ON CONFLICT (photo_hash) DO UPDATE
+    SET r2_private_key = EXCLUDED.r2_private_key,
+        tx_hash = COALESCE(EXCLUDED.tx_hash, public.shots.tx_hash),
+        status = 'confirmed'
+  `
+}
+
+export type SyncedShotDto = {
+  frame: number
+  photoHash: string
+  txHash?: string
+  r2PrivateKey: string
+  createdAt: number
+}
+
+export async function fetchSyncedShotsForRoll(rollId: number): Promise<SyncedShotDto[]> {
+  const sql = getSql()
+  await ensureShotSyncColumns(sql)
+  const rows = await sql`
+    SELECT frame, photo_hash, tx_hash, r2_private_key, created_at
+    FROM public.shots
+    WHERE roll_id = ${rollId} AND r2_private_key IS NOT NULL
+    ORDER BY frame ASC
+  `
+  return rows.map((r) => ({
+    frame: Number(r.frame),
+    photoHash: String(r.photo_hash).toLowerCase(),
+    txHash: r.tx_hash ? String(r.tx_hash) : undefined,
+    r2PrivateKey: String(r.r2_private_key),
+    createdAt: new Date(String(r.created_at)).getTime(),
+  }))
+}
+
+export async function fetchSyncedShotKey(
+  rollId: number,
+  photoHash: string,
+): Promise<string | null> {
+  const sql = getSql()
+  await ensureShotSyncColumns(sql)
+  const rows = await sql`
+    SELECT r2_private_key
+    FROM public.shots
+    WHERE roll_id = ${rollId} AND lower(photo_hash) = ${photoHash.toLowerCase()}
+    LIMIT 1
+  `
+  return rows[0]?.r2_private_key ? String(rows[0].r2_private_key) : null
 }
 
 async function ensurePreMintTable(sql: Sql) {

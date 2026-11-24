@@ -6,6 +6,7 @@ import {
   developRollOnPage,
   photoStore,
   shootFrameOnPage,
+  uploadFrameToPrivateCloud,
   useChainRoll,
   type PhotoRecord,
 } from '@/features/roll'
@@ -197,6 +198,19 @@ export function useRollSession(defaultFrames: number) {
           setHud({ ...task, stage: 'confirmed', txHash })
           syncedInBranch = true
           void chain.refetch({ minFramesUsed: Math.max(roll.framesUsed + 1, task.frame) })
+          // Background-sync private frame image to R2 so Phone & PC see the same Darkroom frames
+          const localShot = rollShots.find((s) => s.hash === task.digest)
+          if (localShot?.blob) {
+            void uploadFrameToPrivateCloud({
+              rollId: roll.id,
+              frame: task.frame,
+              photoHash: task.digest,
+              filmId: roll.filmId,
+              frames: roll.frames,
+              blob: localShot.blob,
+              txHash,
+            })
+          }
           // Background sync real on-chain shot to Postgres so /verify and /admin stay in sync
           if (wallet.address && typeof window !== 'undefined') {
             const rollIdNum = Number(roll.id)
@@ -285,7 +299,7 @@ export function useRollSession(defaultFrames: number) {
         if (!syncedInBranch) void chain.refetch()
       }
     },
-    [chain, executeOnPageConfirm, frames, patchShot, roll, wallet.adapter, wallet.address, wallet.kind],
+    [chain, executeOnPageConfirm, frames, patchShot, roll, rollShots, wallet.adapter, wallet.address, wallet.kind],
   )
 
   const addShot = useCallback(

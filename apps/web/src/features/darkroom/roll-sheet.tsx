@@ -1,9 +1,18 @@
 'use client'
 
 import { BlockConfirmHud, ReviewSheet, type BlockHudTask, type Shot } from '@/features/camera'
-import { PostComposerModal, getProfileMeta, useFeedStore, type PublishableFrame } from '@/features/feed'
+import { PostComposerModal, getProfileMeta, useFeedStore, type FeedPost, type PublishableFrame } from '@/features/feed'
 import { getStock, useStockName } from '@/features/film'
-import { countdown, developRollOnPage, photoStore, rollStage, useNowSec, useRoll } from '@/features/roll'
+import {
+  countdown,
+  developRollOnPage,
+  fetchCloudFramesForRoll,
+  photoStore,
+  rollStage,
+  uploadFrameToPrivateCloud,
+  useNowSec,
+  useRoll,
+} from '@/features/roll'
 import {
   activeChain,
   chainRollContract,
@@ -15,7 +24,7 @@ import {
 } from '@/features/wallet'
 import { chainRollAbi } from '@chainroll/contracts'
 import { Badge, Button, EmptyState, FilmStrip, LatentFrame, cn } from '@chainroll/ui'
-import { Aperture, ArrowLeft, Beaker, Check, Download, Loader2, Send } from 'lucide-react'
+import { Aperture, ArrowLeft, Beaker, Check, Cloud, Download, Loader2, Send } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
@@ -37,8 +46,17 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
   const now = useNowSec()
   const stockName = useStockName()
   const { roll, loading, refetch } = useRoll(rollId)
-  const shots = useRollShots(rollId)
   const { posts } = useFeedStore()
+  const isOwnerForSync = Boolean(
+    roll && w.address && w.address.toLowerCase() === roll.owner.toLowerCase(),
+  )
+  const { shots, syncingCloud } = useRollShots(
+    rollId,
+    roll,
+    posts,
+    isOwnerForSync,
+    w.authenticated,
+  )
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
   const [composerFrame, setComposerFrame] = useState<number | null>(null)
   const [exportingSheet, setExportingSheet] = useState(false)
@@ -403,9 +421,29 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
             </div>
           ))}
         </section>
-        {developed && shots.some((s, i) => !s && i < roll.framesUsed) && (
-          <p className="mt-3 text-2xs text-fg-subtle">{t('otherDevice')}</p>
-        )}
+        {developed &&
+          Array.from({ length: roll.framesUsed }, (_, i) => i).some((i) => !shots[i]) && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-border bg-bg-raised px-3.5 py-2.5">
+              <p className="text-2xs text-fg-muted">{t('otherDevice')}</p>
+              {isOwner && !w.authenticated && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={w.authenticating}
+                  onClick={() => void w.signIn()}
+                >
+                  <Cloud className="size-3.5" />
+                  {w.authenticating ? t('syncingCloud') : t('syncSignIn')}
+                </Button>
+              )}
+              {isOwner && w.authenticated && syncingCloud && (
+                <span className="inline-flex items-center gap-1.5 font-mono text-2xs text-fg-muted">
+                  <Loader2 className="size-3 animate-spin" />
+                  {t('syncingCloud')}
+                </span>
+              )}
+            </div>
+          )}
       </div>
 
       {reviewIndex !== null && reviewIndex >= 0 && (
@@ -465,9 +503,26 @@ function Sprockets() {
   )
 }
 
-/** Photos of this roll on this device, indexed by frame-1 (holes where the frame lives elsewhere). */
-function useRollShots(rollId: bigint) {
-  const [shots, setShots] = useState<(Shot | undefined)[]>([])
+/**
+ * Photos of this roll merged from:
+ * 1) Local IndexedDB on this device (instant, full Blob)
+ * 2) Authenticated Private R2 Cloud Sync (cross-device Phone <-> PC for the roll owner)
+ * 3) Already-published Feed posts (public R2 URLs)
+ * Also silently backfills any local-only IndexedDB frames up to Private R2 when authenticated.
+ */
+function useRollShots(
+  rollId: bigint,
+  roll: { id: bigint; filmId: number; frames: number } | null,
+  posts: FeedPost[],
+  isOwner: boolean,
+  authenticated: boolean,
+) {
+  const [localShots, setLocalShots] = useState<(Shot | undefined)[]>([])
+  const [cloudShots, setCloudShots] = useState<(Shot | undefined)[]>([])
+  const [syncingCloud, setSyncingCloud] = useState(false)
+  const syncedUploadHashes = useRef<Set<string>>(new Set())
+
+  // 1. Load local IndexedDB shots on this device
   useEffect(() => {
     let alive = true
     let urls: string[] = []
@@ -479,7 +534,7 @@ function useRollShots(rollId: bigint) {
         urls.push(url)
         arr[r.frame - 1] = { ...r, url }
       }
-      setShots(arr)
+      setLocalShots(arr)
     })
     return () => {
       alive = false
@@ -487,5 +542,111 @@ function useRollShots(rollId: bigint) {
       urls = []
     }
   }, [rollId])
-  return shots
+
+  // 2. Fetch Private R2 cloud-synced frames + backfill any unsynced local frames
+  useEffect(() => {
+    if (!isOwner || !authenticated || !roll) return
+    let alive = true
+    const run = async () => {
+      setSyncingCloud(true)
+      try {
+        const res = await fetchCloudFramesForRoll(rollId)
+        if (!alive) return
+
+        const cloudHashes = new Set(res.frames.map((f) => f.photoHash.toLowerCase()))
+        const arr: (Shot | undefined)[] = []
+        for (const f of res.frames) {
+          arr[f.frame - 1] = {
+            rollKey: `${activeChain.id}:${rollId}`,
+            frame: f.frame,
+            filmId: roll.filmId,
+            hash: f.photoHash,
+            txHash: f.txHash,
+            takenAt: f.createdAt,
+            status: 'confirmed',
+            blob: new Blob(),
+            bytes: 0,
+            width: 0,
+            height: 0,
+            mime: 'image/webp',
+            quality: 0.9,
+            url: f.url,
+          }
+        }
+        setCloudShots(arr)
+
+        // Auto-upload any local IndexedDB shots not yet present in Private R2
+        const localRows = await photoStore.listRoll(`${activeChain.id}:${rollId}`)
+        for (const row of localRows) {
+          const h = row.hash.toLowerCase()
+          if (cloudHashes.has(h) || syncedUploadHashes.current.has(h)) continue
+          syncedUploadHashes.current.add(h)
+          await uploadFrameToPrivateCloud({
+            rollId,
+            frame: row.frame,
+            photoHash: row.hash,
+            filmId: row.filmId || roll.filmId,
+            frames: roll.frames,
+            blob: row.blob,
+            txHash: row.txHash,
+          })
+        }
+      } finally {
+        if (alive) setSyncingCloud(false)
+      }
+    }
+    void run()
+    return () => {
+      alive = false
+    }
+  }, [authenticated, isOwner, roll, rollId])
+
+  // 3. Merge Local > Cloud Private R2 > Already-Published Feed Post
+  const shots = useMemo<(Shot | undefined)[]>(() => {
+    const rollNum = Number(rollId)
+    const maxLen = Math.max(localShots.length, cloudShots.length, roll?.frames ?? 0)
+    const merged: (Shot | undefined)[] = []
+
+    const postsByFrame = new Map<number, FeedPost>()
+    for (const p of posts) {
+      if (p.rollId === rollNum && p.imageDataUrl) {
+        postsByFrame.set(p.frame, p)
+      }
+    }
+
+    for (let i = 0; i < maxLen; i++) {
+      const local = localShots[i]
+      if (local) {
+        merged[i] = local
+        continue
+      }
+      const cloud = cloudShots[i]
+      if (cloud) {
+        merged[i] = cloud
+        continue
+      }
+      const pub = postsByFrame.get(i + 1)
+      if (pub?.imageDataUrl) {
+        merged[i] = {
+          rollKey: `${activeChain.id}:${rollId}`,
+          frame: pub.frame,
+          filmId: pub.filmId,
+          hash: pub.photoHash as `0x${string}`,
+          txHash: pub.txHash as `0x${string}` | undefined,
+          takenAt: pub.createdAt,
+          status: 'confirmed',
+          blob: new Blob(),
+          bytes: 0,
+          width: 0,
+          height: 0,
+          mime: 'image/webp',
+          quality: 0.9,
+          url: pub.imageDataUrl,
+        }
+      }
+    }
+    return merged
+  }, [cloudShots, localShots, posts, roll?.frames, rollId])
+
+  return { shots, syncingCloud }
 }

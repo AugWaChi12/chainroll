@@ -780,7 +780,9 @@
     "sheet": "Contact sheet",
     "frameLabel": "Frame {frame}",
     "localNote": "Showing your latest roll on-chain plus rolls shot on this device — older rolls from other devices are coming soon.",
-    "otherDevice": "Some frames were shot on another device, so the photos aren't here (they're fully recorded on-chain).",
+    "otherDevice": "Some frames were shot on another device — sign in (SIWE) to sync your private frames across devices.",
+    "syncSignIn": "Sign in to sync frames",
+    "syncingCloud": "Syncing frames…",
     "stage": {
       "shooting": "Shooting",
       "full": "Full",
