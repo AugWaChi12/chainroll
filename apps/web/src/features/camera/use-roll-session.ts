@@ -17,7 +17,7 @@ import {
   useWallet,
   waitForNextKubBlock,
 } from '@/features/wallet'
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { keccak256, stringToHex } from 'viem'
 import type { BlockHudTask } from './block-confirm-hud'
 
@@ -65,10 +65,14 @@ export function useRollSession(defaultFrames: number) {
     void photoStore.patch(hash, patch)
   }, [])
 
-  const pending = shots.filter((s) => s.status === 'pending').length
+  const rollShots = useMemo(
+    () => (rollKey ? shots.filter((s) => s.rollKey === rollKey) : []),
+    [rollKey, shots],
+  )
+  const pending = rollShots.filter((s) => s.status === 'pending').length
   const frames = roll?.frames ?? defaultFrames
   // Prefer max of roll.framesUsed and local confirmed+pending shots so counter never double-counts or lags
-  const localConfirmed = shots.filter((s) => s.status === 'confirmed').length
+  const localConfirmed = rollShots.filter((s) => s.status === 'confirmed').length
   const used = Math.max(roll?.framesUsed ?? 0, localConfirmed) + pending
   const full = Boolean(roll && (used >= frames || roll.developReadyAt > 0))
 
@@ -125,6 +129,7 @@ export function useRollSession(defaultFrames: number) {
       }
       txInFlightRef.current = true
       setHud({ ...task, stage: 'signing', errorCode: undefined })
+      let syncedInBranch = false
       try {
         // Pre-flight real KUB gas check (getKubBalance returns KUB as a number)
         if (wallet.address && wallet.kind !== 'bitkub-next') {
@@ -138,19 +143,43 @@ export function useRollSession(defaultFrames: number) {
           }
         }
         if (task.kind === 'claim') {
-          let txHash: `0x${string}` | undefined
-          await adapter.claimDailyRoll(task.filmId, {
+          const prevRollId = roll?.id ?? 0n
+          const txHash = await adapter.claimDailyRoll(task.filmId, {
             onEvent: (e) => {
               if (e.type === 'sign') setHud({ ...task, stage: 'signing' })
               if (e.type === 'approval') setApprovalUrl(e.approvalUrl)
               if (e.type === 'submitted') {
-                txHash = e.hash
                 setApprovalUrl(null)
                 setHud({ ...task, stage: 'mining', txHash: e.hash })
               }
             },
           })
+          // Wait for the new roll to appear on-chain (or decode RollClaimed from receipt)
+          // so the Camera UI switches from Claim → Shutter immediately.
+          syncedInBranch = true
+          const freshRoll = await chain.refetch({
+            waitForNewRollAfter: prevRollId,
+            txHash,
+          })
           setHud({ ...task, stage: 'confirmed', txHash })
+          if (freshRoll && wallet.address && typeof window !== 'undefined') {
+            void window
+              .fetch('/api/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'roll.claim',
+                  roll: {
+                    id: Number(freshRoll.id),
+                    owner: wallet.address,
+                    filmId: freshRoll.filmId,
+                    frames: freshRoll.frames,
+                    txHash,
+                  },
+                }),
+              })
+              .catch(() => {})
+          }
         } else if (task.kind === 'shoot' && roll) {
           patchShot(task.digest, { status: 'pending', errorCode: undefined, errorReason: undefined })
           const txHash = await adapter.shoot(roll.id, task.digest, {
@@ -166,6 +195,8 @@ export function useRollSession(defaultFrames: number) {
           })
           patchShot(task.digest, { status: 'confirmed', txHash })
           setHud({ ...task, stage: 'confirmed', txHash })
+          syncedInBranch = true
+          void chain.refetch({ minFramesUsed: Math.max(roll.framesUsed + 1, task.frame) })
           // Background sync real on-chain shot to Postgres so /verify and /admin stay in sync
           if (wallet.address && typeof window !== 'undefined') {
             const rollIdNum = Number(roll.id)
@@ -200,19 +231,19 @@ export function useRollSession(defaultFrames: number) {
               .catch(() => {})
           }
         } else if (task.kind === 'develop') {
-          let txHash: `0x${string}` | undefined
           const fn = task.early ? adapter.developEarly : adapter.develop
-          await fn(task.rollId, {
+          const txHash = await fn(task.rollId, {
             onEvent: (e) => {
               if (e.type === 'sign') setHud({ ...task, stage: 'signing' })
               if (e.type === 'approval') setApprovalUrl(e.approvalUrl)
               if (e.type === 'submitted') {
-                txHash = e.hash
                 setApprovalUrl(null)
                 setHud({ ...task, stage: 'mining', txHash: e.hash })
               }
             },
           })
+          syncedInBranch = true
+          await chain.refetch({ expectDeveloping: true })
           setHud({ ...task, stage: 'confirmed', txHash })
           if (typeof window !== 'undefined') {
             void window
@@ -230,9 +261,10 @@ export function useRollSession(defaultFrames: number) {
           }
         }
 
+        const dismissMs = task.kind === 'claim' ? 1800 : 2800
         window.setTimeout(() => {
           setHud((cur) => (cur?.digest === task.digest && cur.stage === 'confirmed' ? null : cur))
-        }, 3200)
+        }, dismissMs)
       } catch (err) {
         console.error('[ChainRoll tx failed]', task.kind, err)
         const { code, reason } = classifyTxError(err)
@@ -250,7 +282,7 @@ export function useRollSession(defaultFrames: number) {
       } finally {
         txInFlightRef.current = false
         setApprovalUrl(null)
-        void chain.refetch()
+        if (!syncedInBranch) void chain.refetch()
       }
     },
     [chain, executeOnPageConfirm, frames, patchShot, roll, wallet.adapter, wallet.address, wallet.kind],
@@ -307,7 +339,7 @@ export function useRollSession(defaultFrames: number) {
   const retry = useCallback(
     (hash: `0x${string}`) => {
       if (!roll) return
-      const shot = shots.find((s) => s.hash === hash)
+      const shot = rollShots.find((s) => s.hash === hash)
       const stock = getStock(roll.filmId)
       const task: BlockHudTask = {
         kind: 'shoot',
@@ -318,7 +350,7 @@ export function useRollSession(defaultFrames: number) {
       }
       setHud(task)
     },
-    [roll, shots, used],
+    [roll, rollShots, used],
   )
 
   /** Pop up the On-Page BlockConfirmHud for claiming a daily roll. */
@@ -367,7 +399,7 @@ export function useRollSession(defaultFrames: number) {
     onChain,
     phase,
     roll,
-    shots,
+    shots: rollShots,
     used,
     frames,
     full,

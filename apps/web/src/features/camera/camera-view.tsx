@@ -113,7 +113,7 @@ export function CameraView() {
   const session = useRollSession(getStock(pickedFilm).frames)
   const { shots, used, frames, full, phase, roll } = session
   // an open on-chain roll fixes the film; otherwise the picker decides
-  const filmId = roll ? roll.filmId : pickedFilm
+  const filmId = phase === 'open' && roll ? roll.filmId : pickedFilm
   const stock = getStock(filmId)
   const activeLook = useMemo(
     () => ({ ...stock.look, exposure: stock.look.exposure + ev }),
@@ -205,7 +205,10 @@ export function CameraView() {
   const blocked = BLOCKING.includes(cam.status)
   const lastShot = shots.at(-1)
   const developed = Boolean(roll && rollStage(roll, nowSec) === 'developed')
-  const actionBusy = isBusy(session.action)
+  const actionBusy =
+    isBusy(session.action) ||
+    session.hud?.stage === 'signing' ||
+    session.hud?.stage === 'mining'
 
   // ── status strip copy ────────────────────────────────────
   const pendingCount = shots.filter((s) => s.status === 'pending').length
@@ -505,7 +508,7 @@ export function CameraView() {
             </Button>
           ) : phase === 'loading' ? (
             <FilmStrip className="w-24" label={t('chain.loading')} />
-          ) : phase === 'claim' || (phase === 'full' && session.canClaim) ? (
+          ) : phase === 'claim' ? (
             session.canClaim ? (
               <Button
                 variant="primary"
@@ -534,19 +537,33 @@ export function CameraView() {
                 <Button variant="primary" asChild>
                   <Link href={`/darkroom/${roll.id}`}>{t('chain.toDarkroom')}</Link>
                 </Button>
-                <Button
-                  variant="secondary"
-                  disabled={actionBusy}
-                  onClick={() => session.claim(pickedFilm)}
-                >
-                  {t('chain.claim')}
-                </Button>
+                {session.canClaim && (
+                  <Button
+                    variant="secondary"
+                    disabled={actionBusy}
+                    onClick={() => session.claim(pickedFilm)}
+                  >
+                    {actionBusy ? t('chain.claiming') : t('chain.claim')}
+                  </Button>
+                )}
               </div>
             ) : roll ? (
               <div className="flex flex-col items-center gap-1.5">
-                <Button variant="primary" size="sm" asChild>
-                  <Link href={`/darkroom/${roll.id}`}>{t('chain.toDarkroom')}</Link>
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button variant="primary" size="sm" asChild>
+                    <Link href={`/darkroom/${roll.id}`}>{t('chain.toDarkroom')}</Link>
+                  </Button>
+                  {session.canClaim && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={actionBusy}
+                      onClick={() => session.claim(pickedFilm)}
+                    >
+                      {actionBusy ? t('chain.claiming') : t('chain.claim')}
+                    </Button>
+                  )}
+                </div>
                 <span className="text-center font-mono text-2xs text-fg-muted">
                   {t('chain.developed', {
                     time: format.dateTime(new Date((roll?.developReadyAt ?? 0) * 1000), {

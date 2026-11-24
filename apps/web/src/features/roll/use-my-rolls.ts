@@ -22,7 +22,7 @@ export function useMyRolls(address: Address | null) {
     ...base,
     functionName: 'latestRollOf',
     args: [address!],
-    query: { enabled },
+    query: { enabled, staleTime: 0 },
   })
 
   const [localIds, setLocalIds] = useState<bigint[]>([])
@@ -52,7 +52,7 @@ export function useMyRolls(address: Address | null) {
       functionName: 'getRoll' as const,
       args: [id] as const,
     })),
-    query: { enabled: enabled && ids.length > 0 },
+    query: { enabled: enabled && ids.length > 0, staleTime: 0 },
   })
 
   const byId = new Map<string, ChainRoll>()
@@ -118,6 +118,7 @@ export function useRoll(rollId: bigint | null) {
     query: {
       enabled: Boolean(chainRollContract && rollId && rollId > 0n),
       refetchInterval: 15_000,
+      staleTime: 0,
     },
   })
   const r = q.data
@@ -133,16 +134,19 @@ export function useRoll(rollId: bigint | null) {
         }
       : null
 
-  const roll = onPageMatch
-    ? {
-        id: BigInt(onPageMatch.id),
-        owner: onPageMatch.owner as Address,
-        filmId: onPageMatch.filmId,
-        frames: onPageMatch.frames,
-        framesUsed: onPageMatch.framesUsed,
-        developReadyAt: onPageMatch.developReadyAt,
-      }
-    : wagmiRoll
+  // Prefer live on-chain state when contract is configured so developReadyAt / framesUsed never lag behind Postgres cache
+  const roll = chainRollContract && wagmiRoll
+    ? wagmiRoll
+    : onPageMatch
+      ? {
+          id: BigInt(onPageMatch.id),
+          owner: onPageMatch.owner as Address,
+          filmId: onPageMatch.filmId,
+          frames: onPageMatch.frames,
+          framesUsed: onPageMatch.framesUsed,
+          developReadyAt: onPageMatch.developReadyAt,
+        }
+      : wagmiRoll
 
   return {
     roll,
