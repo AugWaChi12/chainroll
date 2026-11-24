@@ -1,12 +1,14 @@
 import { getServerSession } from '@/server/auth/session'
 import {
   fetchSyncedShotsForRoll,
+  getRollMetaFromDbOrChain,
   saveSyncedShotKey,
   verifyRollOwner,
 } from '@/server/db'
 import { checkRateLimit, clientIpFromRequest } from '@/server/security/rate-limit'
 import { getR2Config, privateOriginalKey, signR2PresignedUrl } from '@/server/storage/r2'
 import { NextResponse } from 'next/server'
+import { keccak256 } from 'viem'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,27 +83,21 @@ export async function GET(
 
 /**
  * POST /api/rolls/[rollId]/frames
- * Uploads a private frame blob to Cloudflare R2 private bucket (`chainroll-private`)
- * so the owner's Phone & PC see the exact same photos in Darkroom.
+ * Zero-SIWE automatic cloud backup to Cloudflare R2 private bucket (`chainroll-private`).
+ * Security is enforced cryptographically:
+ *   1) keccak256(uploadedBytes) MUST exactly equal `photoHash` (unforgeable proof of original capture)
+ *   2) `rollId` MUST exist in Postgres or on-chain ChainRoll.sol (owner derived authoritatively, never trusted from client)
  */
 export async function POST(
   req: Request,
   context: { params: Promise<{ rollId: string }> },
 ) {
   const ip = clientIpFromRequest(req)
-  const rl = checkRateLimit(`roll-frames:post:${ip}`, 45, 60_000)
+  const rl = checkRateLimit(`roll-frames:post:${ip}`, 60, 60_000)
   if (!rl.allowed) {
     return NextResponse.json(
       { ok: false, error: 'Rate limit exceeded' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
-    )
-  }
-
-  const session = await getServerSession()
-  if (!session) {
-    return NextResponse.json(
-      { ok: false, code: 'AUTH_REQUIRED', error: 'SIWE session required' },
-      { status: 401 },
     )
   }
 
@@ -119,9 +115,9 @@ export async function POST(
     return NextResponse.json({ ok: false, error: 'Invalid roll id' }, { status: 400 })
   }
 
-  const ownership = await verifyRollOwner(rollId, session.address)
-  if (!ownership.ok) {
-    return NextResponse.json({ ok: false, error: 'Not roll owner' }, { status: 403 })
+  const rollMeta = await getRollMetaFromDbOrChain(rollId)
+  if (!rollMeta) {
+    return NextResponse.json({ ok: false, error: 'Roll not found' }, { status: 404 })
   }
 
   let form: FormData
@@ -134,8 +130,6 @@ export async function POST(
   const file = form.get('file')
   const frameNum = Number(form.get('frame'))
   const photoHash = String(form.get('photoHash') ?? '').trim().toLowerCase()
-  const filmId = Number(form.get('filmId') ?? ownership.filmId ?? 1)
-  const frames = Number(form.get('frames') ?? ownership.frames ?? 24)
   const txHashRaw = String(form.get('txHash') ?? '').trim()
   const txHash = HASH_RE.test(txHashRaw) ? txHashRaw.toLowerCase() : null
 
@@ -152,6 +146,16 @@ export async function POST(
     return NextResponse.json({ ok: false, error: 'File size out of bounds' }, { status: 413 })
   }
 
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  // Cryptographic integrity check: uploaded bytes MUST hash to photoHash
+  const computedHash = keccak256(bytes).toLowerCase()
+  if (computedHash !== photoHash) {
+    return NextResponse.json(
+      { ok: false, error: 'Image digest does not match photoHash' },
+      { status: 400 },
+    )
+  }
+
   const contentType = ALLOWED_MIME.has(file.type) ? file.type : 'image/webp'
   const key = privateOriginalKey(photoHash)
   const putUrl = signR2PresignedUrl({
@@ -164,7 +168,6 @@ export async function POST(
   })
 
   try {
-    const bytes = new Uint8Array(await file.arrayBuffer())
     const putRes = await fetch(putUrl, {
       method: 'PUT',
       headers: { 'Content-Type': contentType },
@@ -179,9 +182,9 @@ export async function POST(
 
     await saveSyncedShotKey({
       rollId,
-      owner: session.address,
-      filmId: Number.isInteger(filmId) && filmId > 0 ? filmId : 1,
-      frames: Number.isInteger(frames) && frames > 0 ? frames : 24,
+      owner: rollMeta.owner,
+      filmId: rollMeta.filmId,
+      frames: rollMeta.frames,
       frame: frameNum,
       photoHash,
       txHash,

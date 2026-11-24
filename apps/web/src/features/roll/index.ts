@@ -1,6 +1,8 @@
 export { ActivityView } from './activity-view'
 export {
   fetchCloudFramesForRoll,
+  isHashLocallyMarkedSynced,
+  syncAllLocalRollsToCloud,
   uploadFrameToPrivateCloud,
   type CloudSyncedFrame,
 } from './cloud-sync'

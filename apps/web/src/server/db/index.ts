@@ -256,29 +256,26 @@ function getServerChainConfig(): { rpcUrl: string; contract: Address | null } {
 }
 
 /**
- * Verifies that `walletAddress` owns `rollId` either in Postgres (`public.rolls`)
- * or on-chain (`ChainRoll.getRoll(rollId)`).
+ * Looks up the authoritative owner of `rollId` from Postgres (`public.rolls`)
+ * or live on-chain (`ChainRoll.getRoll(rollId)`).
  */
-export async function verifyRollOwner(
+export async function getRollMetaFromDbOrChain(
   rollId: number,
-  walletAddress: string,
-): Promise<{ ok: boolean; filmId?: number; frames?: number }> {
-  const norm = walletAddress.toLowerCase()
+): Promise<{ owner: string; filmId: number; frames: number } | null> {
   const sql = getSql()
   const rows = await sql`
     SELECT owner, film_id, frames FROM public.rolls WHERE id = ${rollId} LIMIT 1
   `
   if (rows[0]?.owner) {
-    const owner = String(rows[0].owner).toLowerCase()
-    if (owner === norm) {
-      return { ok: true, filmId: Number(rows[0].film_id ?? 1), frames: Number(rows[0].frames ?? 24) }
+    return {
+      owner: String(rows[0].owner).toLowerCase(),
+      filmId: Number(rows[0].film_id ?? 1),
+      frames: Number(rows[0].frames ?? 24),
     }
-    return { ok: false }
   }
 
-  // Fallback to live on-chain ChainRoll.getRoll(rollId) for freshly claimed rolls
   const { rpcUrl, contract } = getServerChainConfig()
-  if (!contract) return { ok: false }
+  if (!contract) return null
   try {
     const client = createPublicClient({ transport: http(rpcUrl) })
     const onChain = await client.readContract({
@@ -287,13 +284,34 @@ export async function verifyRollOwner(
       functionName: 'getRoll',
       args: [BigInt(rollId)],
     })
-    if (onChain.owner.toLowerCase() === norm && onChain.frames > 0) {
-      return { ok: true, filmId: Number(onChain.filmId), frames: Number(onChain.frames) }
+    if (
+      onChain.owner !== '0x0000000000000000000000000000000000000000' &&
+      onChain.frames > 0
+    ) {
+      return {
+        owner: onChain.owner.toLowerCase(),
+        filmId: Number(onChain.filmId),
+        frames: Number(onChain.frames),
+      }
     }
   } catch {
     // RPC read failed
   }
-  return { ok: false }
+  return null
+}
+
+/**
+ * Verifies that `walletAddress` owns `rollId` either in Postgres (`public.rolls`)
+ * or on-chain (`ChainRoll.getRoll(rollId)`).
+ */
+export async function verifyRollOwner(
+  rollId: number,
+  walletAddress: string,
+): Promise<{ ok: boolean; filmId?: number; frames?: number }> {
+  const meta = await getRollMetaFromDbOrChain(rollId)
+  if (!meta) return { ok: false }
+  if (meta.owner !== walletAddress.toLowerCase()) return { ok: false }
+  return { ok: true, filmId: meta.filmId, frames: meta.frames }
 }
 
 export async function saveSyncedShotKey(input: {

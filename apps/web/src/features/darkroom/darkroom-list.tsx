@@ -5,13 +5,14 @@ import {
   countdown,
   photoStore,
   rollStage,
+  syncAllLocalRollsToCloud,
   useMyRolls,
   useNowSec,
   type ChainRoll,
 } from '@/features/roll'
 import { ConnectSheet, activeChain, useWallet } from '@/features/wallet'
 import { Badge, Button, EmptyState, ErrorState, LatentFrame, Skeleton, cn } from '@chainroll/ui'
-import { Aperture, ChevronRight } from 'lucide-react'
+import { Aperture, Check, ChevronRight, Cloud, Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -29,6 +30,24 @@ export function DarkroomList() {
   const { rolls, loading, error, refetch } = useMyRolls(w.address)
   const now = useNowSec()
   const [connectOpen, setConnectOpen] = useState(false)
+  const [syncProgress, setSyncProgress] = useState<{ done: number; total: number } | null>(null)
+  const [syncFinishedCount, setSyncFinishedCount] = useState<number>(0)
+
+  // Automatically sweep & upload any unsynced local IndexedDB shots on this device to Private R2 (zero SIWE)
+  useEffect(() => {
+    if (!w.address) return
+    let alive = true
+    void syncAllLocalRollsToCloud(activeChain.id, (done, total) => {
+      if (alive) setSyncProgress({ done, total })
+    }).then(({ uploaded }) => {
+      if (!alive) return
+      setSyncProgress(null)
+      if (uploaded > 0) setSyncFinishedCount(uploaded)
+    })
+    return () => {
+      alive = false
+    }
+  }, [w.address])
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-10 pb-16 md:px-8">
@@ -47,6 +66,22 @@ export function DarkroomList() {
           </Button>
         )}
       </header>
+
+      {syncProgress && (
+        <div className="mb-5 flex items-center gap-2 border border-frame/40 bg-bg-raised px-3.5 py-2 font-mono text-2xs text-frame">
+          <Loader2 className="size-3.5 animate-spin" />
+          <span>
+            {t('syncingCloud')} ({syncProgress.done}/{syncProgress.total})
+          </span>
+        </div>
+      )}
+      {!syncProgress && syncFinishedCount > 0 && (
+        <div className="mb-5 flex items-center gap-2 border border-success/40 bg-success/10 px-3.5 py-2 font-mono text-2xs text-success">
+          <Check className="size-3.5" />
+          <Cloud className="size-3.5" />
+          <span>{t('cloudSynced', { count: syncFinishedCount })}</span>
+        </div>
+      )}
 
       {!w.address ? (
         <EmptyState

@@ -350,16 +350,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                   </Button>
                 )}
                 {isOwner && localCount > 0 && (
-                  !w.authenticated ? (
-                    <Button
-                      variant="secondary"
-                      disabled={w.authenticating}
-                      onClick={() => void w.signIn()}
-                    >
-                      <Cloud className="size-4" />
-                      {w.authenticating ? t('syncingCloud') : t('uploadToCloud')}
-                    </Button>
-                  ) : cloudCount < localCount ? (
+                  cloudCount < localCount ? (
                     <Button
                       variant="secondary"
                       disabled={syncingCloud}
@@ -589,7 +580,61 @@ function useRollShots(
   const rollFilmId = roll?.filmId ?? 0
   const rollFrames = roll?.frames ?? 0
 
-  // 2. Fetch Private R2 cloud-synced frames + backfill any unsynced local frames
+  // 1b. Auto-upload any local IndexedDB frames for this roll to Private R2 immediately (zero SIWE needed!)
+  useEffect(() => {
+    if (!rollFilmId || !rollFrames) return
+    let alive = true
+    const run = async () => {
+      const localRows = await photoStore.listRoll(`${activeChain.id}:${rollId}`)
+      if (!alive || localRows.length === 0) return
+      const toUpload = localRows.filter((row) => {
+        const h = row.hash.toLowerCase()
+        if (syncedUploadHashes.current.has(h)) return false
+        syncedUploadHashes.current.add(h)
+        return true
+      })
+      if (toUpload.length === 0) return
+      setSyncingCloud(true)
+      try {
+        const uploaded = await Promise.all(
+          toUpload.map(async (row) => {
+            const ok = await uploadFrameToPrivateCloud({
+              rollId,
+              frame: row.frame,
+              photoHash: row.hash,
+              filmId: row.filmId || rollFilmId,
+              frames: rollFrames,
+              blob: row.blob,
+              txHash: row.txHash,
+            })
+            return ok ? row : null
+          }),
+        )
+        if (!alive) return
+        const added = uploaded.filter((r): r is NonNullable<typeof r> => r !== null)
+        if (added.length > 0) {
+          setCloudShots((prev) => {
+            const next = [...prev]
+            for (const row of added) {
+              next[row.frame - 1] = {
+                ...row,
+                url: `/api/rolls/${String(rollId)}/frames/${row.hash.toLowerCase()}`,
+              }
+            }
+            return next
+          })
+        }
+      } finally {
+        if (alive) setSyncingCloud(false)
+      }
+    }
+    void run()
+    return () => {
+      alive = false
+    }
+  }, [rollFilmId, rollFrames, rollId, syncNonce])
+
+  // 2. Fetch Private R2 cloud-synced frames from other devices (requires 7-day SIWE session)
   useEffect(() => {
     if (!isOwner || !authenticated || !rollFilmId || !rollFrames) return
     let alive = true
@@ -598,68 +643,28 @@ function useRollShots(
       try {
         const res = await fetchCloudFramesForRoll(rollId)
         if (!alive) return
-
-        const cloudHashes = new Set(res.frames.map((f) => f.photoHash.toLowerCase()))
-        const arr: (Shot | undefined)[] = []
-        for (const f of res.frames) {
-          arr[f.frame - 1] = {
-            rollKey: `${activeChain.id}:${rollId}`,
-            frame: f.frame,
-            filmId: rollFilmId,
-            hash: f.photoHash,
-            txHash: f.txHash,
-            takenAt: f.createdAt,
-            status: 'confirmed',
-            blob: new Blob(),
-            bytes: 0,
-            width: 0,
-            height: 0,
-            mime: 'image/webp',
-            quality: 0.9,
-            url: f.url,
-          }
-        }
-        setCloudShots(arr)
-
-        // Auto-upload any local IndexedDB shots not yet present in Private R2 (in parallel)
-        const localRows = await photoStore.listRoll(`${activeChain.id}:${rollId}`)
-        const toUpload = localRows.filter((row) => {
-          const h = row.hash.toLowerCase()
-          if (cloudHashes.has(h) || syncedUploadHashes.current.has(h)) return false
-          syncedUploadHashes.current.add(h)
-          return true
-        })
-        if (toUpload.length > 0) {
-          const uploaded = await Promise.all(
-            toUpload.map(async (row) => {
-              const ok = await uploadFrameToPrivateCloud({
-                rollId,
-                frame: row.frame,
-                photoHash: row.hash,
-                filmId: row.filmId || rollFilmId,
-                frames: rollFrames,
-                blob: row.blob,
-                txHash: row.txHash,
-              })
-              return ok ? row : null
-            }),
-          )
-          if (alive) {
-            const added = uploaded.filter((r): r is NonNullable<typeof r> => r !== null)
-            if (added.length > 0) {
-              setCloudShots((prev) => {
-                const next = [...prev]
-                for (const row of added) {
-                  next[row.frame - 1] = {
-                    ...row,
-                    url: `/api/rolls/${String(rollId)}/frames/${row.hash.toLowerCase()}`,
-                  }
-                }
-                return next
-              })
+        setCloudShots((prev) => {
+          const next = [...prev]
+          for (const f of res.frames) {
+            next[f.frame - 1] = {
+              rollKey: `${activeChain.id}:${rollId}`,
+              frame: f.frame,
+              filmId: rollFilmId,
+              hash: f.photoHash,
+              txHash: f.txHash,
+              takenAt: f.createdAt,
+              status: 'confirmed',
+              blob: new Blob(),
+              bytes: 0,
+              width: 0,
+              height: 0,
+              mime: 'image/webp',
+              quality: 0.9,
+              url: f.url,
             }
           }
-        }
+          return next
+        })
       } finally {
         if (alive) setSyncingCloud(false)
       }
