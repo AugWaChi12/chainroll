@@ -887,31 +887,56 @@
     }
   },
   "how": {
-    "eyebrow": "How it works",
+    "eyebrow": "How it works · Litepaper",
     "title": "From shutter to chain",
-    "subtitle": "ChainRoll is a film camera where every frame is a transaction on KUB Chain — a little slower, and every photo counts.",
+    "subtitle": "ChainRoll is a live-camera-only 35mm film camera on KUB Chain — every frame seals a cryptographic keccak256 proof on-chain.",
     "steps": [
       {
         "title": "Claim",
-        "body": "Connect a wallet and claim one free roll a day (24 frames), resetting at midnight Thai time. Pick the film first — once loaded, it's yours until the roll ends.",
+        "body": "Connect a wallet and claim up to 2 free rolls per day (24 frames each), resetting at midnight Bangkok time (UTC+7). Pick your film stock before loading.",
         "tx": "1 tx"
       },
       {
-        "title": "Shoot",
-        "body": "Each frame gets a fingerprint (hash) that's recorded on-chain. The photo stays latent — invisible until developed, just like real film.",
+        "title": "Shoot live",
+        "body": "Live camera sensor only (no gallery uploads) with WebGL2 35mm film shaders and optional 90s quartz date imprint. Each frame hashes to keccak256 on-chain and stays latent.",
         "tx": "1 tx / frame"
       },
       {
         "title": "Develop",
-        "body": "After 24 frames, send the roll to develop. About an hour in the darkroom, then the whole roll fades in.",
+        "body": "Finish 24 frames — or use developEarly anytime after 1+ shot — to seal the roll into the darkroom tank. Export a 35mm Contact Sheet PNG once developed.",
         "tx": "1 tx"
       },
       {
-        "title": "Share",
-        "body": "Post your favourites to the feed and get a link to share on LINE or X — nothing you don't post is seen.",
-        "tx": "soon"
+        "title": "Share & 1/1 Print",
+        "body": "Publish to the Feed with AI Visual Search & 35mm OG Share Cards, verify authenticity on /verify, or mint and trade 1/1 Analog Print NFTs (5% creator royalty).",
+        "tx": "Live"
       }
     ],
+    "pillarsTitle": "Architecture & Key Capabilities",
+    "pillars": [
+      {
+        "tag": "ANTI-AI PROOF",
+        "title": "Verifiable Proof-of-Capture (keccak256)",
+        "body": "Every photo is captured from a live camera sensor and hashed client-side before sealing on ChainRoll.sol. Anyone can verify a file at /verify — 100% locally in the browser."
+      },
+      {
+        "tag": "CLOUD-FIRST SYNC",
+        "title": "Private Cross-Device Darkroom (Phone ↔ PC)",
+        "body": "Shots auto-backup to private Cloudflare R2 verified cryptographically via keccak256(bytes) === photoHash, and are viewable across devices only by the SIWE-authenticated roll owner."
+      },
+      {
+        "tag": "AI VISUAL SEARCH",
+        "title": "Bilingual Visual Search (Thai ↔ English)",
+        "body": "Published frames are indexed with ultra-low-token Gemini Vision bilingual keywords (e.g. river, night, cafe) and searched directly in PostgreSQL with zero AI tokens per query."
+      },
+      {
+        "tag": "1/1 ANALOG PRINT",
+        "title": "1/1 Print NFT Marketplace with 5% Royalty",
+        "body": "Any developed frame can be minted as a 1/1 Print on ChainRollPrints.sol with fixed-price listings, on-chain escrow offers, and automatic 5% ERC-2981 photographer royalties."
+      }
+    ],
+    "contractsTitle": "Smart Contracts (KUB Testnet · Chain ID 25925)",
+    "contractsBody": "Built natively for KUB Chain — supporting MetaMask, KUB Wallet, and a built-in Bitkub NEXT router hook for gas-sponsored onboarding.",
     "costTitle": "Fees (gas)",
     "costBody": "Every transaction pays gas in KUB. The numbers below use the 25 Gwei minimum gas price — real prices depend on network load.",
     "costCols": {
@@ -927,33 +952,38 @@
     },
     "privacyTitle": "Where your photos live",
     "privacy": [
-      "Photos stay on your device (in your browser) — never on-chain.",
-      "The chain only stores a hash (a 32-byte fingerprint) that proves the photo was taken at that moment. It can't be turned back into the photo.",
-      "On-chain data is public and permanent — your wallet address, timestamps and film choice are visible.",
-      "Clearing your browser data deletes photos you haven't saved yet (you can save them after developing)."
+      "Photos never go on-chain — KUB Chain stores only a 32-byte keccak256 fingerprint that cannot be reversed into an image.",
+      "Captured frames stay on your device and auto-backup to private R2 storage so you can view and publish across Phone & PC after signing in once with SIWE.",
+      "Only frames you explicitly post to the Feed become public (and you can delete posts anytime).",
+      "On-chain metadata (wallet address, timestamps, film stock, and photoHash) is public and permanent by design."
     ],
     "walletsTitle": "Supported wallets",
     "wallets": "Bitkub NEXT · MetaMask · OKX · Rabby and other browser wallets · KUB Wallet and mobile wallets via WalletConnect",
     "faqTitle": "FAQ",
     "faq": [
       {
-        "q": "Why wait for developing?",
-        "a": "Because that's the magic of film — you shoot without knowing, then see the whole roll at once."
+        "q": "Why wait for developing — can I develop early?",
+        "a": "Waiting for the darkroom reveal is the magic of 35mm film. If you don't want to shoot all 24 frames, tap 'Develop early' in the Darkroom anytime after taking at least 1 shot."
+      },
+      {
+        "q": "Will my photos sync between my phone and computer?",
+        "a": "Yes! Captured frames automatically back up to private R2 storage. Connect the same wallet and sign in once with SIWE (valid 7 days) to view, export contact sheets, or publish from any device."
+      },
+      {
+        "q": "How does the Anti-AI Photo Verifier (/verify) work?",
+        "a": "Drop any photo onto /verify. Your browser computes its keccak256 hash locally (never uploading the file) and checks KUB Chain — cropping, filtering, or AI editing even 1 pixel breaks the match."
       },
       {
         "q": "Can I delete a bad shot?",
-        "a": "No. Every click uses a real frame, like film — make each one count."
-      },
-      {
-        "q": "Will my photos follow me to a new device?",
-        "a": "The on-chain record is always there, but the photos stay on the device you shot with until you post or save them."
+        "a": "No. Every click uses a real on-chain frame, just like analog film — make every exposure count."
       },
       {
         "q": "Do I need KUB?",
-        "a": "A little, for gas (see the table above). Bitkub NEXT users may have a free transaction quota set by Bitkub."
+        "a": "A small amount of KUB covers gas (see table above). ChainRoll.sol also includes a Bitkub NEXT router hook for gas-sponsored transactions."
       }
     ],
     "cta": "Open camera",
+    "verifyLink": "Try Anti-AI Verifier (/verify)",
     "privacyLink": "Read the privacy policy"
   },
   "privacyPage": {

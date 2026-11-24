@@ -1,5 +1,7 @@
-import { Button, RebateLabel } from '@chainroll/ui'
-import { Aperture } from 'lucide-react'
+import { chainRollAddress, chainRollPrintsAddress } from '@chainroll/contracts'
+import { kubTestnet } from '@chainroll/shared'
+import { Button, RebateLabel, TxHash } from '@chainroll/ui'
+import { Aperture, ShieldCheck } from 'lucide-react'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 
@@ -16,8 +18,14 @@ export default async function HowItWorksPage() {
   const t = await getTranslations('how')
   const f = await getFormatter()
   const steps = t.raw('steps') as { title: string; body: string; tx: string }[]
+  const pillars = t.raw('pillars') as { tag: string; title: string; body: string }[]
   const privacy = t.raw('privacy') as string[]
   const faq = t.raw('faq') as { q: string; a: string }[]
+  const explorerBase = `${kubTestnet.blockExplorers.default.url}/address/`
+  const contracts = [
+    { name: 'ChainRoll.sol', address: chainRollAddress[25925] },
+    { name: 'ChainRollPrints.sol', address: chainRollPrintsAddress[25925] },
+  ] as const
   const rows = [
     ['claim', GAS.claim],
     ['shoot', GAS.shoot],
@@ -47,6 +55,39 @@ export default async function HowItWorksPage() {
           </li>
         ))}
       </ol>
+
+      {/* Architecture & key capabilities */}
+      <section className="mt-16">
+        <h2 className="mb-5 font-display text-2xl">{t('pillarsTitle')}</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          {pillars.map((p) => (
+            <div
+              key={p.tag}
+              className="flex flex-col gap-2 border border-border bg-bg-raised p-5"
+            >
+              <span className="font-mono text-2xs tracking-[0.16em] text-frame">▸ {p.tag}</span>
+              <h3 className="font-display text-xl leading-snug">{p.title}</h3>
+              <p className="text-sm leading-relaxed text-fg-muted">{p.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Live Smart Contracts */}
+      <section className="mt-16 grid gap-6 md:grid-cols-[1fr_1.4fr]">
+        <div>
+          <h2 className="font-display text-2xl">{t('contractsTitle')}</h2>
+          <p className="mt-2 text-sm text-fg-muted">{t('contractsBody')}</p>
+        </div>
+        <div className="flex flex-col divide-y divide-border border border-border bg-bg-raised">
+          {contracts.map((c) => (
+            <div key={c.name} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+              <span className="font-mono text-xs font-medium text-fg">{c.name}</span>
+              {c.address && <TxHash hash={c.address} explorerUrl={explorerBase} />}
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="mt-16 grid gap-6 md:grid-cols-[1fr_1.4fr]">
         <div>
@@ -123,14 +164,22 @@ export default async function HowItWorksPage() {
         </div>
       </section>
 
-      <div className="mt-16 flex items-center justify-between gap-4 border border-border bg-bg-raised p-6">
-        <RebateLabel>KUB · 24 EXP</RebateLabel>
-        <Button variant="primary" size="lg" asChild>
-          <Link href="/camera">
-            <Aperture />
-            {t('cta')}
-          </Link>
-        </Button>
+      <div className="mt-16 flex flex-wrap items-center justify-between gap-4 border border-border bg-bg-raised p-6">
+        <RebateLabel>KUB · 24 EXP · 2 ROLLS/DAY</RebateLabel>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" size="lg" asChild>
+            <Link href="/verify">
+              <ShieldCheck />
+              {t('verifyLink')}
+            </Link>
+          </Button>
+          <Button variant="primary" size="lg" asChild>
+            <Link href="/camera">
+              <Aperture />
+              {t('cta')}
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   )
