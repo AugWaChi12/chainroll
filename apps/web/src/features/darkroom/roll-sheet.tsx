@@ -50,7 +50,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
   const isOwnerForSync = Boolean(
     roll && w.address && w.address.toLowerCase() === roll.owner.toLowerCase(),
   )
-  const { shots, syncingCloud } = useRollShots(
+  const { shots, localCount, cloudCount, syncingCloud, syncNow } = useRollShots(
     rollId,
     roll,
     posts,
@@ -349,6 +349,32 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                     {t('panel.postToFeed')}
                   </Button>
                 )}
+                {isOwner && localCount > 0 && (
+                  !w.authenticated ? (
+                    <Button
+                      variant="secondary"
+                      disabled={w.authenticating}
+                      onClick={() => void w.signIn()}
+                    >
+                      <Cloud className="size-4" />
+                      {w.authenticating ? t('syncingCloud') : t('uploadToCloud')}
+                    </Button>
+                  ) : cloudCount < localCount ? (
+                    <Button
+                      variant="secondary"
+                      disabled={syncingCloud}
+                      onClick={() => void syncNow()}
+                    >
+                      {syncingCloud ? <Loader2 className="animate-spin" /> : <Cloud className="size-4" />}
+                      {syncingCloud ? t('syncingCloud') : t('uploadToCloud')}
+                    </Button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 border border-success/40 bg-success/10 px-2.5 py-1.5 font-mono text-2xs text-success">
+                      <Check className="size-3" />
+                      {t('cloudSynced', { count: cloudCount })}
+                    </span>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -424,7 +450,9 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
         {developed &&
           Array.from({ length: roll.framesUsed }, (_, i) => i).some((i) => !shots[i]) && (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-border bg-bg-raised px-3.5 py-2.5">
-              <p className="text-2xs text-fg-muted">{t('otherDevice')}</p>
+              <p className="text-2xs text-fg-muted">
+                {isOwner && w.authenticated ? t('otherDeviceNeedsUpload') : t('otherDevice')}
+              </p>
               {isOwner && !w.authenticated && (
                 <Button
                   variant="secondary"
@@ -436,11 +464,20 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                   {w.authenticating ? t('syncingCloud') : t('syncSignIn')}
                 </Button>
               )}
-              {isOwner && w.authenticated && syncingCloud && (
-                <span className="inline-flex items-center gap-1.5 font-mono text-2xs text-fg-muted">
-                  <Loader2 className="size-3 animate-spin" />
-                  {t('syncingCloud')}
-                </span>
+              {isOwner && w.authenticated && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={syncingCloud}
+                  onClick={() => void syncNow()}
+                >
+                  {syncingCloud ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Cloud className="size-3.5" />
+                  )}
+                  {syncingCloud ? t('syncingCloud') : t('refreshCloud')}
+                </Button>
               )}
             </div>
           )}
@@ -520,7 +557,13 @@ function useRollShots(
   const [localShots, setLocalShots] = useState<(Shot | undefined)[]>([])
   const [cloudShots, setCloudShots] = useState<(Shot | undefined)[]>([])
   const [syncingCloud, setSyncingCloud] = useState(false)
+  const [syncNonce, setSyncNonce] = useState(0)
   const syncedUploadHashes = useRef<Set<string>>(new Set())
+
+  const syncNow = () => {
+    syncedUploadHashes.current.clear()
+    setSyncNonce((n) => n + 1)
+  }
 
   // 1. Load local IndexedDB shots on this device
   useEffect(() => {
@@ -587,9 +630,9 @@ function useRollShots(
           return true
         })
         if (toUpload.length > 0) {
-          await Promise.all(
-            toUpload.map((row) =>
-              uploadFrameToPrivateCloud({
+          const uploaded = await Promise.all(
+            toUpload.map(async (row) => {
+              const ok = await uploadFrameToPrivateCloud({
                 rollId,
                 frame: row.frame,
                 photoHash: row.hash,
@@ -597,9 +640,25 @@ function useRollShots(
                 frames: rollFrames,
                 blob: row.blob,
                 txHash: row.txHash,
-              }),
-            ),
+              })
+              return ok ? row : null
+            }),
           )
+          if (alive) {
+            const added = uploaded.filter((r): r is NonNullable<typeof r> => r !== null)
+            if (added.length > 0) {
+              setCloudShots((prev) => {
+                const next = [...prev]
+                for (const row of added) {
+                  next[row.frame - 1] = {
+                    ...row,
+                    url: `/api/rolls/${String(rollId)}/frames/${row.hash.toLowerCase()}`,
+                  }
+                }
+                return next
+              })
+            }
+          }
         }
       } finally {
         if (alive) setSyncingCloud(false)
@@ -609,7 +668,7 @@ function useRollShots(
     return () => {
       alive = false
     }
-  }, [authenticated, isOwner, rollFilmId, rollFrames, rollId])
+  }, [authenticated, isOwner, rollFilmId, rollFrames, rollId, syncNonce])
 
   // 3. Merge Local > Cloud Private R2 > Already-Published Feed Post
   const shots = useMemo<(Shot | undefined)[]>(() => {
@@ -658,5 +717,11 @@ function useRollShots(
     return merged
   }, [cloudShots, localShots, posts, roll?.frames, rollId])
 
-  return { shots, syncingCloud }
+  return {
+    shots,
+    localCount: localShots.filter(Boolean).length,
+    cloudCount: cloudShots.filter(Boolean).length,
+    syncingCloud,
+    syncNow,
+  }
 }

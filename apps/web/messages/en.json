@@ -781,7 +781,11 @@
     "frameLabel": "Frame {frame}",
     "localNote": "Showing your latest roll on-chain plus rolls shot on this device — older rolls from other devices are coming soon.",
     "otherDevice": "Some frames were shot on another device — sign in (SIWE) to sync your private frames across devices.",
+    "otherDeviceNeedsUpload": "These frames aren't in cloud sync yet — open this roll on the device that shot them and click \"Sync to cloud\", then refresh here.",
     "syncSignIn": "Sign in to sync frames",
+    "uploadToCloud": "Sync to cloud",
+    "refreshCloud": "Refresh from cloud",
+    "cloudSynced": "Cloud synced ({count})",
     "syncingCloud": "Syncing frames…",
     "stage": {
       "shooting": "Shooting",
