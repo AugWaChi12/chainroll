@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Menu,
   ShieldCheck,
+  Trophy,
   User,
   Warehouse,
   WifiOff,
@@ -95,6 +96,19 @@ export function AppNav({ children }: { children: ReactNode }) {
               {t('camera')}
             </Link>
             <Link
+              href="/leaderboard"
+              title={t('leaderboard')}
+              aria-label={t('leaderboard')}
+              className={cn(
+                'hidden size-8 items-center justify-center rounded-xs border transition-colors md:inline-flex',
+                active('/leaderboard')
+                  ? 'border-frame bg-bg-sunken text-frame'
+                  : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
+              )}
+            >
+              <Trophy className="size-4" />
+            </Link>
+            <Link
               href="/verify"
               title={t('verify')}
               aria-label={t('verify')}
@@ -160,6 +174,19 @@ export function AppNav({ children }: { children: ReactNode }) {
         {menuOpen && (
           <div className="border-t border-border bg-bg-raised px-4 py-3 md:hidden">
             <div className="flex flex-col gap-1.5">
+              <Link
+                href="/leaderboard"
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-xs px-2.5 py-2 text-sm',
+                  active('/leaderboard')
+                    ? 'bg-bg-sunken text-fg'
+                    : 'text-fg-muted hover:bg-bg-sunken/60',
+                )}
+              >
+                <Trophy className="size-4 text-frame" />
+                <span>{t('leaderboard')}</span>
+              </Link>
               <Link
                 href="/verify"
                 onClick={() => setMenuOpen(false)}

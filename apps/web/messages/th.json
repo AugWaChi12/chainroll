@@ -9,7 +9,8 @@
       "films": "ฟิล์ม",
       "how": "วิธีใช้",
       "privacy": "ความเป็นส่วนตัว",
-      "activity": "ประวัติธุรกรรม"
+      "activity": "ประวัติธุรกรรม",
+      "leaderboard": "จัดอันดับ"
     }
   },
   "brand": "ChainRoll",
@@ -688,6 +689,7 @@
     "camera": "กล้อง",
     "darkroom": "ห้องมืด",
     "how": "วิธีใช้",
+    "leaderboard": "จัดอันดับช่างภาพ",
     "verify": "ตรวจรูปแท้บนเชน",
     "activity": "ประวัติธุรกรรม",
     "profile": "โปรไฟล์ของฉัน",
@@ -921,6 +923,36 @@
     "cta": "เปิดกล้อง",
     "verifyLink": "ลองตรวจรูปแท้ (/verify)",
     "privacyLink": "อ่านนโยบายความเป็นส่วนตัว"
+  },
+  "leaderboard": {
+    "eyebrow": "Hall of Frames · KUB Chain",
+    "title": "จัดอันดับช่างภาพฟิล์ม",
+    "subtitle": "สุดยอดช่างภาพและนักสะสม 1/1 Print บน KUB Chain — นับจากเฟรมจริงบนเชน ยอดถูกใจ และคอลเลกชัน",
+    "cta": "เปิดกล้องถ่ายเพิ่ม",
+    "yourRank": "อันดับของคุณ #{rank}",
+    "you": "คุณ",
+    "podiumLabel": "3 อันดับแรกบนฟิล์มสตริป",
+    "tabsLabel": "หมวดหมู่การจัดอันดับ",
+    "ledgerTitle": "อันดับถัดไปบน Contact Sheet",
+    "totalEntries": "ทั้งหมด {count} ช่างภาพ",
+    "emptyTitle": "ยังไม่มีอันดับในหมวดนี้",
+    "emptyBody": "เริ่มถ่ายม้วนแรกหรือสะสม 1/1 Print เพื่อขึ้นเป็นอันดับ 1 บน KUB Chain",
+    "pulse": {
+      "photographers": "ช่างภาพ",
+      "frames": "เฟรมบนเชน",
+      "prints": "1/1 Prints",
+      "likes": "ยอดถูกใจรวม"
+    },
+    "tabs": {
+      "shooters": "เจ้าพ่อฟิล์ม (เฟรม)",
+      "loved": "ขวัญใจฟีด (ไลก์)",
+      "collectors": "นักสะสม 1/1 Print"
+    },
+    "units": {
+      "frames": "เฟรม",
+      "likes": "ไลก์",
+      "prints": "Prints"
+    }
   },
   "privacyPage": {
     "eyebrow": "ความเป็นส่วนตัว",

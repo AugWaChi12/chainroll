@@ -258,6 +258,188 @@ export async function fetchVisualIndexStatsFromDb(): Promise<{
   }
 }
 
+export type LeaderboardEntryDto = {
+  address: string
+  handle: string | null
+  rollsCount: number
+  framesShot: number
+  postsCount: number
+  totalLikes: number
+  printsOwned: number
+  printsMinted: number
+  favoriteFilmId: number
+  signatureImageUrl: string | null
+  signaturePostId: string | null
+  signatureScene: 'nature' | 'portrait' | 'night' | 'indoor'
+}
+
+export type LeaderboardSnapshotDto = {
+  totals: {
+    photographers: number
+    frames: number
+    posts: number
+    prints: number
+    likes: number
+  }
+  entries: LeaderboardEntryDto[]
+}
+
+/**
+ * Computes live leaderboard metrics across all photographers & collectors from PostgreSQL.
+ */
+export async function fetchLeaderboardFromDb(): Promise<LeaderboardSnapshotDto> {
+  const sql = getSql()
+
+  const [userRows, rollRows, postRows, likeRows, printRows] = await Promise.all([
+    sql`SELECT address, handle FROM public.users`,
+    sql`SELECT owner, film_id, frames_used FROM public.rolls`,
+    sql`
+      SELECT p.id, p.shooter, p.film_id, p.r2_public_url, p.scene, p.like_count, p.created_at
+      FROM public.posts p
+      WHERE p.hidden_at IS NULL
+      ORDER BY p.created_at DESC
+    `,
+    sql`SELECT post_id FROM public.likes`,
+    sql`SELECT photographer, owner FROM public.prints`,
+  ])
+
+  const liveLikesByPost = new Map<string, number>()
+  for (const l of likeRows) {
+    const pid = String(l.post_id)
+    liveLikesByPost.set(pid, (liveLikesByPost.get(pid) ?? 0) + 1)
+  }
+
+  type Acc = {
+    address: string
+    handle: string | null
+    rollsCount: number
+    framesShot: number
+    postsCount: number
+    totalLikes: number
+    printsOwned: number
+    printsMinted: number
+    filmCounts: Map<number, number>
+    bestPostLikes: number
+    signatureImageUrl: string | null
+    signaturePostId: string | null
+    signatureScene: 'nature' | 'portrait' | 'night' | 'indoor'
+  }
+
+  const byAddr = new Map<string, Acc>()
+  const getOrCreate = (raw: string): Acc => {
+    const addr = raw.toLowerCase()
+    let acc = byAddr.get(addr)
+    if (!acc) {
+      acc = {
+        address: addr,
+        handle: null,
+        rollsCount: 0,
+        framesShot: 0,
+        postsCount: 0,
+        totalLikes: 0,
+        printsOwned: 0,
+        printsMinted: 0,
+        filmCounts: new Map(),
+        bestPostLikes: -1,
+        signatureImageUrl: null,
+        signaturePostId: null,
+        signatureScene: 'nature',
+      }
+      byAddr.set(addr, acc)
+    }
+    return acc
+  }
+
+  for (const u of userRows) {
+    const acc = getOrCreate(String(u.address))
+    if (u.handle) acc.handle = String(u.handle)
+  }
+
+  let globalFrames = 0
+  for (const r of rollRows) {
+    const acc = getOrCreate(String(r.owner))
+    const used = Number(r.frames_used ?? 0)
+    acc.rollsCount += 1
+    acc.framesShot += used
+    globalFrames += used
+    const fid = Number(r.film_id ?? 1)
+    acc.filmCounts.set(fid, (acc.filmCounts.get(fid) ?? 0) + Math.max(1, used))
+  }
+
+  let globalLikes = 0
+  for (const p of postRows) {
+    const acc = getOrCreate(String(p.shooter))
+    const pid = String(p.id)
+    const likes = Number(p.like_count ?? 0) + (liveLikesByPost.get(pid) ?? 0)
+    const fid = Number(p.film_id ?? 1)
+    const sceneVal = String(p.scene ?? 'nature')
+    const validScene = (
+      ['nature', 'portrait', 'night', 'indoor'].includes(sceneVal) ? sceneVal : 'nature'
+    ) as LeaderboardEntryDto['signatureScene']
+
+    acc.postsCount += 1
+    acc.totalLikes += likes
+    globalLikes += likes
+    acc.filmCounts.set(fid, (acc.filmCounts.get(fid) ?? 0) + 1)
+
+    const imgUrl = p.r2_public_url ? String(p.r2_public_url) : null
+    if (likes > acc.bestPostLikes || (likes === acc.bestPostLikes && imgUrl && !acc.signatureImageUrl)) {
+      acc.bestPostLikes = likes
+      acc.signatureImageUrl = imgUrl
+      acc.signaturePostId = pid
+      acc.signatureScene = validScene
+    }
+  }
+
+  for (const pr of printRows) {
+    const ownerAcc = getOrCreate(String(pr.owner))
+    ownerAcc.printsOwned += 1
+    const photogAcc = getOrCreate(String(pr.photographer))
+    photogAcc.printsMinted += 1
+  }
+
+  const entries: LeaderboardEntryDto[] = []
+  for (const acc of byAddr.values()) {
+    // Only include active participants with at least 1 shot, post, or print
+    if (acc.framesShot === 0 && acc.postsCount === 0 && acc.printsOwned === 0) continue
+
+    let favoriteFilmId = 1
+    let maxFilmWeight = -1
+    for (const [fid, weight] of acc.filmCounts.entries()) {
+      if (weight > maxFilmWeight) {
+        maxFilmWeight = weight
+        favoriteFilmId = fid
+      }
+    }
+
+    entries.push({
+      address: acc.address,
+      handle: acc.handle,
+      rollsCount: acc.rollsCount,
+      framesShot: Math.max(acc.framesShot, acc.postsCount),
+      postsCount: acc.postsCount,
+      totalLikes: acc.totalLikes,
+      printsOwned: acc.printsOwned,
+      printsMinted: acc.printsMinted,
+      favoriteFilmId,
+      signatureImageUrl: acc.signatureImageUrl,
+      signaturePostId: acc.signaturePostId,
+      signatureScene: acc.signatureScene,
+    })
+  }
+
+  return {
+    totals: {
+      photographers: entries.length,
+      frames: Math.max(globalFrames, postRows.length),
+      posts: postRows.length,
+      prints: printRows.length,
+      likes: globalLikes,
+    },
+    entries,
+  }
+}
+
 let shotSyncColsPromise: Promise<void> | null = null
 
 async function ensureShotSyncColumns(sql: Sql): Promise<void> {

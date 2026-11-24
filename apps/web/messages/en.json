@@ -9,7 +9,8 @@
       "films": "Films",
       "how": "How it works",
       "privacy": "Privacy",
-      "activity": "Activity"
+      "activity": "Activity",
+      "leaderboard": "Leaderboard"
     }
   },
   "brand": "ChainRoll",
@@ -752,6 +753,7 @@
     "camera": "Camera",
     "darkroom": "Darkroom",
     "how": "How it works",
+    "leaderboard": "Leaderboard",
     "verify": "Verify authentic photo",
     "activity": "Transaction activity",
     "profile": "My profile",
@@ -985,6 +987,36 @@
     "cta": "Open camera",
     "verifyLink": "Try Anti-AI Verifier (/verify)",
     "privacyLink": "Read the privacy policy"
+  },
+  "leaderboard": {
+    "eyebrow": "Hall of Frames · KUB Chain",
+    "title": "Film Leaderboard",
+    "subtitle": "Top 35mm photographers and 1/1 Analog Print collectors on KUB Chain — ranked by real on-chain frames, community likes, and prints.",
+    "cta": "Shoot a roll",
+    "yourRank": "Your rank #{rank}",
+    "you": "YOU",
+    "podiumLabel": "Top 3 film-strip podium",
+    "tabsLabel": "Leaderboard categories",
+    "ledgerTitle": "Contact Sheet Ledger",
+    "totalEntries": "{count} photographers",
+    "emptyTitle": "No rankings in this category yet",
+    "emptyBody": "Shoot your first roll or collect a 1/1 Print to claim the #1 frame on KUB Chain.",
+    "pulse": {
+      "photographers": "Photographers",
+      "frames": "On-chain frames",
+      "prints": "1/1 Prints",
+      "likes": "Total likes"
+    },
+    "tabs": {
+      "shooters": "Top Shooters",
+      "loved": "Most Loved",
+      "collectors": "1/1 Collectors"
+    },
+    "units": {
+      "frames": "frames",
+      "likes": "likes",
+      "prints": "prints"
+    }
   },
   "privacyPage": {
     "eyebrow": "Privacy",
