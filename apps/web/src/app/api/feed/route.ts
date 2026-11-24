@@ -14,6 +14,7 @@ const querySchema = z.object({
     .optional()
     .transform((v) => v === '1' || v === 'true'),
   sort: z.enum(['latest', 'popular']).default('latest'),
+  q: z.string().trim().max(80).optional(),
 })
 
 export async function GET(req: Request) {
@@ -33,6 +34,7 @@ export async function GET(req: Request) {
     filmId: searchParams.get('filmId') ?? undefined,
     printsOnly: searchParams.get('printsOnly') ?? undefined,
     sort: searchParams.get('sort') ?? undefined,
+    q: searchParams.get('q') ?? undefined,
   })
 
   if (!parsed.success) {

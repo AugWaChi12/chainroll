@@ -10,7 +10,7 @@ import {
   cn,
   truncateHash,
 } from '@chainroll/ui'
-import { Aperture, Check, Flag, Gavel, Heart, Loader2, Share2, Sparkles, X } from 'lucide-react'
+import { Aperture, Check, Flag, Gavel, Heart, Loader2, Search, Share2, Sparkles, X } from 'lucide-react'
 import type { Route } from 'next'
 import { useFormatter, useTranslations } from 'next-intl'
 import Link from 'next/link'
@@ -51,6 +51,8 @@ export function FeedView() {
 
   const [filmFilter, setFilmFilter] = useState<number | 'all' | 'prints'>('all')
   const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest')
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [connectOpen, setConnectOpen] = useState(false)
   const [reportingPost, setReportingPost] = useState<FeedPost | null>(null)
   const [marketPost, setMarketPost] = useState<FeedPost | null>(null)
@@ -70,7 +72,15 @@ export function FeedView() {
   const loadingMoreRef = useRef(false)
   const queryKeyRef = useRef(0)
 
-  const currentQueryKey = `${String(filmFilter)}:${sortBy}`
+  // Debounce search input (280ms) so typing never spams /api/feed
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim())
+    }, 280)
+    return () => window.clearTimeout(timer)
+  }, [searchInput])
+
+  const currentQueryKey = `${String(filmFilter)}:${sortBy}:${searchQuery}`
   const loadingInitial = loadedQueryKey !== currentQueryKey
 
   const handleFilmFilterChange = (next: number | 'all' | 'prints') => {
@@ -80,6 +90,12 @@ export function FeedView() {
 
   const handleSortChange = (next: 'latest' | 'popular') => {
     setSortBy(next)
+    setLocalVisibleCount(PAGE_SIZE)
+  }
+
+  const handleClearSearch = () => {
+    setSearchInput('')
+    setSearchQuery('')
     setLocalVisibleCount(PAGE_SIZE)
   }
 
@@ -93,10 +109,11 @@ export function FeedView() {
       } else if (typeof filmFilter === 'number') {
         qs.set('filmId', String(filmFilter))
       }
+      if (searchQuery) qs.set('q', searchQuery)
       if (cursor) qs.set('cursor', cursor)
       return `/api/feed?${qs.toString()}`
     },
-    [filmFilter, sortBy],
+    [filmFilter, sortBy, searchQuery],
   )
 
   // Fetch initial page (20 posts) whenever filter or sort changes
@@ -172,10 +189,24 @@ export function FeedView() {
         : filmFilter === 'prints'
           ? storePosts.filter((p) => Boolean(getPrintForPost(prints, p.id, p.photoHash)))
           : storePosts.filter((p) => p.filmId === filmFilter)
-    return [...byFilm].sort((a, b) =>
+    const needle = searchQuery.toLowerCase()
+    const bySearch = needle
+      ? byFilm.filter((p) => {
+          const hay = [
+            p.caption,
+            p.handle ?? '',
+            p.scene ?? '',
+            ...(p.aiTags ?? []),
+          ]
+            .join(' ')
+            .toLowerCase()
+          return hay.includes(needle)
+        })
+      : byFilm
+    return [...bySearch].sort((a, b) =>
       sortBy === 'popular' ? likeCountOf(b) - likeCountOf(a) : b.createdAt - a.createdAt,
     )
-  }, [storePosts, prints, filmFilter, sortBy])
+  }, [storePosts, prints, filmFilter, sortBy, searchQuery])
 
   // Merge paginated server items with live optimistic local mutations (likes, reports, newly posted frames)
   const visiblePosts = useMemo(() => {
@@ -195,13 +226,14 @@ export function FeedView() {
       }
     })
 
-    // Prepend any newly created local posts not yet present in serverItems
+    // Prepend any newly created local posts not yet present in serverItems (skip during active search)
+    if (searchQuery) return merged
     const seen = new Set(merged.map((p) => p.id))
     const freshLocal = localFiltered.filter(
       (p) => !seen.has(p.id) && (merged.length === 0 || p.createdAt > merged[0]!.createdAt),
     )
     return freshLocal.length > 0 ? [...freshLocal, ...merged] : merged
-  }, [apiReady, serverItems, storePosts, localFiltered, localVisibleCount])
+  }, [apiReady, serverItems, storePosts, localFiltered, localVisibleCount, searchQuery])
 
   const effectiveTotal = apiReady
     ? Math.max(totalCount ?? visiblePosts.length, visiblePosts.length)
@@ -282,6 +314,68 @@ export function FeedView() {
           </Button>
         </div>
       </header>
+
+      {/* AI Visual Search bar */}
+      <div className="mb-4 flex flex-col gap-2 sm:mb-5">
+        <div className="relative flex items-center">
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute left-3 size-4 text-fg-subtle"
+          />
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t('searchPlaceholder')}
+            aria-label={t('searchLabel')}
+            className="h-10 w-full rounded-xs border border-border bg-bg-raised pr-9 pl-9 text-sm text-fg placeholder:text-fg-subtle focus:border-frame focus:outline-none sm:h-10"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              aria-label={t('searchClear')}
+              className="absolute right-2 rounded-xs p-1 text-fg-muted hover:text-fg"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-mono text-2xs text-fg-subtle">{t('searchTry')}</span>
+            {(['river', 'night', 'cafe', 'portrait'] as const).map((chip) => {
+              const label = t(`searchChips.${chip}`)
+              const active = searchQuery.toLowerCase() === label.toLowerCase()
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    setSearchInput(label)
+                    setSearchQuery(label)
+                    setLocalVisibleCount(PAGE_SIZE)
+                  }}
+                  className={cn(
+                    'rounded-xs border px-2 py-0.5 font-mono text-2xs transition-colors duration-[var(--dur-fast)]',
+                    active
+                      ? 'border-frame bg-frame/10 text-frame'
+                      : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
+                  )}
+                >
+                  #{label}
+                </button>
+              )
+            })}
+          </div>
+          {searchQuery && !loadingInitial && (
+            <span className="font-mono text-2xs tabular text-fg-muted">
+              {t('searchResultCount', { query: searchQuery, count: effectiveTotal })}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Filter & sort bar — single scrollable strip on mobile, clean wrap on desktop */}
       <div className="mb-5 flex flex-col gap-2.5 sm:mb-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
@@ -382,12 +476,18 @@ export function FeedView() {
       {visiblePosts.length === 0 && !loadingInitial ? (
         <EmptyState
           mark="00"
-          title={t('emptyTitle')}
-          description={t('emptyBody')}
+          title={searchQuery ? t('emptySearchTitle', { query: searchQuery }) : t('emptyTitle')}
+          description={searchQuery ? t('emptySearchBody') : t('emptyBody')}
           action={
-            <Button variant="secondary" size="sm" onClick={() => setFilmFilter('all')}>
-              {t('allFilms')}
-            </Button>
+            searchQuery ? (
+              <Button variant="secondary" size="sm" onClick={handleClearSearch}>
+                {t('searchClear')}
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setFilmFilter('all')}>
+                {t('allFilms')}
+              </Button>
+            )
           }
         />
       ) : (

@@ -28,6 +28,7 @@ export type FeedPost = {
   imageDataUrl?: string
   scene?: SampleSceneKind
   featured?: boolean
+  aiTags?: string[]
   reports: FeedReport[]
 }
 

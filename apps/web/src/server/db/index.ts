@@ -1,3 +1,8 @@
+import {
+  defaultSceneTags,
+  expandVisualQuery,
+  tagPhotoWithGemini,
+} from '@/server/ai/visual-tagger'
 import postgres, { type Sql } from 'postgres'
 
 const DEFAULT_DB_URL = 'postgresql://chainroll:chainroll@127.0.0.1:5435/chainroll'
@@ -31,6 +36,7 @@ export type DbPostDto = {
   imageDataUrl?: string
   scene: 'nature' | 'portrait' | 'night' | 'indoor'
   featured: boolean
+  aiTags?: string[]
   reports: {
     reporter: string
     reason: 'nsfw' | 'spam' | 'copyright' | 'harassment'
@@ -101,6 +107,120 @@ export type DbRollDto = {
   framesUsed: number
   developReadyAt: number
   claimTxHash?: string
+}
+
+let visualColsPromise: Promise<void> | null = null
+
+async function ensureVisualSearchColumns(sql: Sql): Promise<void> {
+  if (!visualColsPromise) {
+    visualColsPromise = (async () => {
+      await sql`
+        ALTER TABLE public.posts
+        ADD COLUMN IF NOT EXISTS ai_tags TEXT[] NOT NULL DEFAULT '{}'
+      `
+      await sql`
+        ALTER TABLE public.posts
+        ADD COLUMN IF NOT EXISTS ai_description TEXT NOT NULL DEFAULT ''
+      `
+      await sql`
+        ALTER TABLE public.posts
+        ADD COLUMN IF NOT EXISTS ai_tagged_at TIMESTAMPTZ
+      `
+    })().catch((err) => {
+      visualColsPromise = null
+      throw err
+    })
+  }
+  await visualColsPromise
+}
+
+export async function tagAndSavePostVisuals(
+  postId: string,
+  imageSource: string,
+  opts?: { caption?: string; scene?: string },
+): Promise<{ tagged: boolean; tags: string[] }> {
+  const sql = getSql()
+  await ensureVisualSearchColumns(sql)
+
+  const aiResult = imageSource
+    ? await tagPhotoWithGemini(imageSource, { caption: opts?.caption })
+    : null
+
+  if (aiResult && (aiResult.tags.length > 0 || aiResult.description)) {
+    await sql`
+      UPDATE public.posts
+      SET ai_tags = ${aiResult.tags},
+          ai_description = ${aiResult.description},
+          ai_tagged_at = now()
+      WHERE id = ${postId}
+    `
+    return { tagged: true, tags: aiResult.tags }
+  }
+
+  // Zero-token baseline tags from scene if Gemini key is not yet configured
+  const fallbackTags = defaultSceneTags(opts?.scene ?? 'nature')
+  await sql`
+    UPDATE public.posts
+    SET ai_tags = CASE WHEN array_length(ai_tags, 1) IS NULL THEN ${fallbackTags} ELSE ai_tags END
+    WHERE id = ${postId}
+  `
+  return { tagged: false, tags: fallbackTags }
+}
+
+export async function reindexUntaggedPostsFromDb(opts?: {
+  limit?: number
+  force?: boolean
+}): Promise<{
+  geminiConfigured: boolean
+  processed: number
+  tagged: number
+  skipped: number
+}> {
+  const sql = getSql()
+  await ensureVisualSearchColumns(sql)
+
+  const geminiConfigured = Boolean(process.env.GEMINI_API_KEY?.trim())
+  const limit = Math.max(1, Math.min(50, Math.floor(opts?.limit ?? 20)))
+  const force = Boolean(opts?.force)
+
+  const rows = force
+    ? await sql`
+        SELECT id, r2_public_url, caption, scene
+        FROM public.posts
+        WHERE hidden_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      `
+    : await sql`
+        SELECT id, r2_public_url, caption, scene
+        FROM public.posts
+        WHERE hidden_at IS NULL AND ai_tagged_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+      `
+
+  let tagged = 0
+  let skipped = 0
+
+  // Process 2 at a time to stay friendly on memory & API rate limits
+  for (let i = 0; i < rows.length; i += 2) {
+    const chunk = rows.slice(i, i + 2)
+    await Promise.all(
+      chunk.map(async (row) => {
+        const id = String(row.id)
+        const scene = String(row.scene ?? 'nature')
+        const imgSrc = row.r2_public_url ? String(row.r2_public_url) : `/samples/${scene}.jpg`
+        const res = await tagAndSavePostVisuals(id, imgSrc, {
+          caption: String(row.caption ?? ''),
+          scene,
+        })
+        if (res.tagged) tagged += 1
+        else skipped += 1
+      }),
+    )
+  }
+
+  return { geminiConfigured, processed: rows.length, tagged, skipped }
 }
 
 async function ensurePreMintTable(sql: Sql) {
@@ -235,6 +355,7 @@ export async function fetchAppStateFromDb(): Promise<{
       imageDataUrl: p.r2_public_url ? String(p.r2_public_url) : undefined,
       scene: validScene,
       featured: Boolean(p.featured),
+      aiTags: Array.isArray(p.ai_tags) ? p.ai_tags.map(String) : undefined,
       reports: reportsByPost.get(pid) ?? [],
     }
   })
@@ -334,6 +455,7 @@ export type FeedPageParams = {
   filmId?: number | null
   printsOnly?: boolean
   sort?: 'latest' | 'popular'
+  q?: string | null
 }
 
 export type FeedPageResult = {
@@ -369,11 +491,14 @@ function decodeFeedCursor(raw: string | null | undefined): FeedCursorPayload | n
 
 export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<FeedPageResult> {
   const sql = getSql()
+  await ensureVisualSearchColumns(sql)
   const limit = Math.max(1, Math.min(50, Math.floor(params.limit ?? 20)))
   const sort = params.sort === 'popular' ? 'popular' : 'latest'
   const filmId = params.filmId && params.filmId > 0 ? Math.floor(params.filmId) : null
   const printsOnly = Boolean(params.printsOnly)
   const cursor = decodeFeedCursor(params.cursor)
+  const searchTerms = params.q ? expandVisualQuery(params.q) : []
+  const searchPatterns = searchTerms.map((term) => `%${term.replace(/[%_\\]/g, '\\$&')}%`)
 
   const filmClause = filmId ? sql`AND p.film_id = ${filmId}` : sql``
   const printsClause = printsOnly
@@ -382,13 +507,25 @@ export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<
         WHERE pr.post_id = p.id OR lower(pr.photo_hash) = lower(p.photo_hash)
       )`
     : sql``
+  const searchClause =
+    searchPatterns.length > 0
+      ? sql`AND (
+          p.caption ILIKE ANY(${searchPatterns})
+          OR array_to_string(p.ai_tags, ' ') ILIKE ANY(${searchPatterns})
+          OR p.ai_description ILIKE ANY(${searchPatterns})
+          OR COALESCE(u.handle, '') ILIKE ANY(${searchPatterns})
+          OR p.scene ILIKE ANY(${searchPatterns})
+        )`
+      : sql``
 
   const countPromise = sql`
     SELECT COUNT(*)::int AS total
     FROM public.posts p
+    LEFT JOIN public.users u ON u.address = p.shooter
     WHERE p.hidden_at IS NULL
       ${filmClause}
       ${printsClause}
+      ${searchClause}
   `
 
   const rowsPromise =
@@ -397,6 +534,7 @@ export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<
           WITH ranked AS (
             SELECT p.id, p.shooter, u.handle, p.roll_id, p.frame, p.film_id, p.photo_hash, p.tx_hash,
                    p.r2_public_url, p.scene, p.featured, p.caption, p.like_count, p.created_at,
+                   p.ai_tags,
                    (p.like_count + COALESCE(lc.cnt, 0))::int AS total_likes
             FROM public.posts p
             LEFT JOIN public.users u ON u.address = p.shooter
@@ -408,6 +546,7 @@ export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<
             WHERE p.hidden_at IS NULL
               ${filmClause}
               ${printsClause}
+              ${searchClause}
           )
           SELECT *
           FROM ranked
@@ -425,12 +564,14 @@ export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<
         `
       : sql`
           SELECT p.id, p.shooter, u.handle, p.roll_id, p.frame, p.film_id, p.photo_hash, p.tx_hash,
-                 p.r2_public_url, p.scene, p.featured, p.caption, p.like_count, p.created_at
+                 p.r2_public_url, p.scene, p.featured, p.caption, p.like_count, p.created_at,
+                 p.ai_tags
           FROM public.posts p
           LEFT JOIN public.users u ON u.address = p.shooter
           WHERE p.hidden_at IS NULL
             ${filmClause}
             ${printsClause}
+            ${searchClause}
             ${
               cursor
                 ? sql`AND (
@@ -507,6 +648,7 @@ export async function fetchFeedPageFromDb(params: FeedPageParams = {}): Promise<
       imageDataUrl: p.r2_public_url ? String(p.r2_public_url) : undefined,
       scene: validScene,
       featured: Boolean(p.featured),
+      aiTags: Array.isArray(p.ai_tags) ? p.ai_tags.map(String) : undefined,
       reports: reportsByPost.get(pid) ?? [],
     }
   })
@@ -1314,20 +1456,26 @@ export async function applyDbMutation(payload: DbMutationPayload): Promise<void>
     case 'post.create': {
       const p = payload.post
       const shooter = p.shooter.toLowerCase()
+      const scene = p.scene ?? 'nature'
+      const baselineTags = defaultSceneTags(scene)
+      await ensureVisualSearchColumns(sql)
       await ensureUser(sql, shooter)
       await sql`
         INSERT INTO public.posts (
           id, shooter, roll_id, frame, film_id, photo_hash, tx_hash,
-          r2_public_url, scene, featured, caption
+          r2_public_url, scene, featured, caption, ai_tags
         ) VALUES (
           ${p.id}, ${shooter}, ${p.rollId}, ${p.frame}, ${p.filmId},
           ${p.photoHash}, ${p.txHash ?? null}, ${p.imageDataUrl ?? null},
-          ${p.scene ?? 'nature'}, true, ${p.caption}
+          ${scene}, true, ${p.caption}, ${baselineTags}
         )
         ON CONFLICT (photo_hash) DO UPDATE
         SET caption = EXCLUDED.caption,
             r2_public_url = COALESCE(EXCLUDED.r2_public_url, public.posts.r2_public_url)
       `
+      // Fire-and-forget ultra-low-token Gemini Vision tagging (~180 tokens/photo)
+      const imgSrc = p.imageDataUrl ?? `/samples/${scene}.jpg`
+      void tagAndSavePostVisuals(p.id, imgSrc, { caption: p.caption, scene }).catch(() => {})
       return
     }
 
