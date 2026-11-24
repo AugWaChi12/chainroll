@@ -543,9 +543,12 @@ function useRollShots(
     }
   }, [rollId])
 
+  const rollFilmId = roll?.filmId ?? 0
+  const rollFrames = roll?.frames ?? 0
+
   // 2. Fetch Private R2 cloud-synced frames + backfill any unsynced local frames
   useEffect(() => {
-    if (!isOwner || !authenticated || !roll) return
+    if (!isOwner || !authenticated || !rollFilmId || !rollFrames) return
     let alive = true
     const run = async () => {
       setSyncingCloud(true)
@@ -559,7 +562,7 @@ function useRollShots(
           arr[f.frame - 1] = {
             rollKey: `${activeChain.id}:${rollId}`,
             frame: f.frame,
-            filmId: roll.filmId,
+            filmId: rollFilmId,
             hash: f.photoHash,
             txHash: f.txHash,
             takenAt: f.createdAt,
@@ -575,21 +578,28 @@ function useRollShots(
         }
         setCloudShots(arr)
 
-        // Auto-upload any local IndexedDB shots not yet present in Private R2
+        // Auto-upload any local IndexedDB shots not yet present in Private R2 (in parallel)
         const localRows = await photoStore.listRoll(`${activeChain.id}:${rollId}`)
-        for (const row of localRows) {
+        const toUpload = localRows.filter((row) => {
           const h = row.hash.toLowerCase()
-          if (cloudHashes.has(h) || syncedUploadHashes.current.has(h)) continue
+          if (cloudHashes.has(h) || syncedUploadHashes.current.has(h)) return false
           syncedUploadHashes.current.add(h)
-          await uploadFrameToPrivateCloud({
-            rollId,
-            frame: row.frame,
-            photoHash: row.hash,
-            filmId: row.filmId || roll.filmId,
-            frames: roll.frames,
-            blob: row.blob,
-            txHash: row.txHash,
-          })
+          return true
+        })
+        if (toUpload.length > 0) {
+          await Promise.all(
+            toUpload.map((row) =>
+              uploadFrameToPrivateCloud({
+                rollId,
+                frame: row.frame,
+                photoHash: row.hash,
+                filmId: row.filmId || rollFilmId,
+                frames: rollFrames,
+                blob: row.blob,
+                txHash: row.txHash,
+              }),
+            ),
+          )
         }
       } finally {
         if (alive) setSyncingCloud(false)
@@ -599,7 +609,7 @@ function useRollShots(
     return () => {
       alive = false
     }
-  }, [authenticated, isOwner, roll, rollId])
+  }, [authenticated, isOwner, rollFilmId, rollFrames, rollId])
 
   // 3. Merge Local > Cloud Private R2 > Already-Published Feed Post
   const shots = useMemo<(Shot | undefined)[]>(() => {

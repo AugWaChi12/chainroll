@@ -2,7 +2,7 @@
 
 import { chainRollAbi } from '@chainroll/contracts'
 import { activeChain, chainRollContract } from '@/features/wallet'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Address } from 'viem'
 import { useReadContract, useReadContracts } from 'wagmi'
 import { useOnPageRolls } from './onpage-roll-store'
@@ -135,18 +135,41 @@ export function useRoll(rollId: bigint | null) {
       : null
 
   // Prefer live on-chain state when contract is configured so developReadyAt / framesUsed never lag behind Postgres cache
-  const roll = chainRollContract && wagmiRoll
-    ? wagmiRoll
-    : onPageMatch
-      ? {
-          id: BigInt(onPageMatch.id),
-          owner: onPageMatch.owner as Address,
-          filmId: onPageMatch.filmId,
-          frames: onPageMatch.frames,
-          framesUsed: onPageMatch.framesUsed,
-          developReadyAt: onPageMatch.developReadyAt,
-        }
-      : wagmiRoll
+  const rawRoll =
+    chainRollContract && wagmiRoll
+      ? wagmiRoll
+      : onPageMatch
+        ? {
+            id: BigInt(onPageMatch.id),
+            owner: onPageMatch.owner as Address,
+            filmId: onPageMatch.filmId,
+            frames: onPageMatch.frames,
+            framesUsed: onPageMatch.framesUsed,
+            developReadyAt: onPageMatch.developReadyAt,
+          }
+        : wagmiRoll
+
+  const rollIdKey = rawRoll ? String(rawRoll.id) : null
+  const rollOwner = rawRoll?.owner ?? null
+  const rollFilmId = rawRoll?.filmId ?? 0
+  const rollFrames = rawRoll?.frames ?? 0
+  const rollFramesUsed = rawRoll?.framesUsed ?? 0
+  const rollDevelopReadyAt = rawRoll?.developReadyAt ?? 0
+
+  const roll = useMemo(
+    () =>
+      rollIdKey && rollOwner
+        ? {
+            id: BigInt(rollIdKey),
+            owner: rollOwner,
+            filmId: rollFilmId,
+            frames: rollFrames,
+            framesUsed: rollFramesUsed,
+            developReadyAt: rollDevelopReadyAt,
+          }
+        : null,
+    [rollIdKey, rollOwner, rollFilmId, rollFrames, rollFramesUsed, rollDevelopReadyAt],
+  )
 
   return {
     roll,
