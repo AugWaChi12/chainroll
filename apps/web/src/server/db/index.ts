@@ -148,14 +148,22 @@ export async function tagAndSavePostVisuals(
     ? await tagPhotoWithGemini(imageSource, { caption: opts?.caption })
     : null
 
-  if (aiResult && (aiResult.tags.length > 0 || aiResult.description)) {
+  if (aiResult && (aiResult.tags.length > 0 || aiResult.description || aiResult.nsfw)) {
     await sql`
       UPDATE public.posts
       SET ai_tags = ${aiResult.tags},
           ai_description = ${aiResult.description},
-          ai_tagged_at = now()
+          ai_tagged_at = now(),
+          hidden_at = CASE WHEN ${aiResult.nsfw} THEN COALESCE(hidden_at, now()) ELSE hidden_at END
       WHERE id = ${postId}
     `
+    if (aiResult.nsfw) {
+      const note = `AI Auto-Moderation (18+): ${aiResult.nsfwReason ?? 'Explicit content detected'}`
+      await sql`
+        INSERT INTO public.reports (post_id, reporter, reason, note)
+        VALUES (${postId}, '0x0000000000000000000000000000000000000000', 'nsfw', ${note})
+      `
+    }
     return { tagged: true, tags: aiResult.tags }
   }
 

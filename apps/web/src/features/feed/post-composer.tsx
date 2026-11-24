@@ -8,8 +8,15 @@ import type { Route } from 'next'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
-import { blobToDataUrl, createPost, useFeedStore, type FeedPost } from './post-store'
+import {
+  blobToDataUrl,
+  createPost,
+  getProfileMeta,
+  useFeedStore,
+  type FeedPost,
+} from './post-store'
 import { frameMark } from './post-visual'
+import { burnFeedWatermark } from './watermark'
 
 export type PublishableFrame = {
   frame: number
@@ -96,7 +103,17 @@ export function PostComposerModal({
       }
 
       if (uploadBlob) {
-        // 2. Direct browser -> Cloudflare R2 presigned upload (public CDN + private 1/1 master)
+        // 2. Burn analog watermark onto the PUBLIC feed preview while keeping the CLEAN original for 1/1 Print master
+        const profile = getProfileMeta(shooter)
+        const photographerLabel = profile.handle
+          ? `@${profile.handle}`
+          : `${shooter.slice(0, 6)}…${shooter.slice(-4)}`
+        const publicBlob = await burnFeedWatermark(uploadBlob, {
+          photographerLabel,
+          photoHash: active.hash,
+        })
+
+        // 3. Direct browser -> Cloudflare R2 presigned upload (watermarked public CDN + clean private 1/1 master)
         const contentType =
           uploadBlob.type === 'image/jpeg' ? 'image/jpeg' : ('image/webp' as const)
         try {
@@ -106,7 +123,7 @@ export function PostComposerModal({
             body: JSON.stringify({
               photoHash: active.hash,
               contentType,
-              bytes: uploadBlob.size,
+              bytes: Math.max(uploadBlob.size, publicBlob.size),
             }),
           })
           if (signRes.ok) {
@@ -121,7 +138,7 @@ export function PostComposerModal({
                 window.fetch(signed.publicPutUrl, {
                   method: 'PUT',
                   headers: { 'Content-Type': contentType },
-                  body: uploadBlob,
+                  body: publicBlob,
                 }),
                 window.fetch(signed.privatePutUrl, {
                   method: 'PUT',
@@ -138,7 +155,7 @@ export function PostComposerModal({
           // fallback to compressed data URL when R2 is not configured
         }
         if (!imageDataUrl) {
-          imageDataUrl = await blobToDataUrl(uploadBlob)
+          imageDataUrl = await blobToDataUrl(publicBlob)
         }
       }
 

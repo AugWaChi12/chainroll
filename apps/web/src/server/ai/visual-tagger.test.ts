@@ -19,11 +19,20 @@ describe('visual-tagger', () => {
 
   it('parses structured Gemini JSON response cleanly and deduplicates tags', () => {
     const res = parseGeminiVisualResponse(
-      '```json\n{"tags":["#แม่น้ำ","River","river"," พระอาทิตย์ตก "],"desc":"แม่น้ำยามเย็น / Sunset river view"}\n```',
+      '```json\n{"tags":["#แม่น้ำ","River","river"," พระอาทิตย์ตก "],"desc":"แม่น้ำยามเย็น / Sunset river view","nsfw":false}\n```',
     )
     expect(res).not.toBeNull()
     expect(res?.tags).toEqual(['แม่น้ำ', 'river', 'พระอาทิตย์ตก'])
     expect(res?.description).toBe('แม่น้ำยามเย็น / Sunset river view')
+    expect(res?.nsfw).toBe(false)
+  })
+
+  it('detects nsfw=true and captures reason for 18+ auto-moderation', () => {
+    const res = parseGeminiVisualResponse(
+      '{"tags":["adult"],"desc":"explicit","nsfw":true,"nsfwReason":"explicit nudity"}',
+    )
+    expect(res?.nsfw).toBe(true)
+    expect(res?.nsfwReason).toBe('explicit nudity')
   })
 
   it('provides baseline visual tags for sample scenes', () => {

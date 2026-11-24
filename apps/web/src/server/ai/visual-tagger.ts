@@ -4,13 +4,15 @@ import path from 'node:path'
 export type VisualTagResult = {
   tags: string[]
   description: string
+  nsfw: boolean
+  nsfwReason?: string
   model: string
 }
 
 const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'] as const
 
 const COMPACT_PROMPT =
-  'Return JSON {"tags":[...],"desc":"..."}. List 10-14 concise visual search keywords in BOTH Thai and English (objects, place, scenery, lighting, time of day, colors, mood). desc: 1 short Thai+English visual phrase (<=120 chars).'
+  'Return JSON {"tags":[...],"desc":"...","nsfw":false,"nsfwReason":""}. List 10-14 concise visual search keywords in BOTH Thai and English (objects, place, scenery, lighting, time of day, colors, mood). desc: 1 short Thai+English visual phrase (<=120 chars). Set nsfw=true ONLY for explicit 18+ nudity, sexual content, or graphic violence/gore (normal portraits/beaches/street=false).'
 
 /**
  * Bidirectional Thai <-> English visual synonym groups for zero-token query expansion.
@@ -75,7 +77,9 @@ export function defaultSceneTags(scene: string): string[] {
   }
 }
 
-export function parseGeminiVisualResponse(rawText: string): { tags: string[]; description: string } | null {
+export function parseGeminiVisualResponse(
+  rawText: string,
+): { tags: string[]; description: string; nsfw: boolean; nsfwReason?: string } | null {
   const trimmed = rawText.trim()
   if (!trimmed) return null
 
@@ -83,7 +87,13 @@ export function parseGeminiVisualResponse(rawText: string): { tags: string[]; de
   if (!jsonMatch) return null
 
   try {
-    const parsed = JSON.parse(jsonMatch[0]) as { tags?: unknown; desc?: unknown; description?: unknown }
+    const parsed = JSON.parse(jsonMatch[0]) as {
+      tags?: unknown
+      desc?: unknown
+      description?: unknown
+      nsfw?: unknown
+      nsfwReason?: unknown
+    }
     const rawTags = Array.isArray(parsed.tags) ? parsed.tags : []
     const seen = new Set<string>()
     const tags: string[] = []
@@ -104,9 +114,14 @@ export function parseGeminiVisualResponse(rawText: string): { tags: string[]; de
           ? parsed.description
           : ''
     const description = rawDesc.trim().slice(0, 200)
+    const nsfw = parsed.nsfw === true
+    const nsfwReason =
+      typeof parsed.nsfwReason === 'string' && parsed.nsfwReason.trim()
+        ? parsed.nsfwReason.trim().slice(0, 120)
+        : undefined
 
-    if (tags.length === 0 && !description) return null
-    return { tags, description }
+    if (tags.length === 0 && !description && !nsfw) return null
+    return { tags, description, nsfw, nsfwReason }
   } catch {
     return null
   }
@@ -220,12 +235,46 @@ export async function tagPhotoWithGemini(
       }
 
       const json = (await res.json()) as {
-        candidates?: { content?: { parts?: { text?: string }[] } }[]
+        promptFeedback?: { blockReason?: string }
+        candidates?: {
+          finishReason?: string
+          safetyRatings?: { category?: string; probability?: string }[]
+          content?: { parts?: { text?: string }[] }
+        }[]
       }
-      const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
+
+      // Check Gemini native safety block / sexually explicit rating
+      const candidate = json.candidates?.[0]
+      const safetyFlagged =
+        json.promptFeedback?.blockReason === 'SAFETY' ||
+        candidate?.finishReason === 'SAFETY' ||
+        Boolean(
+          candidate?.safetyRatings?.some(
+            (r) =>
+              r.category === 'HARM_CATEGORY_SEXUALLY_EXPLICIT' &&
+              (r.probability === 'HIGH' || r.probability === 'MEDIUM'),
+          ),
+        )
+
+      const text = candidate?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
       const parsed = parseGeminiVisualResponse(text)
       if (parsed) {
-        return { tags: parsed.tags, description: parsed.description, model }
+        return {
+          tags: parsed.tags,
+          description: parsed.description,
+          nsfw: parsed.nsfw || safetyFlagged,
+          nsfwReason: parsed.nsfwReason ?? (safetyFlagged ? 'Gemini safety filter' : undefined),
+          model,
+        }
+      }
+      if (safetyFlagged) {
+        return {
+          tags: [],
+          description: '',
+          nsfw: true,
+          nsfwReason: 'Gemini safety filter (18+)',
+          model,
+        }
       }
     } catch {
       // try next model
