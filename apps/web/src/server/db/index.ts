@@ -167,6 +167,13 @@ export async function tagAndSavePostVisuals(
         INSERT INTO public.reports (post_id, reporter, reason, note)
         VALUES (${postId}, '0x0000000000000000000000000000000000000000', 'nsfw', ${note})
       `
+    } else if (aiResult.screenCapture) {
+      const note =
+        'AI Auto-Moderation: Suspected screen re-photography (Analog Hole / Moire pattern detected)'
+      await sql`
+        INSERT INTO public.reports (post_id, reporter, reason, note)
+        VALUES (${postId}, '0x0000000000000000000000000000000000000000', 'spam', ${note})
+      `
     }
     return { tagged: true, tags: aiResult.tags }
   }

@@ -43,6 +43,8 @@ contract ChainRoll is AccessControl, Pausable {
     mapping(bytes32 photoHash => uint256) private _hashOrigin;
     /// @notice Most recent roll claimed by a user (0 = none). Lets the app find the open roll without scanning logs.
     mapping(address user => uint256 rollId) public latestRollOf;
+    /// @dev Complete chronological list of roll IDs claimed by `user` for O(1) owner history lookup.
+    mapping(address user => uint256[]) private _ownerRolls;
 
     uint256 public nextRollId = 1;
     address public sdkCallHelperRouter;
@@ -164,6 +166,11 @@ contract ChainRoll is AccessControl, Pausable {
         return _rolls[rollId];
     }
 
+    /// @notice All roll IDs ever claimed by `user` in chronological order (O(1) single-RPC lookup).
+    function getRollsByOwner(address user) external view returns (uint256[] memory) {
+        return _ownerRolls[user];
+    }
+
     function currentDay() public view returns (uint256) {
         return (block.timestamp + DAY_OFFSET) / 1 days;
     }
@@ -235,6 +242,7 @@ contract ChainRoll is AccessControl, Pausable {
         _claimsOnDay[user][currentDay()] += 1;
         rollId = nextRollId++;
         latestRollOf[user] = rollId;
+        _ownerRolls[user].push(rollId);
         _rolls[rollId] = Roll({
             owner: user, filmId: filmId, framesUsed: 0, frames: film.frames, developReadyAt: 0
         });

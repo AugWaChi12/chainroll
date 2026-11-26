@@ -53,8 +53,21 @@ async function tx<T>(
   }).finally(() => db.close())
 }
 
+let persistRequested = false
+
+function ensurePersistentStorage() {
+  if (persistRequested || typeof navigator === 'undefined') return
+  persistRequested = true
+  try {
+    void navigator.storage?.persist?.()?.catch(() => {})
+  } catch {
+    // ignore if unsupported
+  }
+}
+
 export const photoStore = {
   async put(p: PhotoRecord) {
+    ensurePersistentStorage()
     try {
       await tx('readwrite', (s) => s.put(p))
     } catch {

@@ -128,6 +128,12 @@ contract ChainRollTest is Test {
         vm.warp(cam.nextClaimAt(alice));
         uint256 third = _claim(alice);
         assertEq(cam.latestRollOf(alice), third);
+
+        uint256[] memory aliceRolls = cam.getRollsByOwner(alice);
+        assertEq(aliceRolls.length, 3);
+        assertEq(aliceRolls[0], first);
+        assertEq(aliceRolls[1], second);
+        assertEq(aliceRolls[2], third);
     }
 
     function test_claim_respectsDailyLimitPerBangkokDay() public {

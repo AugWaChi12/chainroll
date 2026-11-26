@@ -7,13 +7,14 @@ export type VisualTagResult = {
   description: string
   nsfw: boolean
   nsfwReason?: string
+  screenCapture?: boolean
   model: string
 }
 
 const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'] as const
 
 const COMPACT_PROMPT =
-  'Return JSON {"tags":[...],"desc":"...","nsfw":false,"nsfwReason":""}. List 10-14 concise visual search keywords in BOTH Thai and English (objects, place, scenery, lighting, time of day, colors, mood). desc: 1 short Thai+English visual phrase (<=120 chars). Set nsfw=true ONLY for explicit 18+ nudity, sexual content, or graphic violence/gore (normal portraits/beaches/street=false).'
+  'Return JSON {"tags":[...],"desc":"...","nsfw":false,"nsfwReason":"","screen":false}. List 10-14 concise visual search keywords in BOTH Thai and English (objects, place, scenery, lighting, time of day, colors, mood). desc: 1 short Thai+English visual phrase (<=120 chars). Set nsfw=true ONLY for explicit 18+ nudity, sexual content, or graphic violence/gore (normal portraits/beaches/street=false). Set screen=true ONLY if this is a photo taken of another digital display/monitor/phone screen with visible screen bezel, pixel grid, or moire pattern.'
 
 /**
  * Bidirectional Thai <-> English visual synonym groups for zero-token query expansion.
@@ -80,7 +81,13 @@ export function defaultSceneTags(scene: string): string[] {
 
 export function parseGeminiVisualResponse(
   rawText: string,
-): { tags: string[]; description: string; nsfw: boolean; nsfwReason?: string } | null {
+): {
+  tags: string[]
+  description: string
+  nsfw: boolean
+  nsfwReason?: string
+  screenCapture?: boolean
+} | null {
   const trimmed = rawText.trim()
   if (!trimmed) return null
 
@@ -94,6 +101,8 @@ export function parseGeminiVisualResponse(
       description?: unknown
       nsfw?: unknown
       nsfwReason?: unknown
+      screen?: unknown
+      screenCapture?: unknown
     }
     const rawTags = Array.isArray(parsed.tags) ? parsed.tags : []
     const seen = new Set<string>()
@@ -120,9 +129,14 @@ export function parseGeminiVisualResponse(
       typeof parsed.nsfwReason === 'string' && parsed.nsfwReason.trim()
         ? parsed.nsfwReason.trim().slice(0, 120)
         : undefined
+    const screenCapture = parsed.screen === true || parsed.screenCapture === true
+    if (screenCapture && !seen.has('screen-recapture')) {
+      seen.add('screen-recapture')
+      tags.push('screen-recapture')
+    }
 
-    if (tags.length === 0 && !description && !nsfw) return null
-    return { tags, description, nsfw, nsfwReason }
+    if (tags.length === 0 && !description && !nsfw && !screenCapture) return null
+    return { tags, description, nsfw, nsfwReason, screenCapture }
   } catch {
     return null
   }
@@ -269,6 +283,7 @@ export async function tagPhotoWithGemini(
           description: parsed.description,
           nsfw: parsed.nsfw || safetyFlagged,
           nsfwReason: parsed.nsfwReason ?? (safetyFlagged ? 'Gemini safety filter' : undefined),
+          screenCapture: parsed.screenCapture,
           model,
         }
       }

@@ -35,6 +35,14 @@ describe('visual-tagger', () => {
     expect(res?.nsfwReason).toBe('explicit nudity')
   })
 
+  it('detects screen=true (screen re-photography / analog hole) and appends screen-recapture tag', () => {
+    const res = parseGeminiVisualResponse(
+      '{"tags":["monitor","หน้าจอ"],"desc":"ถ่ายจากหน้าจอคอม","nsfw":false,"screen":true}',
+    )
+    expect(res?.screenCapture).toBe(true)
+    expect(res?.tags).toContain('screen-recapture')
+  })
+
   it('provides baseline visual tags for sample scenes', () => {
     expect(defaultSceneTags('nature')).toContain('แม่น้ำ')
     expect(defaultSceneTags('indoor')).toContain('คาเฟ่')

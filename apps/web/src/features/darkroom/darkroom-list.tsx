@@ -34,18 +34,24 @@ export function DarkroomList() {
   const [syncFinishedCount, setSyncFinishedCount] = useState<number>(0)
 
   // Automatically sweep & upload any unsynced local IndexedDB shots on this device to Private R2 (zero SIWE)
+  // including when the mobile browser reconnects to the network.
   useEffect(() => {
     if (!w.address) return
     let alive = true
-    void syncAllLocalRollsToCloud(activeChain.id, (done, total) => {
-      if (alive) setSyncProgress({ done, total })
-    }).then(({ uploaded }) => {
-      if (!alive) return
-      setSyncProgress(null)
-      if (uploaded > 0) setSyncFinishedCount(uploaded)
-    })
+    const runSweep = () => {
+      void syncAllLocalRollsToCloud(activeChain.id, (done, total) => {
+        if (alive) setSyncProgress({ done, total })
+      }).then(({ uploaded }) => {
+        if (!alive) return
+        setSyncProgress(null)
+        if (uploaded > 0) setSyncFinishedCount((prev) => prev + uploaded)
+      })
+    }
+    runSweep()
+    window.addEventListener('online', runSweep)
     return () => {
       alive = false
+      window.removeEventListener('online', runSweep)
     }
   }, [w.address])
 

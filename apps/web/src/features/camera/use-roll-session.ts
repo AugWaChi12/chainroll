@@ -6,6 +6,7 @@ import {
   developRollOnPage,
   photoStore,
   shootFrameOnPage,
+  syncAllLocalRollsToCloud,
   uploadFrameToPrivateCloud,
   useChainRoll,
   type PhotoRecord,
@@ -60,6 +61,17 @@ export function useRollSession(defaultFrames: number) {
     }
   }, [rollKey])
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), [])
+
+  // Background sweep of any unsynced confirmed frames in IndexedDB whenever camera opens or device comes back online
+  useEffect(() => {
+    if (!wallet.address) return
+    const runSweep = () => {
+      void syncAllLocalRollsToCloud(activeChain.id)
+    }
+    runSweep()
+    window.addEventListener('online', runSweep)
+    return () => window.removeEventListener('online', runSweep)
+  }, [wallet.address])
 
   const patchShot = useCallback((hash: string, patch: Partial<PhotoRecord>) => {
     setShots((prev) => prev.map((s) => (s.hash === hash ? { ...s, ...patch } : s)))

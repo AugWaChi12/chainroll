@@ -25,6 +25,14 @@ export function useMyRolls(address: Address | null) {
     query: { enabled, staleTime: 0 },
   })
 
+  // O(1) owner roll index on contracts deployed with getRollsByOwner (gracefully ignored if unavailable)
+  const ownerRollIds = useReadContract({
+    ...base,
+    functionName: 'getRollsByOwner',
+    args: [address!],
+    query: { enabled, staleTime: 0, retry: false },
+  })
+
   const [localIds, setLocalIds] = useState<bigint[]>([])
   useEffect(() => {
     let alive = true
@@ -59,11 +67,15 @@ export function useMyRolls(address: Address | null) {
           .map((r) => BigInt(r.id))
       : []
 
-    return [...new Set([...onChainScan, ...localIds, ...dbOwnerIds].map(String))]
+    const directOwnerIds = Array.isArray(ownerRollIds.data) ? [...ownerRollIds.data] : []
+
+    return [
+      ...new Set([...directOwnerIds, ...onChainScan, ...localIds, ...dbOwnerIds].map(String)),
+    ]
       .map(BigInt)
       .filter((id) => id > 0n)
       .sort((a, b) => (b > a ? 1 : -1))
-  }, [address, latest.data, localIds, onPageRolls])
+  }, [address, latest.data, localIds, onPageRolls, ownerRollIds.data])
 
   const rolls = useReadContracts({
     allowFailure: true,
