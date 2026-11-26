@@ -353,6 +353,25 @@ export const chainRollAbi = [
   },
   {
     "type": "function",
+    "name": "getRollsByOwner",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "grantRole",
     "inputs": [
       {
