@@ -166,7 +166,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const statusLine = buildStatusLine(post)
   const hashLabel = post ? shortHex(post.photoHash) : id.toUpperCase()
   const rollMeta = post ? `ROLL #${post.rollId} · FRAME ${mark}` : `FRAME ${mark}`
-  const siteHost = (process.env.NEXT_PUBLIC_SITE_URL || 'https://chainroll.nan-tai.com').replace(
+  const siteHost = (process.env.NEXT_PUBLIC_SITE_URL || 'https://chainroll.art').replace(
     /^https?:\/\//,
     '',
   )

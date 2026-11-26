@@ -1,4 +1,4 @@
-{$DOMAIN:chainroll.nan-tai.com} {
+{$DOMAIN:chainroll.art} {
   encode zstd gzip
 
   header {
@@ -13,4 +13,8 @@
   reverse_proxy web:3000 {
     flush_interval -1
   }
+}
+
+www.{$DOMAIN:chainroll.art}, chainroll.nan-tai.com {
+  redir https://{$DOMAIN:chainroll.art}{uri} 301
 }

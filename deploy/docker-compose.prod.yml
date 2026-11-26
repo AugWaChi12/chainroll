@@ -26,6 +26,7 @@ services:
       context: ..
       dockerfile: Dockerfile
       args:
+        NEXT_PUBLIC_SITE_URL: https://${DOMAIN:-chainroll.art}
         NEXT_PUBLIC_CHAIN: ${NEXT_PUBLIC_CHAIN:-testnet}
         NEXT_PUBLIC_CHAINROLL_ADDRESS: ${NEXT_PUBLIC_CHAINROLL_ADDRESS:-}
         NEXT_PUBLIC_WC_PROJECT_ID: ${NEXT_PUBLIC_WC_PROJECT_ID:-}
@@ -45,6 +46,7 @@ services:
       R2_PRIVATE_BUCKET: ${R2_PRIVATE_BUCKET:-chainroll-private}
       R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      NEXT_PUBLIC_SITE_URL: https://${DOMAIN:-chainroll.art}
       NEXT_PUBLIC_CHAIN: ${NEXT_PUBLIC_CHAIN:-testnet}
       NEXT_PUBLIC_CHAINROLL_ADDRESS: ${NEXT_PUBLIC_CHAINROLL_ADDRESS:-}
       NEXT_PUBLIC_WC_PROJECT_ID: ${NEXT_PUBLIC_WC_PROJECT_ID:-}
@@ -62,7 +64,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     environment:
-      DOMAIN: ${DOMAIN:-chainroll.nan-tai.com}
+      DOMAIN: ${DOMAIN:-chainroll.art}
     ports:
       - '80:80'
       - '443:443'

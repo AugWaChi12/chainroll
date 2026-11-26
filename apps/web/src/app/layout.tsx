@@ -17,7 +17,7 @@ const thai = Anuphan({ subsets: ['thai', 'latin'], variable: '--ff-thai' })
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('meta')
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://chainroll.nan-tai.com'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://chainroll.art'
   return {
     metadataBase: new URL(siteUrl),
     title: { default: t('title'), template: '%s · ChainRoll' },

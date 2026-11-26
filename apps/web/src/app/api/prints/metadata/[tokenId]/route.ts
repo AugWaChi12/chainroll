@@ -44,7 +44,7 @@ export async function GET(
     return NextResponse.json({ error: 'Token not found' }, { status: 404 })
   }
 
-  const origin = new URL(req.url).origin
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL || 'https://chainroll.art').replace(/\/$/, '')
   const postId = String(row.post_id)
   const frameNum = Number(row.frame)
   const frameCode = `${String(frameNum).padStart(2, '0')}${frameNum % 2 ? 'A' : ''}`

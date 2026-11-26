@@ -91,8 +91,8 @@ contract ChainRollPrintsTest is Test {
         // baseTokenURI configurable by admin
         assertEq(prints.tokenURI(1), "");
         vm.prank(admin);
-        prints.setBaseURI("https://chainroll.nan-tai.com/api/prints/metadata/");
-        assertEq(prints.tokenURI(1), "https://chainroll.nan-tai.com/api/prints/metadata/1");
+        prints.setBaseURI("https://chainroll.art/api/prints/metadata/");
+        assertEq(prints.tokenURI(1), "https://chainroll.art/api/prints/metadata/1");
     }
 
     function test_buyPrint_primaryAndSecondaryRoyaltySplit() public {

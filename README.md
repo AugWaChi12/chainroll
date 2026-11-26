@@ -2,7 +2,7 @@
 
 **On-chain 35mm analog film camera PWA & 1/1 Analog Print NFT marketplace built for [KUB Chain](https://www.kubchain.com).**
 
-Live MVP (KUB Testnet): **[https://chainroll.nan-tai.com](https://chainroll.nan-tai.com)**
+Live MVP (KUB Testnet): **[https://chainroll.art](https://chainroll.art)**
 
 ---
 

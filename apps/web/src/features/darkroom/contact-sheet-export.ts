@@ -248,7 +248,7 @@ export async function exportContactSheetPng(input: ContactSheetExportInput): Pro
   ctx.font = '600 14px ui-monospace, SFMono-Regular, Menlo, monospace'
   ctx.fillText('VERIFIED ON KUB CHAIN  ·  1 SHOT = 1 TX', padX, footerY)
 
-  const rightText = 'chainroll.nan-tai.com/verify'
+  const rightText = 'chainroll.art/verify'
   ctx.fillStyle = '#9D9388'
   const rw = ctx.measureText(rightText).width
   ctx.fillText(rightText, width - padX - rw, footerY)
