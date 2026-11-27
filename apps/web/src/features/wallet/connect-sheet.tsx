@@ -4,17 +4,25 @@ import { Button, cn } from '@chainroll/ui'
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   Copy,
+  ExternalLink,
   FlaskConical,
+  LogOut,
   QrCode,
   ShieldCheck,
   Smartphone,
+  User,
   Wallet,
+  Warehouse,
   X,
 } from 'lucide-react'
+import type { Route } from 'next'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import QRCode from 'qrcode'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { activeChain } from './chain'
 import { classifyTxError } from './tx'
 import { useWallet, type WalletOption } from './wallet-provider'
 
@@ -327,10 +335,23 @@ function QrPanel({ uri, onBack }: { uri: string; onBack: () => void }) {
   )
 }
 
-/** Small pill showing the connected wallet; opens the sheet when disconnected. */
+/** Small pill showing the connected wallet + account dropdown; opens ConnectSheet when disconnected. */
 export function WalletButton({ onOpen }: { onOpen: () => void }) {
   const t = useTranslations('wallet')
   const w = useWallet()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [copiedAddr, setCopiedAddr] = useState(false)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target?.closest('[data-wallet-menu]')) setMenuOpen(false)
+    }
+    document.addEventListener('click', onClick)
+    return () => document.removeEventListener('click', onClick)
+  }, [menuOpen])
+
   if (!w.address)
     return (
       <Button size="sm" variant="secondary" onClick={onOpen}>
@@ -338,17 +359,21 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
         {t('connect')}
       </Button>
     )
+
+  const explorerBase =
+    activeChain.blockExplorers?.default.url ?? 'https://testnet.kubscan.com'
+
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="relative flex shrink-0 items-center gap-1.5" data-wallet-menu>
       {!w.authenticated && (
         <button
           type="button"
           disabled={w.authenticating}
           onClick={() => void w.signIn()}
           title={t('verifyWallet')}
-          className="inline-flex h-7 items-center gap-1 rounded-xs border border-frame/70 bg-frame/15 px-1.5 font-mono text-[11px] whitespace-nowrap text-frame transition-colors hover:bg-frame/25 disabled:opacity-50 sm:h-8 sm:px-2 sm:text-2xs"
+          className="inline-flex h-8 items-center gap-1 rounded-sm border border-frame/70 bg-frame/15 px-2 font-mono text-[11px] whitespace-nowrap text-frame transition-colors hover:bg-frame/25 disabled:opacity-50 sm:text-2xs"
         >
-          <ShieldCheck className="size-3.5 shrink-0 sm:size-3" />
+          <ShieldCheck className="size-3.5 shrink-0" />
           <span className="hidden sm:inline">
             {w.authenticating ? t('verifying') : t('verifyWallet')}
           </span>
@@ -356,9 +381,14 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
       )}
       <button
         type="button"
-        onClick={() => void w.disconnect()}
-        title={t('disconnect')}
-        className="flex h-7 shrink-0 items-center gap-1.5 rounded-xs border border-border px-2 font-mono text-[11px] whitespace-nowrap text-fg-muted hover:text-fg sm:h-8 sm:text-2xs"
+        onClick={() => setMenuOpen((v) => !v)}
+        aria-expanded={menuOpen}
+        className={cn(
+          'flex h-8 shrink-0 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[11px] whitespace-nowrap transition-colors sm:text-2xs',
+          menuOpen
+            ? 'border-border-strong bg-bg-sunken text-fg'
+            : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
+        )}
       >
         <span
           aria-hidden
@@ -368,14 +398,111 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
           )}
         />
         <span className="hidden max-w-24 truncate xl:inline">{w.walletName}</span>
-        <span className="hidden xl:inline">·</span>
+        <span className="hidden text-fg-subtle xl:inline">·</span>
         <span className="sm:hidden">
           {w.address.slice(0, 4)}…{w.address.slice(-4)}
         </span>
         <span className="hidden sm:inline">
           {w.address.slice(0, 6)}…{w.address.slice(-4)}
         </span>
+        <ChevronDown
+          className={cn(
+            'size-3 text-fg-subtle transition-transform duration-150',
+            menuOpen && 'rotate-180 text-frame',
+          )}
+          aria-hidden
+        />
       </button>
+
+      {menuOpen && (
+        <div className="absolute right-0 top-10 z-50 w-68 overflow-hidden rounded-sm border border-border bg-bg-raised shadow-pop">
+          <div className="border-b border-border bg-bg-sunken/60 px-3.5 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-[10px] tracking-widest text-frame uppercase">
+                ▸ {w.walletName || 'KUB WALLET'}
+              </span>
+              {w.authenticated ? (
+                <span className="inline-flex items-center gap-1 rounded-xs border border-success/40 bg-success/10 px-1.5 py-0.5 font-mono text-[10px] text-success">
+                  <ShieldCheck className="size-3" />
+                  {t('verifiedSiwe')}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={w.authenticating}
+                  onClick={() => void w.signIn()}
+                  className="inline-flex items-center gap-1 rounded-xs border border-frame/60 bg-frame/15 px-1.5 py-0.5 font-mono text-[10px] text-frame hover:bg-frame/25"
+                >
+                  <ShieldCheck className="size-3" />
+                  {w.authenticating ? t('verifying') : t('verifyWallet')}
+                </button>
+              )}
+            </div>
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+              <span className="font-mono text-xs text-fg">
+                {w.address.slice(0, 10)}…{w.address.slice(-8)}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  title={t('copyAddress')}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(w.address!)
+                      setCopiedAddr(true)
+                      setTimeout(() => setCopiedAddr(false), 1500)
+                    } catch {
+                      /* clipboard blocked */
+                    }
+                  }}
+                  className="inline-flex size-6 items-center justify-center rounded-xs border border-border bg-bg text-fg-muted hover:border-border-strong hover:text-fg"
+                >
+                  {copiedAddr ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+                </button>
+                <a
+                  href={`${explorerBase}/address/${w.address}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={t('viewExplorer')}
+                  className="inline-flex size-6 items-center justify-center rounded-xs border border-border bg-bg text-fg-muted hover:border-border-strong hover:text-fg"
+                >
+                  <ExternalLink className="size-3" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="divide-y divide-border/50 p-1.5">
+            <Link
+              href={`/u/${w.address}` as Route}
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 rounded-xs px-2.5 py-2 text-sm text-fg transition-colors hover:bg-bg-sunken"
+            >
+              <User className="size-4 text-frame" />
+              <span>{t('myProfile')}</span>
+            </Link>
+            <Link
+              href="/darkroom"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 rounded-xs px-2.5 py-2 text-sm text-fg transition-colors hover:bg-bg-sunken"
+            >
+              <Warehouse className="size-4 text-frame" />
+              <span>{t('myDarkroom')}</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false)
+                void w.disconnect()
+              }}
+              className="flex w-full items-center gap-2.5 rounded-xs px-2.5 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/10"
+            >
+              <LogOut className="size-4" />
+              <span>{t('disconnect')}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
