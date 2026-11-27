@@ -194,7 +194,11 @@ export function useRollSession(defaultFrames: number) {
               .catch(() => {})
           }
         } else if (task.kind === 'shoot' && roll) {
-          patchShot(task.digest, { status: 'pending', errorCode: undefined, errorReason: undefined })
+          patchShot(task.digest, {
+            status: 'pending',
+            errorCode: undefined,
+            errorReason: undefined,
+          })
           const txHash = await adapter.shoot(roll.id, task.digest, {
             onEvent: (e) => {
               if (e.type === 'sign') setHud({ ...task, stage: 'signing' })
@@ -210,59 +214,33 @@ export function useRollSession(defaultFrames: number) {
           setHud({ ...task, stage: 'confirmed', txHash })
           syncedInBranch = true
           void chain.refetch({ minFramesUsed: Math.max(roll.framesUsed + 1, task.frame) })
-          // Background-sync private frame image to R2 so Phone & PC always see every frame
-          // (read from IndexedDB fallback so auto-confirm never misses a shot in a stale closure)
+          // Background sync real on-chain shot to Postgres FIRST so /api/rolls/[rollId]/frames
+          // origin check succeeds immediately without waiting on lagging KUB Testnet RPC nodes,
+          // then upload the private frame image to R2 with automatic retry.
           const capturedRollKey = `${activeChain.id}:${roll.id}`
           const inMemoryBlob = rollShots.find((s) => s.hash === task.digest)?.blob
+          const rollIdNum = Number(roll.id)
+          const ownerAddr = wallet.address
           void (async () => {
-            let blob = inMemoryBlob
-            if (!blob || blob.size === 0) {
-              const stored = await photoStore.listRoll(capturedRollKey)
-              blob = stored.find((s) => s.hash === task.digest)?.blob
-            }
-            if (!blob || blob.size === 0) return
-            const ok = await uploadFrameToPrivateCloud({
-              rollId: roll.id,
-              frame: task.frame,
-              photoHash: task.digest,
-              filmId: roll.filmId,
-              frames: roll.frames,
-              blob,
-              txHash,
-            })
-            if (!ok) {
-              await new Promise((r) => setTimeout(r, 1500))
-              await uploadFrameToPrivateCloud({
-                rollId: roll.id,
-                frame: task.frame,
-                photoHash: task.digest,
-                filmId: roll.filmId,
-                frames: roll.frames,
-                blob,
-                txHash,
-              })
-            }
-          })()
-          // Background sync real on-chain shot to Postgres so /verify and /admin stay in sync
-          if (wallet.address && typeof window !== 'undefined') {
-            const rollIdNum = Number(roll.id)
-            void window
-              .fetch('/api/state', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  type: 'roll.claim',
-                  roll: {
-                    id: rollIdNum,
-                    owner: wallet.address,
-                    filmId: roll.filmId,
-                    frames: roll.frames,
-                    txHash,
-                  },
-                }),
-              })
-              .then(() =>
-                window.fetch('/api/state', {
+            if (ownerAddr && typeof window !== 'undefined') {
+              await window
+                .fetch('/api/state', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    type: 'roll.claim',
+                    roll: {
+                      id: rollIdNum,
+                      owner: ownerAddr,
+                      filmId: roll.filmId,
+                      frames: roll.frames,
+                      txHash,
+                    },
+                  }),
+                })
+                .catch(() => {})
+              await window
+                .fetch('/api/state', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -272,10 +250,31 @@ export function useRollSession(defaultFrames: number) {
                     photoHash: task.digest,
                     txHash,
                   }),
-                }),
-              )
-              .catch(() => {})
-          }
+                })
+                .catch(() => {})
+            }
+
+            let blob = inMemoryBlob
+            if (!blob || blob.size === 0) {
+              const stored = await photoStore.listRoll(capturedRollKey)
+              blob = stored.find((s) => s.hash === task.digest)?.blob
+            }
+            if (!blob || blob.size === 0) return
+
+            for (const delayMs of [0, 1200, 3000]) {
+              if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs))
+              const ok = await uploadFrameToPrivateCloud({
+                rollId: roll.id,
+                frame: task.frame,
+                photoHash: task.digest,
+                filmId: roll.filmId,
+                frames: roll.frames,
+                blob,
+                txHash,
+              })
+              if (ok) break
+            }
+          })()
         } else if (task.kind === 'develop') {
           const fn = task.early ? adapter.developEarly : adapter.develop
           const txHash = await fn(task.rollId, {
@@ -331,7 +330,17 @@ export function useRollSession(defaultFrames: number) {
         if (!syncedInBranch) void chain.refetch()
       }
     },
-    [chain, executeOnPageConfirm, frames, patchShot, roll, rollShots, wallet.adapter, wallet.address, wallet.kind],
+    [
+      chain,
+      executeOnPageConfirm,
+      frames,
+      patchShot,
+      roll,
+      rollShots,
+      wallet.adapter,
+      wallet.address,
+      wallet.kind,
+    ],
   )
 
   const addShot = useCallback(
