@@ -35,9 +35,8 @@ export function DarkroomList() {
   const [syncFinishedCount, setSyncFinishedCount] = useState<number>(0)
 
   // Automatically sweep & upload any unsynced local IndexedDB shots on this device to Private R2 (zero SIWE)
-  // including when the mobile browser reconnects to the network.
+  // including when the mobile browser reconnects to the network (even if wallet is not connected yet).
   useEffect(() => {
-    if (!w.address) return
     let alive = true
     const runSweep = () => {
       void syncAllLocalRollsToCloud(activeChain.id, (done, total) => {

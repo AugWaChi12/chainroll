@@ -2,7 +2,8 @@
 
 import { LocaleSwitcher } from '@/features/i18n'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { ConnectSheet, WalletButton, useWallet } from '@/features/wallet'
+import { syncAllLocalRollsToCloud } from '@/features/roll'
+import { ConnectSheet, WalletButton, activeChain, useWallet } from '@/features/wallet'
 import { cn } from '@chainroll/ui'
 import {
   Aperture,
@@ -63,15 +64,22 @@ export function AppNav({ children }: { children: ReactNode }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- read initial browser online state
     setOnline(typeof navigator === 'undefined' ? true : navigator.onLine)
-    const onUp = () => setOnline(true)
+    const runSweep = () => {
+      void syncAllLocalRollsToCloud(activeChain.id)
+    }
+    const onUp = () => {
+      setOnline(true)
+      runSweep()
+    }
     const onDown = () => setOnline(false)
+    runSweep()
     window.addEventListener('online', onUp)
     window.addEventListener('offline', onDown)
     return () => {
       window.removeEventListener('online', onUp)
       window.removeEventListener('offline', onDown)
     }
-  }, [])
+  }, [address])
 
   const isExploreRoute =
     active('/leaderboard') || active('/verify') || active('/activity') || active('/how-it-works')
