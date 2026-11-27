@@ -364,27 +364,13 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
     activeChain.blockExplorers?.default.url ?? 'https://testnet.kubscan.com'
 
   return (
-    <div className="relative flex shrink-0 items-center gap-1.5" data-wallet-menu>
-      {!w.authenticated && (
-        <button
-          type="button"
-          disabled={w.authenticating}
-          onClick={() => void w.signIn()}
-          title={t('verifyWallet')}
-          className="inline-flex h-8 items-center gap-1 rounded-sm border border-frame/70 bg-frame/15 px-2 font-mono text-[11px] whitespace-nowrap text-frame transition-colors hover:bg-frame/25 disabled:opacity-50 sm:text-2xs"
-        >
-          <ShieldCheck className="size-3.5 shrink-0" />
-          <span className="hidden sm:inline">
-            {w.authenticating ? t('verifying') : t('verifyWallet')}
-          </span>
-        </button>
-      )}
+    <div className="relative flex shrink-0 items-center" data-wallet-menu>
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}
         aria-expanded={menuOpen}
         className={cn(
-          'flex h-8 shrink-0 items-center gap-1.5 rounded-sm border px-2.5 font-mono text-[11px] whitespace-nowrap transition-colors sm:text-2xs',
+          'flex h-8 shrink-0 items-center gap-2 rounded-sm border px-2.5 font-mono text-[11px] whitespace-nowrap transition-colors sm:text-2xs',
           menuOpen
             ? 'border-border-strong bg-bg-sunken text-fg'
             : 'border-border bg-bg-raised text-fg-muted hover:border-border-strong hover:text-fg',
@@ -392,17 +378,13 @@ export function WalletButton({ onOpen }: { onOpen: () => void }) {
       >
         <span
           aria-hidden
+          title={w.authenticated ? t('verifiedSiwe') : t('verifyWallet')}
           className={cn(
             'size-1.5 shrink-0 rounded-full',
-            w.authenticated ? 'bg-success' : 'bg-warning',
+            w.authenticated ? 'bg-success' : 'bg-frame',
           )}
         />
-        <span className="hidden max-w-24 truncate xl:inline">{w.walletName}</span>
-        <span className="hidden text-fg-subtle xl:inline">·</span>
-        <span className="sm:hidden">
-          {w.address.slice(0, 4)}…{w.address.slice(-4)}
-        </span>
-        <span className="hidden sm:inline">
+        <span>
           {w.address.slice(0, 6)}…{w.address.slice(-4)}
         </span>
         <ChevronDown

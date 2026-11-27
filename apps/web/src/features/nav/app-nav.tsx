@@ -128,9 +128,9 @@ export function AppNav({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col bg-bg text-fg">
       {/* top bar */}
       <header className="sticky top-0 z-30 border-b border-border bg-bg/92 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-3 sm:px-5 md:px-8">
-          {/* Left: Brand + Primary Navigation */}
-          <div className="flex items-center gap-3 lg:gap-5">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 md:px-8">
+          {/* Left: Brand + 4 Clean Primary Nav Items */}
+          <div className="flex items-center gap-4 lg:gap-6">
             <Link
               href="/"
               className="group flex shrink-0 items-center gap-2 font-display text-lg tracking-tight sm:text-xl"
@@ -145,7 +145,7 @@ export function AppNav({ children }: { children: ReactNode }) {
 
             <nav
               aria-label={t('label')}
-              className="hidden shrink-0 items-center gap-0.5 md:flex lg:gap-1"
+              className="hidden shrink-0 items-center gap-1 md:flex"
             >
               {[
                 { href: '/feed' as Route, label: t('feed') },
@@ -159,7 +159,7 @@ export function AppNav({ children }: { children: ReactNode }) {
                     href={item.href}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      'relative shrink-0 rounded-xs px-2.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors lg:px-3',
+                      'relative shrink-0 rounded-xs px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors',
                       isActive ? 'text-fg' : 'text-fg-muted hover:bg-bg-sunken/60 hover:text-fg',
                     )}
                   >
@@ -167,51 +167,12 @@ export function AppNav({ children }: { children: ReactNode }) {
                     {isActive && (
                       <span
                         aria-hidden
-                        className="absolute inset-x-2.5 -bottom-[11px] h-0.5 bg-accent lg:inset-x-3"
+                        className="absolute inset-x-3 -bottom-[11px] h-0.5 bg-accent"
                       />
                     )}
                   </Link>
                 )
               })}
-
-              {/* Direct Leaderboard & Verify links on spacious xl screens */}
-              <Link
-                href="/leaderboard"
-                aria-current={active('/leaderboard') ? 'page' : undefined}
-                className={cn(
-                  'relative hidden shrink-0 rounded-xs px-2.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors xl:inline-flex',
-                  active('/leaderboard')
-                    ? 'text-fg'
-                    : 'text-fg-muted hover:bg-bg-sunken/60 hover:text-fg',
-                )}
-              >
-                {t('leaderboard')}
-                {active('/leaderboard') && (
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-2.5 -bottom-[11px] h-0.5 bg-accent"
-                  />
-                )}
-              </Link>
-
-              <Link
-                href="/verify"
-                aria-current={active('/verify') ? 'page' : undefined}
-                className={cn(
-                  'relative hidden shrink-0 rounded-xs px-2.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors xl:inline-flex',
-                  active('/verify')
-                    ? 'text-fg'
-                    : 'text-fg-muted hover:bg-bg-sunken/60 hover:text-fg',
-                )}
-              >
-                {t('verifyShort')}
-                {active('/verify') && (
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-2.5 -bottom-[11px] h-0.5 bg-accent"
-                  />
-                )}
-              </Link>
 
               {/* Explore Studio Directory Dropdown */}
               <div className="relative" data-more-menu>
@@ -220,7 +181,7 @@ export function AppNav({ children }: { children: ReactNode }) {
                   onClick={() => setMoreOpen((v) => !v)}
                   aria-expanded={moreOpen}
                   className={cn(
-                    'relative inline-flex items-center gap-1 rounded-xs px-2.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors',
+                    'relative inline-flex items-center gap-1.5 rounded-xs px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors',
                     moreOpen || isExploreRoute
                       ? 'bg-bg-sunken/80 text-fg'
                       : 'text-fg-muted hover:bg-bg-sunken/60 hover:text-fg',
@@ -237,7 +198,7 @@ export function AppNav({ children }: { children: ReactNode }) {
                   {isExploreRoute && !moreOpen && (
                     <span
                       aria-hidden
-                      className="absolute inset-x-2.5 -bottom-[11px] h-0.5 bg-accent xl:hidden"
+                      className="absolute inset-x-3 -bottom-[11px] h-0.5 bg-accent"
                     />
                   )}
                 </button>
