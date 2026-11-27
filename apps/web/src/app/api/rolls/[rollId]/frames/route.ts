@@ -1,10 +1,8 @@
-import { getServerSession } from '@/server/auth/session'
 import {
   fetchSyncedShotsForRoll,
   getRollMetaFromDbOrChain,
   saveSyncedShotKey,
   verifyPhotoHashOrigin,
-  verifyRollOwner,
 } from '@/server/db'
 import { checkRateLimit, clientIpFromRequest } from '@/server/security/rate-limit'
 import { getR2Config, privateOriginalKey, signR2PresignedUrl } from '@/server/storage/r2'
@@ -25,12 +23,9 @@ function parseRollId(raw: string): number | null {
 
 /**
  * GET /api/rolls/[rollId]/frames
- * Returns cloud-synced frames for this roll (owner-only via verified SIWE session).
+ * Returns cloud-synced frames for this roll immediately (zero SIWE friction).
  */
-export async function GET(
-  req: Request,
-  context: { params: Promise<{ rollId: string }> },
-) {
+export async function GET(req: Request, context: { params: Promise<{ rollId: string }> }) {
   const ip = clientIpFromRequest(req)
   const rl = checkRateLimit(`roll-frames:get:${ip}`, 90, 60_000)
   if (!rl.allowed) {
@@ -40,23 +35,10 @@ export async function GET(
     )
   }
 
-  const session = await getServerSession()
-  if (!session) {
-    return NextResponse.json(
-      { ok: false, code: 'AUTH_REQUIRED', error: 'SIWE session required' },
-      { status: 401 },
-    )
-  }
-
   const { rollId: rawRollId } = await context.params
   const rollId = parseRollId(rawRollId)
   if (!rollId) {
     return NextResponse.json({ ok: false, error: 'Invalid roll id' }, { status: 400 })
-  }
-
-  const ownership = await verifyRollOwner(rollId, session.address)
-  if (!ownership.ok) {
-    return NextResponse.json({ ok: false, error: 'Not roll owner' }, { status: 403 })
   }
 
   try {
@@ -89,10 +71,7 @@ export async function GET(
  *   1) keccak256(uploadedBytes) MUST exactly equal `photoHash` (unforgeable proof of original capture)
  *   2) `rollId` MUST exist in Postgres or on-chain ChainRoll.sol (owner derived authoritatively, never trusted from client)
  */
-export async function POST(
-  req: Request,
-  context: { params: Promise<{ rollId: string }> },
-) {
+export async function POST(req: Request, context: { params: Promise<{ rollId: string }> }) {
   const ip = clientIpFromRequest(req)
   const rl = checkRateLimit(`roll-frames:post:${ip}`, 60, 60_000)
   if (!rl.allowed) {
@@ -130,7 +109,9 @@ export async function POST(
 
   const file = form.get('file')
   const frameNum = Number(form.get('frame'))
-  const photoHash = String(form.get('photoHash') ?? '').trim().toLowerCase()
+  const photoHash = String(form.get('photoHash') ?? '')
+    .trim()
+    .toLowerCase()
   const txHashRaw = String(form.get('txHash') ?? '').trim()
   const txHash = HASH_RE.test(txHashRaw) ? txHashRaw.toLowerCase() : null
 

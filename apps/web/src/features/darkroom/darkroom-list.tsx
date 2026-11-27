@@ -3,6 +3,7 @@
 import { getStock, useStockName } from '@/features/film'
 import {
   countdown,
+  fetchCloudFramesForRoll,
   photoStore,
   rollStage,
   syncAllLocalRollsToCloud,
@@ -199,18 +200,40 @@ function RollCard({ roll, now }: { roll: ChainRoll; now: number }) {
   )
 }
 
-/** First six developed thumbnails from this device (empty while latent). */
+/** First six developed thumbnails from this device or R2 Cloud (empty while latent). */
 function useRollThumbs(rollId: bigint, developed: boolean) {
-  const [urls, setUrls] = useState<string[]>([])
+  const [urls, setUrls] = useState<(string | undefined)[]>([])
   useEffect(() => {
     if (!developed) return
     let alive = true
-    let made: string[] = []
-    void photoStore.listRoll(`${activeChain.id}:${rollId}`).then((rows) => {
+    const made: string[] = []
+    const load = async () => {
+      const rows = await photoStore.listRoll(`${activeChain.id}:${rollId}`)
       if (!alive) return
-      made = rows.slice(0, 6).map((r) => URL.createObjectURL(r.blob))
-      setUrls(made)
-    })
+      const byFrame: (string | undefined)[] = []
+      for (const r of rows) {
+        if (r.frame >= 1 && r.frame <= 6) {
+          const u = URL.createObjectURL(r.blob)
+          made.push(u)
+          byFrame[r.frame - 1] = u
+        }
+      }
+      if (byFrame.filter(Boolean).length > 0) {
+        setUrls([...byFrame])
+      }
+      // Fill any missing thumbnail slots from R2 Cloud Sync automatically
+      if (byFrame.filter(Boolean).length < 6) {
+        const cloud = await fetchCloudFramesForRoll(rollId)
+        if (!alive) return
+        for (const f of cloud.frames) {
+          if (f.frame >= 1 && f.frame <= 6 && !byFrame[f.frame - 1]) {
+            byFrame[f.frame - 1] = f.url
+          }
+        }
+        setUrls([...byFrame])
+      }
+    }
+    void load()
     return () => {
       alive = false
       made.forEach((u) => URL.revokeObjectURL(u))

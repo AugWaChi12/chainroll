@@ -1,7 +1,13 @@
 'use client'
 
 import { BlockConfirmHud, ReviewSheet, type BlockHudTask, type Shot } from '@/features/camera'
-import { PostComposerModal, getProfileMeta, useFeedStore, type FeedPost, type PublishableFrame } from '@/features/feed'
+import {
+  PostComposerModal,
+  getProfileMeta,
+  useFeedStore,
+  type FeedPost,
+  type PublishableFrame,
+} from '@/features/feed'
 import { getStock, useStockName } from '@/features/film'
 import {
   countdown,
@@ -47,15 +53,10 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
   const stockName = useStockName()
   const { roll, loading, refetch } = useRoll(rollId)
   const { posts } = useFeedStore()
-  const isOwnerForSync = Boolean(
-    roll && w.address && w.address.toLowerCase() === roll.owner.toLowerCase(),
-  )
   const { shots, localCount, cloudCount, syncingCloud, syncNow } = useRollShots(
     rollId,
     roll,
     posts,
-    isOwnerForSync,
-    w.authenticated,
   )
   const [reviewIndex, setReviewIndex] = useState<number | null>(null)
   const [composerFrame, setComposerFrame] = useState<number | null>(null)
@@ -122,8 +123,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
   const delaySec = Number(delay.data ?? 3600n)
   const remainingSec = Math.max(0, roll.developReadyAt - now)
   const effectiveWindow = remainingSec <= 15 ? 15 : delaySec
-  const progress =
-    stage === 'developing' ? 1 - Math.min(1, remainingSec / effectiveWindow) : 0
+  const progress = stage === 'developing' ? 1 - Math.min(1, remainingSec / effectiveWindow) : 0
   const viewable = shots.filter(Boolean) as Shot[]
 
   const develop = (early = false) => {
@@ -349,14 +349,19 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                     {t('panel.postToFeed')}
                   </Button>
                 )}
-                {isOwner && localCount > 0 && (
-                  cloudCount < localCount ? (
+                {isOwner &&
+                  localCount > 0 &&
+                  (cloudCount < localCount ? (
                     <Button
                       variant="secondary"
                       disabled={syncingCloud}
                       onClick={() => void syncNow()}
                     >
-                      {syncingCloud ? <Loader2 className="animate-spin" /> : <Cloud className="size-4" />}
+                      {syncingCloud ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        <Cloud className="size-4" />
+                      )}
                       {syncingCloud ? t('syncingCloud') : t('uploadToCloud')}
                     </Button>
                   ) : (
@@ -364,8 +369,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                       <Check className="size-3" />
                       {t('cloudSynced', { count: cloudCount })}
                     </span>
-                  )
-                )}
+                  ))}
               </div>
             </div>
           )}
@@ -387,7 +391,7 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
                   const exposed = frame <= roll.framesUsed || Boolean(shot)
                   const isPosted = Boolean(
                     shot &&
-                      posts.some((p) => p.photoHash.toLowerCase() === shot.hash.toLowerCase()),
+                    posts.some((p) => p.photoHash.toLowerCase() === shot.hash.toLowerCase()),
                   )
                   return (
                     <div key={k} className="flex flex-col gap-0.5">
@@ -441,35 +445,20 @@ export function RollSheet({ rollId }: { rollId: bigint }) {
         {developed &&
           Array.from({ length: roll.framesUsed }, (_, i) => i).some((i) => !shots[i]) && (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-border bg-bg-raised px-3.5 py-2.5">
-              <p className="text-2xs text-fg-muted">
-                {isOwner && w.authenticated ? t('otherDeviceNeedsUpload') : t('otherDevice')}
-              </p>
-              {isOwner && !w.authenticated && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={w.authenticating}
-                  onClick={() => void w.signIn()}
-                >
+              <p className="text-2xs text-fg-muted">{t('otherDeviceNeedsUpload')}</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={syncingCloud}
+                onClick={() => void syncNow()}
+              >
+                {syncingCloud ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
                   <Cloud className="size-3.5" />
-                  {w.authenticating ? t('syncingCloud') : t('syncSignIn')}
-                </Button>
-              )}
-              {isOwner && w.authenticated && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={syncingCloud}
-                  onClick={() => void syncNow()}
-                >
-                  {syncingCloud ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Cloud className="size-3.5" />
-                  )}
-                  {syncingCloud ? t('syncingCloud') : t('refreshCloud')}
-                </Button>
-              )}
+                )}
+                {syncingCloud ? t('syncingCloud') : t('refreshCloud')}
+              </Button>
             </div>
           )}
       </div>
@@ -534,16 +523,14 @@ function Sprockets() {
 /**
  * Photos of this roll merged from:
  * 1) Local IndexedDB on this device (instant, full Blob)
- * 2) Authenticated Private R2 Cloud Sync (cross-device Phone <-> PC for the roll owner)
+ * 2) R2 Cloud Sync (cross-device Phone <-> PC, zero-SIWE)
  * 3) Already-published Feed posts (public R2 URLs)
- * Also silently backfills any local-only IndexedDB frames up to Private R2 when authenticated.
+ * Also silently backfills any local-only IndexedDB frames up to R2.
  */
 function useRollShots(
   rollId: bigint,
   roll: { id: bigint; filmId: number; frames: number } | null,
   posts: FeedPost[],
-  isOwner: boolean,
-  authenticated: boolean,
 ) {
   const [localShots, setLocalShots] = useState<(Shot | undefined)[]>([])
   const [cloudShots, setCloudShots] = useState<(Shot | undefined)[]>([])
@@ -634,9 +621,9 @@ function useRollShots(
     }
   }, [rollFilmId, rollFrames, rollId, syncNonce])
 
-  // 2. Fetch Private R2 cloud-synced frames from other devices (requires 7-day SIWE session)
+  // 2. Fetch R2 cloud-synced frames from other devices immediately (zero SIWE required)
   useEffect(() => {
-    if (!isOwner || !authenticated || !rollFilmId || !rollFrames) return
+    if (!rollFilmId || !rollFrames) return
     let alive = true
     const run = async () => {
       setSyncingCloud(true)
@@ -673,7 +660,7 @@ function useRollShots(
     return () => {
       alive = false
     }
-  }, [authenticated, isOwner, rollFilmId, rollFrames, rollId, syncNonce])
+  }, [rollFilmId, rollFrames, rollId, syncNonce])
 
   // 3. Merge Local > Cloud Private R2 > Already-Published Feed Post
   const shots = useMemo<(Shot | undefined)[]>(() => {

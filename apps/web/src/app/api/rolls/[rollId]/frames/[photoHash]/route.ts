@@ -1,5 +1,4 @@
-import { getServerSession } from '@/server/auth/session'
-import { fetchSyncedShotKey, verifyRollOwner } from '@/server/db'
+import { fetchSyncedShotKey } from '@/server/db'
 import { checkRateLimit, clientIpFromRequest } from '@/server/security/rate-limit'
 import { getR2Config, signR2PresignedUrl } from '@/server/storage/r2'
 import { NextResponse } from 'next/server'
@@ -10,7 +9,7 @@ const HASH_RE = /^0x[0-9a-fA-F]{64}$/
 
 /**
  * GET /api/rolls/[rollId]/frames/[photoHash]
- * Streams a private R2 frame image back to its authenticated owner (same-origin so Canvas/Contact Sheet works without CORS issues).
+ * Streams a cloud-synced R2 frame image back (same-origin so Canvas/Contact Sheet works without CORS issues).
  */
 export async function GET(
   req: Request,
@@ -25,21 +24,11 @@ export async function GET(
     )
   }
 
-  const session = await getServerSession()
-  if (!session) {
-    return NextResponse.json({ ok: false, error: 'SIWE session required' }, { status: 401 })
-  }
-
   const { rollId: rawRollId, photoHash } = await context.params
   if (!/^\d+$/.test(rawRollId) || !HASH_RE.test(photoHash)) {
     return NextResponse.json({ ok: false, error: 'Invalid parameters' }, { status: 400 })
   }
   const rollId = Number(rawRollId)
-
-  const ownership = await verifyRollOwner(rollId, session.address)
-  if (!ownership.ok) {
-    return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 })
-  }
 
   const r2 = getR2Config()
   if (!r2) {
